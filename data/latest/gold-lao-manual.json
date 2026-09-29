@@ -4,9 +4,12 @@
   "source_url": null,
   "license": "Prices typed in by the owner from the shop's public posts",
   "kind": "shop",
-  "configured": false,
-  "stale": false,
+  "configured": true,
+  "stale": true,
   "last_success_at": null,
-  "last_error": null,
+  "last_error": {
+    "message": "The sheet has no entries yet",
+    "at": "2026-09-29T19:41:16.576Z"
+  },
   "records": []
 }
