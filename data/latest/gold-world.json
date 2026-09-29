@@ -1,0 +1,20 @@
+{
+  "source": "gold-world",
+  "source_name": "World gold spot XAU/USD (goldprice.dev, backup gold-api.com)",
+  "source_url": "https://goldprice.dev",
+  "license": "Free public API, no key",
+  "kind": "market",
+  "stale": false,
+  "last_success_at": "2026-09-29T12:26:41.257Z",
+  "last_error": null,
+  "records": [
+    {
+      "source": "gold-world",
+      "metric": "XAU_USD",
+      "value": 4151.13,
+      "unit": "USD per troy oz",
+      "fetched_at": "2026-09-29T12:26:40.546Z",
+      "source_date": "2026-09-29T12:26:40.726Z"
+    }
+  ]
+}

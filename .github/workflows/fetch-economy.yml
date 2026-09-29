@@ -1,0 +1,42 @@
+# Lao economy data (World Bank, IMF, manual monthly CPI) - once a month.
+name: Fetch economy data
+
+on:
+  schedule:
+    - cron: "0 3 2 * *"      # 2nd day of every month, 03:00 UTC (10:00 Vientiane)
+  workflow_dispatch:         # "Run workflow" button (use it after typing a new CPI number)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-data          # same group as the 30-minute job, so they never push at the same time
+  cancel-in-progress: false
+
+jobs:
+  economy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch economy data
+        run: node scripts/fetch-economy.js
+
+      - name: Commit changes
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --staged --quiet; then
+            echo "No data changes - nothing to commit."
+            exit 0
+          fi
+          git commit -m "data: economy update $(date -u +'%Y-%m-%d')"
+          git pull --rebase
+          git push

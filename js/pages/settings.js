@@ -1,0 +1,97 @@
+// Page 6: Data & settings - language, theme, and the status of every data source.
+
+import { el, card, cardHead, kindChip, statusBadge, sourceStatus, sourceLink, sectionTitle } from "../ui.js";
+import { formatDate, toMs } from "../format.js";
+
+function settingRow(label, options, current, onPick) {
+  const row = el("div", "setting-row");
+  row.append(el("span", "", label));
+  const group = el("div", "segmented");
+  for (const [value, text] of options) {
+    const b = el("button", "", text);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(value === current));
+    b.addEventListener("click", () => onPick(value));
+    group.append(b);
+  }
+  row.append(group);
+  return row;
+}
+
+// One status row per source: name, kind, status, newest data time, error
+function statusRows(summary, economy, hints, t) {
+  const rows = [];
+  for (const [id, src] of Object.entries(summary.sources)) {
+    const status = sourceStatus(id, summary);
+    const name = el("div");
+    name.append(sourceLink(src));
+    if (src.last_error && src.stale) name.append(el("div", "error-text", src.last_error.message));
+    rows.push([name, kindChip(src.kind, t), statusBadge(status, t), src.latest_source_date ? formatDate(src.latest_source_date, t) : "—"]);
+  }
+  if (economy && economy.indicators) {
+    for (const group of ["worldbank", "imf"]) {
+      const list = Object.values(economy.indicators).filter((i) => i.source === group);
+      const bad = list.find((i) => i.stale);
+      const newestYear = Math.max(...list.flatMap((i) => i.values.map(([y]) => y)).filter((y) => y <= new Date().getFullYear()));
+      const name = el("div");
+      name.append(sourceLink(economy.sources[group]));
+      if (bad && bad.last_error) name.append(el("div", "error-text", bad.last_error.message));
+      rows.push([name, kindChip("official", t), statusBadge(bad ? "error" : "ok", t), `${t.year} ${newestYear}`]);
+    }
+    const cpi = economy.cpi_monthly;
+    const name = el("div");
+    name.append(sourceLink(economy.sources.cpi_manual));
+    const status = !cpi || !cpi.configured ? "not_configured" : cpi.stale ? "error" : "ok";
+    if (cpi && cpi.stale && cpi.last_error) name.append(el("div", "error-text", cpi.last_error.message));
+    const last = cpi && cpi.values.length ? cpi.values[cpi.values.length - 1][0] : "—";
+    rows.push([name, kindChip("official", t), statusBadge(status, t), last]);
+  }
+  const n = hints && hints.hints ? hints.hints.length : 0;
+  rows.push([t.forecast_store, kindChip("estimated", t), statusBadge(hints ? "ok" : "stale", t), `${n} ${t.hints_stored}`]);
+  return rows;
+}
+
+export function render(view, ctx) {
+  const { t, summary, economy, hints } = ctx;
+  const grid = el("div", "grid grid-2");
+
+  const prefs = card(null);
+  prefs.append(cardHead(t.settings_display, null, false, t));
+  prefs.append(settingRow(t.setting_language, [["th", "ไทย"], ["lo", "ລາວ"]], ctx.lang, ctx.setLang));
+  prefs.append(settingRow(t.setting_theme, [["dark", t.theme_dark], ["light", t.theme_light]], ctx.theme, ctx.setTheme));
+  prefs.append(el("p", "note", t.settings_saved_note));
+
+  const times = Object.values(summary.sources).map((s) => s.last_success_at).filter(Boolean);
+  const newest = times.sort((a, b) => toMs(a) - toMs(b)).pop();
+  const upd = card(null);
+  upd.append(cardHead(t.last_update_title, null, false, t));
+  upd.append(el("div", "stat-value", newest ? formatDate(newest, t) : "—"));
+  upd.append(el("p", "note", t.last_update_note));
+  grid.append(prefs, upd);
+  view.append(grid);
+
+  view.append(sectionTitle(t.source_status_title));
+  const c = card(null);
+  // A stacked list (not a table) so it also fits on a narrow phone
+  const list = el("ul", "status-list");
+  for (const [name, chip, badge, latest] of statusRows(summary, economy, hints, t)) {
+    const li = el("li", "status-item");
+    const top = el("div", "status-top");
+    top.append(typeof name === "string" ? el("strong", "", name) : name, badge);
+    const meta = el("div", "status-meta");
+    meta.append(chip, el("span", "", `${t.col_latest_data}: ${latest}`));
+    li.append(top, meta);
+    list.append(li);
+  }
+  c.append(list);
+  c.append(el("p", "note", t.source_status_note));
+  view.append(c);
+
+  view.append(sectionTitle(t.manual_title));
+  const m = card("shop");
+  m.append(el("p", "note", t.manual_text));
+  const steps = el("ol", "steps");
+  for (const k of ["setup_step_1", "setup_step_2", "setup_step_3", "setup_step_4"]) steps.append(el("li", "", t[k]));
+  m.append(steps);
+  view.append(m);
+}

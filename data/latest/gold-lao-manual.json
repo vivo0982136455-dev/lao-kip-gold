@@ -1,0 +1,12 @@
+{
+  "source": "gold-lao-manual",
+  "source_name": "Phouvong Jewelry (manual entry)",
+  "source_url": null,
+  "license": "Prices typed in by the owner from the shop's public posts",
+  "kind": "shop",
+  "configured": false,
+  "stale": false,
+  "last_success_at": null,
+  "last_error": null,
+  "records": []
+}
