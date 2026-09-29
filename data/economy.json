@@ -720,8 +720,11 @@
    ],
    "source_updated": null,
    "updated_at": "2026-09-29T12:05:42.206Z",
-   "stale": false,
-   "last_error": null
+   "stale": true,
+   "last_error": {
+    "message": "Download failed (https://www.imf.org/external/datamapper/api/v1/NGDPD/LAO): HTTP 403 from https://www.imf.org/external/datamapper/api/v1/NGDPD/LAO",
+    "at": "2026-09-29T14:49:42.860Z"
+   }
   },
   "imf.NGDP_RPCH": {
    "source": "imf",
@@ -859,8 +862,11 @@
    ],
    "source_updated": null,
    "updated_at": "2026-09-29T12:05:42.206Z",
-   "stale": false,
-   "last_error": null
+   "stale": true,
+   "last_error": {
+    "message": "Download failed (https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH/LAO): HTTP 403 from https://www.imf.org/external/datamapper/api/v1/NGDP_RPCH/LAO",
+    "at": "2026-09-29T14:49:42.860Z"
+   }
   },
   "imf.PCPIPCH": {
    "source": "imf",
@@ -998,8 +1004,11 @@
    ],
    "source_updated": null,
    "updated_at": "2026-09-29T12:05:42.206Z",
-   "stale": false,
-   "last_error": null
+   "stale": true,
+   "last_error": {
+    "message": "Download failed (https://www.imf.org/external/datamapper/api/v1/PCPIPCH/LAO): HTTP 403 from https://www.imf.org/external/datamapper/api/v1/PCPIPCH/LAO",
+    "at": "2026-09-29T14:49:42.860Z"
+   }
   },
   "imf.BCA_NGDPD": {
    "source": "imf",
@@ -1137,8 +1146,11 @@
    ],
    "source_updated": null,
    "updated_at": "2026-09-29T12:05:42.206Z",
-   "stale": false,
-   "last_error": null
+   "stale": true,
+   "last_error": {
+    "message": "Download failed (https://www.imf.org/external/datamapper/api/v1/BCA_NGDPD/LAO): HTTP 403 from https://www.imf.org/external/datamapper/api/v1/BCA_NGDPD/LAO",
+    "at": "2026-09-29T14:49:42.860Z"
+   }
   },
   "imf.GGXWDG_NGDP": {
    "source": "imf",
@@ -1272,8 +1284,11 @@
    ],
    "source_updated": null,
    "updated_at": "2026-09-29T12:05:42.206Z",
-   "stale": false,
-   "last_error": null
+   "stale": true,
+   "last_error": {
+    "message": "Download failed (https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP/LAO): HTTP 403 from https://www.imf.org/external/datamapper/api/v1/GGXWDG_NGDP/LAO",
+    "at": "2026-09-29T14:49:42.860Z"
+   }
   }
  },
  "cpi_monthly": {
