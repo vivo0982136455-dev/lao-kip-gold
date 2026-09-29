@@ -1,5 +1,5 @@
 {
   "_help": "Paste the 'Publish to web' CSV links of your Google Sheet tabs here. Guide: docs/manual-entry-guide-th.md",
-  "lao_gold_csv_url": "",
+  "lao_gold_csv_url": "https://docs.google.com/spreadsheets/d/1uKH9A0aoemxJfceglZpBXteIvwexp91VwW7S8sX0Azc/export?format=csv",
   "lao_cpi_csv_url": ""
 }
