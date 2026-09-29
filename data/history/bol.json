@@ -20340,5 +20340,19 @@
 {"source":"bol","metric":"THB_LAK_buy","value":675.7,"unit":"LAK per THB","fetched_at":"2026-09-29T11:08:50.009Z","source_date":"2026-09-28"},
 {"source":"bol","metric":"THB_LAK_sell","value":686,"unit":"LAK per THB","fetched_at":"2026-09-29T11:08:50.009Z","source_date":"2026-09-28"},
 {"source":"bol","metric":"USD_LAK_buy","value":22329,"unit":"LAK per USD","fetched_at":"2026-09-29T11:08:50.009Z","source_date":"2026-09-28"},
-{"source":"bol","metric":"USD_LAK_sell","value":22552,"unit":"LAK per USD","fetched_at":"2026-09-29T11:08:50.009Z","source_date":"2026-09-28"}
+{"source":"bol","metric":"USD_LAK_sell","value":22552,"unit":"LAK per USD","fetched_at":"2026-09-29T11:08:50.009Z","source_date":"2026-09-28"},
+{"source":"bol","metric":"CNY_LAK_buy","value":3312,"unit":"LAK per CNY","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"CNY_LAK_sell","value":3337,"unit":"LAK per CNY","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"EUR_LAK_buy","value":25467,"unit":"LAK per EUR","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"EUR_LAK_sell","value":25724,"unit":"LAK per EUR","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"GBP_LAK_buy","value":29395,"unit":"LAK per GBP","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"GBP_LAK_sell","value":29983,"unit":"LAK per GBP","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"JPY_LAK_buy","value":143.39,"unit":"LAK per JPY","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"JPY_LAK_sell","value":146.25,"unit":"LAK per JPY","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"KRW_LAK_buy","value":15.95,"unit":"LAK per KRW","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"KRW_LAK_sell","value":16.25,"unit":"LAK per KRW","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"THB_LAK_buy","value":675.7,"unit":"LAK per THB","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"THB_LAK_sell","value":686,"unit":"LAK per THB","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"USD_LAK_buy","value":22336,"unit":"LAK per USD","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"},
+{"source":"bol","metric":"USD_LAK_sell","value":22559,"unit":"LAK per USD","fetched_at":"2026-09-29T23:14:22.719Z","source_date":"2026-09-29"}
 ]
