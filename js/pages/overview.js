@@ -1,6 +1,6 @@
 // Page 1: Overview - the most important numbers at a glance.
 
-import { el, metricCard, sectionTitle, isStale } from "../ui.js";
+import { el, metricCard, sectionTitle, isStale, sourceStatus } from "../ui.js";
 import { dailyChartCard, mountCharts } from "../charts.js";
 import { todayHintCard } from "./forecast.js";
 
@@ -38,7 +38,11 @@ export function render(view, ctx) {
           ["row_lbb_sell", "calc.lbb_sell_baht"],
           ["row_lbb_buy", "calc.lbb_buy_baht"],
           ["row_adj_sell", "calc.lao_gold_adj_sell", { emptyText: t.need_shop_prices }],
-          ["row_phouvong_sell", "gold-lao-manual.sell", { emptyText: t.not_configured_short }],
+          [
+            "row_phouvong_sell",
+            "gold-lao-manual.sell",
+            { emptyText: sourceStatus("gold-lao-manual", summary) === "not_configured" ? t.not_configured_short : t.phouvong_empty_title },
+          ],
         ],
       },
       summary,

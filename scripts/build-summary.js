@@ -9,7 +9,7 @@ const path = require("path");
 const { DATA_DIR, LATEST_DIR, HISTORY_DIR, readJson } = require("./lib/common");
 
 const DAYS_KEPT = 100; // charts show up to 90 days; keep a few extra
-const SOURCES = ["bol", "gold-world", "gold-thai", "fx-market", "gold-lbb", "bcel", "gold-lao-manual"];
+const SOURCES = ["bol", "gold-world", "gold-thai", "fx-market", "gold-lbb", "bcel", "bcel-deposit", "gold-lao-manual"];
 const OUT_FILE = path.join(DATA_DIR, "summary.json");
 
 // Gold units

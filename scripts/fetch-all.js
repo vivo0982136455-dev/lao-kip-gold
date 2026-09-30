@@ -9,6 +9,7 @@ const SOURCES = [
   require("./fetch-fx-market"),
   require("./fetch-gold-lbb"),
   require("./fetch-bcel"),
+  require("./fetch-bcel-deposit"),
   require("./fetch-lao-gold-manual"),
 ];
 

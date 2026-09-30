@@ -1,5 +1,5 @@
 // App shell: loads texts + data, builds the sidebar menu, and shows one page at a time.
-// Pages are chosen by the address "hash": #/overview, #/rates, #/gold, #/economy, #/forecast, #/settings
+// Pages are chosen by the address "hash": #/overview, #/rates, #/gold, #/living, #/economy, #/forecast, #/settings
 // No build step - plain ES modules.
 
 import { icon } from "./icons.js";
@@ -10,6 +10,7 @@ import * as overview from "./pages/overview.js";
 import * as rates from "./pages/rates.js";
 import * as gold from "./pages/gold.js";
 import * as economy from "./pages/economy.js";
+import * as living from "./pages/living.js";
 import * as forecast from "./pages/forecast.js";
 import * as settings from "./pages/settings.js";
 
@@ -18,6 +19,7 @@ const ROUTES = [
   { path: "overview", title: "page_overview", icon: "dashboard", group: "nav_group_main", page: overview },
   { path: "rates", title: "page_rates", icon: "exchange", group: "nav_group_markets", page: rates },
   { path: "gold", title: "page_gold", icon: "gold", group: "nav_group_markets", page: gold },
+  { path: "living", title: "page_living", icon: "coin", group: "nav_group_analysis", page: living },
   { path: "economy", title: "page_economy", icon: "economy", group: "nav_group_analysis", page: economy },
   { path: "forecast", title: "page_forecast", icon: "forecast", group: "nav_group_analysis", page: forecast },
   { path: "settings", title: "page_settings", icon: "settings", group: "nav_group_system", page: settings },

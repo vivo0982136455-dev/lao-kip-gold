@@ -1,21 +1,27 @@
-// Sources #6, #7, #8: Lao economy (yearly) + monthly CPI typed in by the owner.
-//   #6 World Bank API (actual yearly data)       - free, no key
-//   #7 IMF DataMapper API (includes forecasts)   - free, no key
-//   #8 Monthly CPI inflation from the Google Sheet (config "lao_cpi_csv_url")
+// Sources #6, #7, #8: Lao economy - yearly numbers + MONTHLY inflation and gold (all automatic).
+//   #6 World Bank API (actual yearly data)          - free, no key
+//   #7 IMF DataMapper API (yearly, with forecasts)   - free, no key
+//   #8 IMF SDMX API (monthly): Lao CPI (all items + 12 categories), CPI index, world gold price
+//      (replaced the Google-Sheet CPI entry on 2026-09-30 - nothing to type in any more)
+// Also builds monthly BOL mid rates (USD, THB) from data/history/bol.json for the "value kept" comparison.
 // Writes data/economy.json. Run monthly (GitHub Actions) or by hand: node scripts/fetch-economy.js
 //
-// Real responses (checked 2026-09-29):
+// Real responses (checked 2026-09-29 / 2026-09-30):
 //   World Bank: [ {page, lastupdated:"2026-07-13"}, [ { "date": "2025", "value": 18302970218.59 }, ... ] ]
-//   IMF: { "values": { "NGDP_RPCH": { "LAO": { "2024": 4.3, "2025": 4.8, ... "2031": 3 }, ...all countries } } }
-//   (the IMF API returns ALL countries even when asking for LAO - we pick "LAO")
+//   IMF DataMapper: { "values": { "NGDP_RPCH": { "LAO": { "2024": 4.3, ... "2031": 3 }, ...all countries } } }
+//   IMF SDMX (JSON): { structure: { dimensions: { series: [..., {id:"COICOP_1999", values:[{id:"CP01", name:"Food ..."}]}],
+//                      observation: [{ id:"TIME_PERIOD", values:[{id:"2026-M08"}, ...] }] } },
+//                      dataSets: [ { series: { "0:0:3:0:0": { observations: { "0": ["7.7", ...] } } } } ] }
 // One failing indicator keeps its old values (marked stale); the others still update.
 
 const path = require("path");
-const { DATA_DIR, fetchJson, fetchText, parseAnyNumber, parseCsv, readJson, writeIfChanged } = require("./lib/common");
-const { manualUrl, parseSheetMonth } = require("./lib/manual");
+const { DATA_DIR, HISTORY_DIR, fetchJson, parseAnyNumber, readJson, writeIfChanged } = require("./lib/common");
 
 const OUT_FILE = path.join(DATA_DIR, "economy.json");
 const FIRST_YEAR = 2000;
+const FIRST_MONTH = "2015-01";
+const CATEGORY_FIRST_MONTH = "2019-01";
+const IMF_SDMX = "https://api.imf.org/external/sdmx/2.1/data/";
 
 const SOURCES = {
   worldbank: {
@@ -28,12 +34,25 @@ const SOURCES = {
     source_url: "https://www.imf.org/external/datamapper/profile/LAO",
     license: "IMF - free to use with attribution",
   },
-  cpi_manual: {
-    source_name: "Lao Statistics Bureau (manual entry)",
-    source_url: "https://laosis.lsb.gov.la",
-    license: "Numbers typed in by the owner",
+  imf_sdmx: {
+    source_name: "IMF Data (CPI, Primary Commodity Prices)",
+    source_url: "https://data.imf.org",
+    license: "IMF - free to use with attribution",
+  },
+  bol: {
+    source_name: "Bank of the Lao PDR (monthly average of daily rates)",
+    source_url: "https://www.bol.gov.la",
+    license: "Official rates via AllRatesToday mirror (CC BY 4.0)",
   },
 };
+
+// Monthly series from the IMF SDMX API. An empty key part ("LAO.CPI..") = every category at once.
+const MONTHLY = {
+  cpi_yoy: { key: "IMF.STA,CPI/LAO.CPI._T.YOY_PCH_PA_PT.M", unit: "%" }, // inflation vs same month last year
+  cpi_index: { key: "IMF.STA,CPI/LAO.CPI._T.IX.M", unit: "index" }, // price level (for "real" values)
+  gold_usd: { key: "IMF.RES,PCPS/G001.PGOLD.USD.M", unit: "USD per troy oz" }, // world gold, monthly average
+};
+const CPI_CATEGORIES_KEY = "IMF.STA,CPI/LAO.CPI..YOY_PCH_PA_PT.M";
 
 // id -> where to get it. "unit" is what the value means after "scale" is applied.
 const INDICATORS = {
@@ -74,30 +93,64 @@ async function fromImf(def) {
   return { values, source_updated: null };
 }
 
-// Monthly CPI (%, compared with the same month last year) from the Google Sheet.
-// CSV columns: 0 Timestamp | 1 Month | 2 CPI inflation % | 3 Note. Last entry for a month wins.
-async function cpiFromSheet(url) {
-  const rows = parseCsv(await fetchText(url));
-  const byMonth = new Map();
-  for (const [i, row] of rows.slice(1).entries()) {
-    try {
-      const month = parseSheetMonth(row[1]);
-      if (!month) throw new Error(`cannot read month "${row[1]}"`);
-      const value = parseAnyNumber(row[2], "CPI %");
-      if (value < -50 || value > 500) throw new Error(`CPI looks wrong: ${row[2]}`);
-      byMonth.set(month, round(value));
-    } catch (err) {
-      console.warn(`       cpi: skipped row ${i + 2}: ${err.message}`);
-    }
+// IMF SDMX -> list of { code, name, values: [["2026-08", 7.7], ...] } (one per series, e.g. per CPI category)
+async function fromImfSdmx(key) {
+  const data = await fetchJson(`${IMF_SDMX}${key}?startPeriod=${FIRST_MONTH}`);
+  const dims = data.structure && data.structure.dimensions;
+  const set = data.dataSets && data.dataSets[0];
+  if (!dims || !set || !set.series) throw new Error(`Unexpected IMF SDMX response for ${key}`);
+  const time = dims.observation[0].values;
+  const coicop = dims.series.findIndex((d) => d.id === "COICOP_1999");
+  return Object.entries(set.series).map(([seriesKey, s]) => {
+    const cat = coicop >= 0 ? dims.series[coicop].values[Number(seriesKey.split(":")[coicop])] : null;
+    const values = Object.entries(s.observations)
+      .map(([i, obs]) => {
+        const m = /^(\d{4})-M(\d{2})$/.exec(time[Number(i)].id); // "2026-M08" -> "2026-08"
+        if (!m || obs[0] === null) return null;
+        return [`${m[1]}-${m[2]}`, round(parseAnyNumber(obs[0], key))];
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1));
+    return { code: cat ? cat.id : null, name: cat ? cat.name : null, values };
+  });
+}
+
+// BOL mid rate (buy+sell)/2, averaged per month, from our own stored history (no download)
+function bolMonthly(cur) {
+  const rows = readJson(path.join(HISTORY_DIR, "bol.json"), []);
+  const byDay = new Map();
+  for (const r of rows) {
+    if (r.metric !== `${cur}_LAK_buy` && r.metric !== `${cur}_LAK_sell`) continue;
+    const d = byDay.get(r.source_date) || {};
+    d[r.metric.endsWith("buy") ? "buy" : "sell"] = r.value;
+    byDay.set(r.source_date, d);
   }
-  if (!byMonth.size) throw new Error("No valid CPI rows");
-  return [...byMonth.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  const byMonth = new Map();
+  for (const [day, { buy, sell }] of byDay) {
+    if (!buy || !sell) continue;
+    const m = byMonth.get(day.slice(0, 7)) || [];
+    m.push((buy + sell) / 2);
+    byMonth.set(day.slice(0, 7), m);
+  }
+  return [...byMonth.entries()]
+    .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+    .map(([month, list]) => [month, round(list.reduce((s, v) => s + v, 0) / list.length)]);
+}
+
+// Save one monthly series; on failure keep the old values and mark them stale
+function monthlyEntry(old, fields, values, now) {
+  const same = old && JSON.stringify(old.values) === JSON.stringify(values);
+  return { ...fields, values, updated_at: same ? old.updated_at : now, stale: false, last_error: null };
+}
+function monthlyFailure(old, fields, err, now) {
+  return { ...fields, values: [], ...(old || {}), stale: true, last_error: old && old.stale ? old.last_error : { message: err.message, at: now } };
 }
 
 async function main() {
-  const old = readJson(OUT_FILE, { indicators: {}, cpi_monthly: null });
+  const old = readJson(OUT_FILE, { indicators: {}, monthly: {} });
+  const oldMonthly = old.monthly || {};
   const now = new Date().toISOString();
-  const out = { sources: SOURCES, indicators: {}, cpi_monthly: null };
+  const out = { sources: SOURCES, indicators: {}, monthly: {} };
   let failed = 0;
 
   for (const [id, def] of Object.entries(INDICATORS)) {
@@ -126,28 +179,55 @@ async function main() {
     }
   }
 
-  // Monthly CPI (manual)
-  const cpiUrl = manualUrl("lao_cpi_csv_url", "LAO_CPI_CSV_URL");
-  const oldCpi = old.cpi_monthly;
-  if (!cpiUrl) {
-    out.cpi_monthly = { configured: false, values: [], stale: false, last_error: null };
-    console.log("[SKIP] cpi_monthly: no CSV link set in config/manual-sources.json");
-  } else {
+  // Monthly series (IMF SDMX)
+  for (const [id, def] of Object.entries(MONTHLY)) {
+    const fields = { source: "imf_sdmx", unit: def.unit };
     try {
-      const values = await cpiFromSheet(cpiUrl);
-      const same = oldCpi && JSON.stringify(oldCpi.values) === JSON.stringify(values);
-      out.cpi_monthly = { configured: true, unit: "%", values, updated_at: same ? oldCpi.updated_at : now, stale: false, last_error: null };
-      console.log(`[OK]   cpi_monthly: ${values.length} months`);
+      const [series] = await fromImfSdmx(def.key);
+      if (!series || series.values.length < 12) throw new Error("fewer than 12 months returned");
+      out.monthly[id] = monthlyEntry(oldMonthly[id], fields, series.values, now);
+      console.log(`[OK]   monthly.${id}: ${series.values.length} months (to ${series.values[series.values.length - 1][0]})`);
     } catch (err) {
       failed++;
-      console.error(`[FAIL] cpi_monthly: ${err.message}`);
-      out.cpi_monthly = { ...(oldCpi || { values: [] }), configured: true, stale: true, last_error: { message: err.message, at: now } };
+      console.error(`[FAIL] monthly.${id}: ${err.message}`);
+      out.monthly[id] = monthlyFailure(oldMonthly[id], fields, err, now);
     }
   }
 
-  writeIfChanged(OUT_FILE, JSON.stringify(out, null, 1) + "\n");
-  console.log(`\nDone: ${failed} failed. Wrote data/economy.json`);
-  if (failed === Object.keys(INDICATORS).length) process.exitCode = 1;
+  // CPI by category (CP01 food ... CP12), one request
+  try {
+    const list = (await fromImfSdmx(CPI_CATEGORIES_KEY)).filter((s) => /^CP\d{2}$/.test(s.code) && s.values.length);
+    if (list.length < 5) throw new Error(`only ${list.length} CPI categories returned`);
+    for (const s of list) {
+      const id = `cpi_cat_${s.code}`;
+      const recent = s.values.filter(([m]) => m >= CATEGORY_FIRST_MONTH); // categories: shorter history keeps the file small
+      out.monthly[id] = monthlyEntry(oldMonthly[id], { source: "imf_sdmx", unit: "%", name_en: s.name }, recent, now);
+    }
+    console.log(`[OK]   monthly.cpi_cat_*: ${list.length} categories`);
+  } catch (err) {
+    failed++;
+    console.error(`[FAIL] monthly.cpi_cat_*: ${err.message}`);
+    for (const [id, entry] of Object.entries(oldMonthly)) {
+      if (id.startsWith("cpi_cat_")) out.monthly[id] = monthlyFailure(entry, {}, err, now);
+    }
+  }
+
+  // BOL monthly mid rates from our own history
+  for (const cur of ["USD", "THB"]) {
+    const id = `bol_${cur.toLowerCase()}_mid`;
+    const values = bolMonthly(cur);
+    out.monthly[id] = values.length
+      ? monthlyEntry(oldMonthly[id], { source: "bol", unit: `LAK per ${cur}` }, values, now)
+      : monthlyFailure(oldMonthly[id], { source: "bol", unit: `LAK per ${cur}` }, new Error("no BOL history"), now);
+  }
+
+  // One series per line: small file for phones, still readable in git
+  const block = (obj) => "{\n" + Object.entries(obj).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(",\n") + "\n }";
+  const text = `{\n "sources": ${JSON.stringify(out.sources)},\n "indicators": ${block(out.indicators)},\n "monthly": ${block(out.monthly)}\n}\n`;
+  JSON.parse(text); // safety: must be valid JSON
+  writeIfChanged(OUT_FILE, text);
+  console.log(`\nDone: ${failed} failed. Wrote data/economy.json (${(text.length / 1024).toFixed(0)} KB)`);
+  if (failed >= Object.keys(INDICATORS).length) process.exitCode = 1;
 }
 
 main();

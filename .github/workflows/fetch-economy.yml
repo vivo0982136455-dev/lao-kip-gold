@@ -1,10 +1,11 @@
-# Lao economy data (World Bank, IMF, manual monthly CPI) - once a month.
+# Lao economy data (World Bank, IMF yearly + monthly CPI / gold) and WFP prices of everyday goods.
+# Weekly: IMF and WFP publish on different days each month, weekly keeps us at most ~7 days behind.
 name: Fetch economy data
 
 on:
   schedule:
-    - cron: "0 3 2 * *"      # 2nd day of every month, 03:00 UTC (10:00 Vientiane)
-  workflow_dispatch:         # "Run workflow" button (use it after typing a new CPI number)
+    - cron: "0 3 * * 1"      # every Monday, 03:00 UTC (10:00 Vientiane)
+  workflow_dispatch:         # "Run workflow" button
 
 permissions:
   contents: write
@@ -26,6 +27,11 @@ jobs:
 
       - name: Fetch economy data
         run: node scripts/fetch-economy.js
+
+      # "if: always()" = prices still update even if one economy source failed
+      - name: Fetch prices of everyday goods (WFP)
+        if: always()
+        run: node scripts/fetch-prices.js
 
       - name: Commit changes
         if: always()

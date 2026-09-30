@@ -23,6 +23,12 @@
   --kind-estimated: #199e70; /* aqua   = our estimate */
   --kind-shop: #9085e9; /* violet = shop price typed in by owner */
   --kind-bank: #e0609a; /* pink   = commercial bank / bullion bank (LBB, BCEL) */
+  /* Categorical line colours for charts where every line is the same kind (Cost of living page) */
+  --cat-1: #3987e5;
+  --cat-2: #e0609a;
+  --cat-3: #d95926;
+  --cat-4: #1baf7a;
+  --cat-5: #9085e9;
   --ok: #0ca30c;
   --ok-bg: rgba(12, 163, 12, 0.14);
   --warn-text: #fab219;
@@ -53,6 +59,11 @@
   --kind-estimated: #1baf7a;
   --kind-shop: #4a3aa7;
   --kind-bank: #c2336f;
+  --cat-1: #2a78d6;
+  --cat-2: #c2336f;
+  --cat-3: #eb6834;
+  --cat-4: #13875c;
+  --cat-5: #4a3aa7;
   --ok: #006300;
   --ok-bg: rgba(12, 163, 12, 0.12);
   --warn-text: #7a5200;
@@ -231,6 +242,20 @@ td .sub { color: var(--muted); font-size: 0.74rem; margin-left: 4px; }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--surface-2); }
 tr[aria-selected="true"] td { background: var(--accent-soft); }
+/* Horizontal bar inside a table cell (inflation by category). Length is measured from 0. */
+.bar-cell { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.bar-track { width: 90px; height: 8px; border-radius: 4px; background: var(--grid); flex: none; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; background: var(--kind-official); }
+.neg-text { color: var(--bad-text); }
+/* Tables with long first-column names (Cost of living page): let the name wrap so the numbers fit a phone */
+.wrap-first td:first-child { white-space: normal; min-width: 6.5em; }
+.wrap-first th { white-space: normal; vertical-align: bottom; }
+.wrap-first td .sub-line { display: block; color: var(--muted); font-size: 0.7rem; }
+@media (max-width: 480px) {
+  .bar-track { width: 44px; }
+  .wrap-first th, .wrap-first td { padding-left: 4px; padding-right: 4px; }
+  .wrap-first table { font-size: 0.8rem; }
+}
 .ok-text { color: var(--ok); font-weight: 600; }
 .bad-text { color: var(--bad-text); font-weight: 600; }
 

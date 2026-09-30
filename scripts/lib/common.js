@@ -22,7 +22,9 @@ const RETRY_WAIT_MS = 3000; // wait 3 seconds before the one retry
 
 // Download a URL as text. Tries twice before giving up.
 // A value that is not http(s) is read as a local file (used for testing with sample files).
-async function fetchText(url) {
+// extraHeaders: e.g. { Accept: "application/json" } (the IMF API answers XML without it)
+// timeoutMs: raise it for big files (the WFP price file is ~7 MB)
+async function fetchText(url, extraHeaders = {}, timeoutMs = TIMEOUT_MS) {
   if (!/^https?:\/\//i.test(url)) {
     const file = path.isAbsolute(url) ? url : path.join(ROOT_DIR, url);
     try {
@@ -35,8 +37,8 @@ async function fetchText(url) {
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const res = await fetch(url, {
-        headers: { "User-Agent": "lao-kip-gold-dashboard (personal, non-commercial)" },
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        headers: { "User-Agent": "lao-kip-gold-dashboard (personal, non-commercial)", ...extraHeaders },
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
       return await res.text();
@@ -49,8 +51,8 @@ async function fetchText(url) {
 }
 
 // Download a URL and parse it as JSON.
-async function fetchJson(url) {
-  const text = await fetchText(url);
+async function fetchJson(url, extraHeaders = {}) {
+  const text = await fetchText(url, { Accept: "application/json", ...extraHeaders });
   try {
     return JSON.parse(text);
   } catch {

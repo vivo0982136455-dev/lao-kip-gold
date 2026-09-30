@@ -14,7 +14,7 @@ export function el(tag, className, text) {
 // ---------- Stale check ----------
 // How old (in hours) a source's newest data may be before we show "stale data".
 // Generous on purpose: BOL and gold markets do not publish on weekends/holidays.
-const MAX_AGE_HOURS = { bol: 5 * 24, "gold-world": 3 * 24, "gold-thai": 3 * 24, "fx-market": 2 * 24, "gold-lbb": 4 * 24, bcel: 4 * 24, "gold-lao-manual": 4 * 24 };
+const MAX_AGE_HOURS = { bol: 5 * 24, "gold-world": 3 * 24, "gold-thai": 3 * 24, "fx-market": 2 * 24, "gold-lbb": 4 * 24, bcel: 4 * 24, "bcel-deposit": 4 * 24,"gold-lao-manual": 4 * 24 };
 
 // Returns "ok" | "stale" | "error" | "not_configured"
 export function sourceStatus(sourceId, summary) {

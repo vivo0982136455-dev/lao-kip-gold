@@ -1,7 +1,7 @@
 // Page 4: Lao economy (Phase 4). Yearly data: World Bank (actual) + IMF (forecast, dashed line).
-// Monthly CPI comes from the owner's Google Sheet.
+// Monthly CPI comes from the IMF (automatic since 2026-09-30).
 
-import { el, card, sectionTitle, statTile, emptyState } from "../ui.js";
+import { el, sectionTitle, statTile, emptyState } from "../ui.js";
 import { formatNumber } from "../format.js";
 import { chartCard, mountCharts } from "../charts.js";
 
@@ -108,33 +108,29 @@ export function render(view, ctx) {
     grid.append(chartCard({ title: t[def.title], subtitle, labels: s.years.map(String), series, unit: s.unit, t, firstColTitle: t.year }));
   }
 
-  // Monthly CPI (manual)
-  const cpi = eco.cpi_monthly;
-  if (cpi && cpi.configured && cpi.values.length) {
-    const labels = cpi.values.map(([m]) => m);
+  // Monthly CPI (IMF, automatic) - last 5 years; the Cost of living page has the details
+  const cpi = eco.monthly && eco.monthly.cpi_yoy;
+  if (cpi && cpi.values.length) {
+    const recent = cpi.values.slice(-60);
+    const labels = recent.map(([m]) => m);
     grid.append(
       chartCard({
         title: t.eco_cpi_monthly,
-        subtitle: `${t.source}: ${t.cpi_source} · ${t.latest_month} ${labels[labels.length - 1]}${cpi.stale ? " · ⚠ " + t.stale_badge : ""}`,
+        subtitle: `${t.source}: IMF · ${t.latest_month} ${labels[labels.length - 1]}${cpi.stale ? " · ⚠ " + t.stale_badge : ""}`,
         labels,
-        series: [{ label: t.eco_cpi_monthly, kind: "official", values: cpi.values.map(([, v]) => v) }],
+        series: [{ label: t.eco_cpi_monthly, kind: "official", values: recent.map(([, v]) => v) }],
         unit: "%",
         t,
         firstColTitle: t.month,
       })
     );
-  } else {
-    const c = card(null);
-    c.append(el("h3", "", t.eco_cpi_monthly));
-    c.append(emptyState(t.cpi_not_setup_title, t.cpi_not_setup_text));
-    grid.append(c);
   }
   view.append(grid);
 
   // Sources
   const src = el("p", "note");
   src.style.marginTop = "12px";
-  src.textContent = `${t.footer_sources}: ` + Object.values(eco.sources).map((s) => `${s.source_name} (${s.license})`).join(" · ");
+  src.textContent = `${t.footer_sources}: ` + Object.values(eco.sources).filter((s) => s.source_name).map((s) => `${s.source_name} (${s.license})`).join(" · ");
   view.append(src);
   mountCharts(view);
 }

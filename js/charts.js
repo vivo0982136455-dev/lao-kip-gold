@@ -54,7 +54,8 @@ const crosshair = {
 function drawChart(canvas, { labels, series, unit, t }) {
   const surface = cssVar("--surface");
   const datasets = series.map((s) => {
-    const color = cssVar("--kind-" + s.kind);
+    // s.color (e.g. "--cat-2") is for charts whose lines are all the SAME kind (inflation categories, savings)
+    const color = cssVar(s.color || "--kind-" + s.kind);
     const count = s.values.filter((v) => v !== null).length;
     return {
       label: s.label,

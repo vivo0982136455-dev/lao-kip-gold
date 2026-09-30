@@ -52,9 +52,11 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 5 | Lao shop gold price (Phouvong) | Manual entry: Google Form → Google Sheet published as CSV → fetched by Action | 1×/day | Owner enters by hand |
 | 6 | Macro (annual) | World Bank API `https://api.worldbank.org/v2/country/LAO/indicator/{CODE}?format=json` — e.g. NY.GDP.MKTP.CD, NY.GDP.MKTP.KD.ZG, FP.CPI.TOTL.ZG, BX.KLT.DINV.CD.WD, PA.NUS.FCRF | 1×/month | Free, no key |
 | 7 | Macro forecasts | IMF DataMapper `https://www.imf.org/external/datamapper/api/v1/{INDICATOR}/LAO` — e.g. NGDP_RPCH, PCPIPCH, BCA_NGDPD, GGXWDG_NGDP | 1×/month | Free, no key |
-| 8 | Lao monthly CPI / inflation | Lao Statistics Bureau (laosis.lsb.gov.la) — no API | 1×/month | Manual entry (same Google Sheet, separate tab) |
+| 8 | Lao monthly CPI / inflation (all items + 12 COICOP categories, index) + monthly world gold | IMF SDMX `https://api.imf.org/external/sdmx/2.1/data/IMF.STA,CPI/LAO.CPI..YOY_PCH_PA_PT.M` (send `Accept: application/json`), gold `IMF.RES,PCPS/G001.PGOLD.USD.M` | weekly | ✅ Verified 2026-09-30 (to Aug 2026). Replaced the manual CPI entry. |
 | 9 | **Real Lao gold price** — Lao Bullion Bank buy/sell (LAK per gram) | `https://laobullionbank.com/api/bullionmarkets/rategold` (+ `rategoldall` history since Aug 2025) — the JSON the LBB site itself reads | every 30 min (LBB updates 2–7×/business day) | ✅ Verified 2026-09-30. Undocumented → may change. Time is Vientiane despite "UTC" label. Replaces Phouvong as the premium basis. |
 | 10 | BCEL commercial bank rates USD/THB/CNY (note buy / sell) | `https://www.bcel.com.la/bcel/exchange-rate.html?lang=en` (HTML table) | every 30 min (published in daily "rounds") | ✅ Verified 2026-09-30. Label as BANK, separate from OFFICIAL (BOL) and MARKET. |
+| 11 | BCEL deposit interest rates (saving + fixed 3–60 months, LAK/USD/THB/CNY) | box on `https://www.bcel.com.la/bcel/home.html?lang=en` | daily | ✅ Verified 2026-09-30 |
+| 12 | Everyday prices: WFP market prices (12 items × 17 provinces, monthly) + WFP real-time national fuel estimate | HDX packages `wfp-food-prices-for-lao-people-s-democratic-republic`, `lao-people-s-democratic-republic-real-time-prices` (links looked up via CKAN `package_show`) | weekly | ✅ Verified 2026-09-30. Market data ~2–3 months late; some provinces carry old numbers forward. |
 
 Checked and rejected (2026-09-30): LDB `kpv_gold` (Phouvong prices, API returns 401 = needs login → not allowed);
 talupa / goldrate24 / goldpricez / bullion-rates / livepriceofgold (only world spot × FX, nothing new);
@@ -116,6 +118,11 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Daily: store the hint (▲▼▬) made before BOL publishes; when BOL publishes, record whether it was right.
 - Show accuracy % over last 30 days, for kip direction and for gold estimate error (%).
 - Acceptance: accuracy numbers are computed only from stored history, never hard-coded.
+
+### Phase 6 — Cost of living & savings page (added 2026-09-30, owner request)
+- Page `#/living`: monthly inflation (all + categories, ranked), everyday prices by province vs national average (+ fuel estimate),
+  "1,000,000 kip kept as kip / USD / THB / gold" before and after inflation (1 / 3 / 5 years), BCEL deposit rates vs inflation (real rate).
+- Rules: everything computed from stored data; labelled as PAST results, never a forecast or investment advice.
 
 ---
 

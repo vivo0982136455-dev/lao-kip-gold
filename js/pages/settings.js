@@ -38,13 +38,17 @@ function statusRows(summary, economy, hints, t) {
       if (bad && bad.last_error) name.append(el("div", "error-text", bad.last_error.message));
       rows.push([name, kindChip("official", t), statusBadge(bad ? "error" : "ok", t), `${t.year} ${newestYear}`]);
     }
-    const cpi = economy.cpi_monthly;
-    const name = el("div");
-    name.append(sourceLink(economy.sources.cpi_manual));
-    const status = !cpi || !cpi.configured ? "not_configured" : cpi.stale ? "error" : "ok";
-    if (cpi && cpi.stale && cpi.last_error) name.append(el("div", "error-text", cpi.last_error.message));
-    const last = cpi && cpi.values.length ? cpi.values[cpi.values.length - 1][0] : "—";
-    rows.push([name, kindChip("official", t), statusBadge(status, t), last]);
+    // Monthly series: IMF (CPI, gold) - newest month of monthly inflation
+    const monthly = Object.values(economy.monthly || {}).filter((s) => s.source === "imf_sdmx");
+    if (monthly.length && economy.sources.imf_sdmx) {
+      const bad = monthly.find((s) => s.stale);
+      const name = el("div");
+      name.append(sourceLink(economy.sources.imf_sdmx));
+      if (bad && bad.last_error) name.append(el("div", "error-text", bad.last_error.message));
+      const cpi = economy.monthly.cpi_yoy;
+      const last = cpi && cpi.values.length ? cpi.values[cpi.values.length - 1][0] : "—";
+      rows.push([name, kindChip("official", t), statusBadge(bad ? "error" : "ok", t), `${t.month} ${last}`]);
+    }
   }
   const n = hints && hints.hints ? hints.hints.length : 0;
   rows.push([t.forecast_store, kindChip("estimated", t), statusBadge(hints ? "ok" : "stale", t), `${n} ${t.hints_stored}`]);
