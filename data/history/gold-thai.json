@@ -6,5 +6,9 @@
 {"source":"gold-thai","metric":"bar_buy","value":66100,"unit":"THB per baht-weight","fetched_at":"2026-09-30T02:12:31.982Z","source_date":"2026-09-30T02:00:00.000Z"},
 {"source":"gold-thai","metric":"bar_sell","value":66300,"unit":"THB per baht-weight","fetched_at":"2026-09-30T02:12:31.982Z","source_date":"2026-09-30T02:00:00.000Z"},
 {"source":"gold-thai","metric":"ornament_buy","value":64778.68,"unit":"THB per baht-weight","fetched_at":"2026-09-30T02:12:31.982Z","source_date":"2026-09-30T02:00:00.000Z"},
-{"source":"gold-thai","metric":"ornament_sell","value":67100,"unit":"THB per baht-weight","fetched_at":"2026-09-30T02:12:31.982Z","source_date":"2026-09-30T02:00:00.000Z"}
+{"source":"gold-thai","metric":"ornament_sell","value":67100,"unit":"THB per baht-weight","fetched_at":"2026-09-30T02:12:31.982Z","source_date":"2026-09-30T02:00:00.000Z"},
+{"source":"gold-thai","metric":"bar_buy","value":66450,"unit":"THB per baht-weight","fetched_at":"2026-09-30T08:45:31.601Z","source_date":"2026-09-30T08:20:00.000Z"},
+{"source":"gold-thai","metric":"bar_sell","value":66650,"unit":"THB per baht-weight","fetched_at":"2026-09-30T08:45:31.601Z","source_date":"2026-09-30T08:20:00.000Z"},
+{"source":"gold-thai","metric":"ornament_buy","value":65127.36,"unit":"THB per baht-weight","fetched_at":"2026-09-30T08:45:31.601Z","source_date":"2026-09-30T08:20:00.000Z"},
+{"source":"gold-thai","metric":"ornament_sell","value":67450,"unit":"THB per baht-weight","fetched_at":"2026-09-30T08:45:31.601Z","source_date":"2026-09-30T08:20:00.000Z"}
 ]
