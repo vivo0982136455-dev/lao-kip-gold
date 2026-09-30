@@ -4,6 +4,7 @@
 //   calc.bol_<CUR>_LAK_mid  BOL mid rate (buy+sell)/2, 7 currencies, since 2021
 //   calc.lbb_sell_baht / calc.lbb_buy_baht  Lao Bullion Bank per Lao baht (15 g), since Aug 2025
 //   gold-world.XAU_USD / calc.gold_world_lak  world gold (IMF monthly since 2015 + our recent daily prices)
+//   silver-world.XAG_USD / calc.silver_world_lak_kg  world silver, the same way (LAK per kg)
 // Weekly point = last value of the week, labelled with the Monday that starts the week (never a future date).
 // Usage: node scripts/build-long.js   (fetch-all.js also runs it)
 
@@ -66,6 +67,18 @@ function main() {
   const goldUsd = new Map(monthlyGold.map(([m, v]) => [weekStart(`${m}-15`), round(v)]).filter(([w]) => w < firstRecentWeek));
   for (const [w, v] of weekly(recentGold, (r) => r.value)) goldUsd.set(w, v);
   if (goldUsd.size) metrics["gold-world.XAU_USD"] = [...goldUsd.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  // World silver the same way: IMF monthly + our recent daily prices; and LAK per kg (× BOL USD mid)
+  const monthlySilver = eco && eco.monthly && eco.monthly.silver_usd ? eco.monthly.silver_usd.values : [];
+  const recentSilver = readJson(path.join(HISTORY_DIR, "silver-world.json"), []).filter((r) => r.metric === "XAG_USD");
+  const firstSilverWeek = recentSilver.length ? weekStart(localDay(recentSilver[0].source_date)) : "9999";
+  const silverUsd = new Map(monthlySilver.map(([m, v]) => [weekStart(`${m}-15`), round(v)]).filter(([w]) => w < firstSilverWeek));
+  for (const [w, v] of weekly(recentSilver, (r) => r.value)) silverUsd.set(w, v);
+  if (silverUsd.size) metrics["silver-world.XAG_USD"] = [...silverUsd.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  const silverLak = monthlySilver
+    .filter(([m]) => bolUsdMonthly.has(m) && weekStart(`${m}-15`) < firstSilverWeek)
+    .map(([m, v]) => [weekStart(`${m}-15`), round(v * (1000 / 31.1035) * bolUsdMonthly.get(m))]);
+  if (silverLak.length) metrics["calc.silver_world_lak_kg"] = silverLak;
+
   // Same, in LAK per Thai baht-weight (world gold × BOL USD mid), like calc.gold_world_lak in the summary
   const goldLak = monthlyGold
     .filter(([m]) => bolUsdMonthly.has(m) && weekStart(`${m}-15`) < firstRecentWeek)

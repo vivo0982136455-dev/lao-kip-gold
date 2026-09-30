@@ -5,6 +5,7 @@
 const SOURCES = [
   require("./fetch-bol"),
   require("./fetch-gold-world"),
+  require("./fetch-silver-world"),
   require("./fetch-gold-thai"),
   require("./fetch-fx-market"),
   require("./fetch-gold-lbb"),

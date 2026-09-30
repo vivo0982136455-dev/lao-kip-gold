@@ -332,7 +332,12 @@ export function dailyChartCard({ title, subtitle, summary, seriesDefs, rangeDays
       .map((s) => {
         const fromLong = longData.metrics[s.longId || s.metric];
         const daily = s.daily || (summary.metrics[s.metric] && summary.metrics[s.metric].daily);
-        const points = fromLong || (daily ? toWeekly(daily) : null);
+        let points = fromLong || (daily ? toWeekly(daily) : null);
+        // The long file can end earlier (e.g. monthly IMF values): add the newer weeks from the daily summary
+        if (fromLong && daily) {
+          const lastLong = fromLong[fromLong.length - 1][0];
+          points = [...fromLong, ...toWeekly(daily).filter(([w]) => w > lastLong)];
+        }
         return points ? { s, points } : null;
       })
       .filter(Boolean);

@@ -12,7 +12,7 @@
   "nav_group_system": "ระบบ",
   "page_overview": "แดชบอร์ด",
   "page_rates": "อัตราแลกเปลี่ยน",
-  "page_gold": "ทองคำ",
+  "page_gold": "ทองคำ & เงิน",
   "page_economy": "เศรษฐกิจลาว",
   "page_forecast": "พยากรณ์ & ความแม่นยำ",
   "page_settings": "ข้อมูล & ตั้งค่า",
@@ -353,5 +353,24 @@
   "col_bar_vs_lbb": "แท่ง vs LBB",
 
   "unit_million_lak": "ล้านกีบ",
+  "silver_title": "เงิน (Silver)",
+  "card_silver_world": "เงินโลก (Spot)",
+  "row_xag_usd_oz": "USD / ออนซ์",
+  "row_silver_lak_kg": "กีบ / 1 กิโล",
+  "note_silver_world": "แปลงเป็นกีบ: USD/ออนซ์ × 32.1507 × USD→LAK ตลาด (เงินบริสุทธิ์ ราคาโลก)",
+  "card_silver_pml": "ร้านเงิน PML (จากรูป · ไม่บังคับ)",
+  "row_pml_sell": "PML ขาย (1 กิโล)",
+  "row_pml_buy": "PML รับซื้อ (1 กิโล)",
+  "silver_pml_empty_title": "ยังไม่มีราคาเงิน PML",
+  "silver_pml_empty": "เพิ่มคำถามราคาเงิน 2 ข้อต่อท้ายฟอร์ม แล้วกด \"เลือกรูป\" ด้านบนกับรูปราคาเงินของ PML (ไม่บังคับ)",
+  "pml_vs_world": "เงินโลก (กีบ/กิโล)",
+  "shop_minus_world": "PML − ราคาโลก",
+  "note_silver_pml": "ส่วนต่างจากราคาโลก = ค่าหลอม ค่าขนส่ง ภาษี และกำไรร้าน",
+  "chart_silver_lak": "เงิน (กีบต่อ 1 กิโล)",
+  "chart_silver_usd": "เงินโลก (USD ต่อออนซ์)",
+  "series_silver_world_lak": "เงินโลก แปลงเป็นกีบ",
+  "series_silver_world": "เงินโลก (ตลาด)",
+  "series_pml_sell": "PML ราคาขาย",
+
   "months": ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
 }

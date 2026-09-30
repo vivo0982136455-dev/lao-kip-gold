@@ -5,16 +5,16 @@
   "license": "Free public API, no key",
   "kind": "market",
   "stale": false,
-  "last_success_at": "2026-09-30T15:32:29.496Z",
+  "last_success_at": "2026-09-30T15:43:34.634Z",
   "last_error": null,
   "records": [
     {
       "source": "gold-world",
       "metric": "XAU_USD",
-      "value": 4152.48,
+      "value": 4156.95,
       "unit": "USD per troy oz",
-      "fetched_at": "2026-09-30T15:32:28.986Z",
-      "source_date": "2026-09-30T15:32:28.769Z"
+      "fetched_at": "2026-09-30T15:43:32.202Z",
+      "source_date": "2026-09-30T15:43:33.900Z"
     }
   ]
 }

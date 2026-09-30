@@ -9,13 +9,14 @@ const path = require("path");
 const { DATA_DIR, LATEST_DIR, HISTORY_DIR, readJson } = require("./lib/common");
 
 const DAYS_KEPT = 100; // charts show up to 90 days; keep a few extra
-const SOURCES = ["bol", "gold-world", "gold-thai", "fx-market", "gold-lbb", "bcel", "bcel-deposit", "gold-lao-manual", "silver-lao-manual"];
+const SOURCES = ["bol", "gold-world", "silver-world", "gold-thai", "fx-market", "gold-lbb", "bcel", "bcel-deposit", "gold-lao-manual", "silver-lao-manual"];
 const OUT_FILE = path.join(DATA_DIR, "summary.json");
 
 // Gold units
 const GRAMS_PER_BAHT = 15.244; // Thai baht-weight (Thai association prices)
 const GRAMS_PER_LAO_BAHT = 15; // Lao "baht" (LBB sells 15 g and 7.5 g bars = 1 and ½ baht)
 const GRAMS_PER_TROY_OZ = 31.1035;
+const TROY_OZ_PER_KG = 1000 / GRAMS_PER_TROY_OZ; // 32.1507
 
 // ---------- Day helpers (all days are Asia/Vientiane, UTC+7, no daylight saving) ----------
 
@@ -205,6 +206,14 @@ function main() {
     unit: "LAK per baht-weight",
     inputs: ["gold-world.XAU_USD", "fx-market.USD_LAK"],
     formula: (xau, usdLak) => xau * (GRAMS_PER_BAHT / GRAMS_PER_TROY_OZ) * usdLak,
+  });
+
+  // World silver in LAK per kg = XAG/USD × 32.1507 × USD→LAK (market). PML's shop price is per kg too.
+  derive("calc.silver_world_lak_kg", {
+    kind: "market",
+    unit: "LAK per kg",
+    inputs: ["silver-world.XAG_USD", "fx-market.USD_LAK"],
+    formula: (xag, usdLak) => xag * TROY_OZ_PER_KG * usdLak,
   });
 
   // Estimated Lao gold = Thai association bar price (THB per baht-weight) × THB→LAK (market)

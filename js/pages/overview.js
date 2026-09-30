@@ -6,7 +6,7 @@ import { todayHintCard } from "./forecast.js";
 
 // Sources that raise the "not updating" alert. The Phouvong form is optional, so it never alerts here
 // (its own card and the Settings page still show its status).
-const SOURCE_NAMES = ["bol", "gold-world", "gold-thai", "fx-market", "gold-lbb", "bcel"];
+const SOURCE_NAMES = ["bol", "gold-world", "silver-world", "gold-thai", "fx-market", "gold-lbb", "bcel"];
 
 export function render(view, ctx) {
   const { t, summary, hints } = ctx;

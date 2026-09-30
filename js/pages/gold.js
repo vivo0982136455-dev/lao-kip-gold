@@ -1,4 +1,5 @@
-// Page 3: Gold - real Lao price (Lao Bullion Bank), our estimate, the optional Phouvong price, Thai and world gold.
+// Page 3: Gold & silver - real Lao gold price (Lao Bullion Bank), our estimate, the optional Phouvong price,
+// Thai and world gold; world silver + the optional PML shop silver price.
 
 import { el, card, cardHead, metricCard, sectionTitle, emptyState, table, rangeButtons, valueRow, cardFoot, sourceStatus, pctPill } from "../ui.js";
 import { formatNumber, formatPct, formatDate } from "../format.js";
@@ -68,6 +69,39 @@ function phouvongCard(summary, t) {
   c.append(prem);
   c.append(el("p", "note", t.note_premium));
   c.append(cardFoot(["gold-lao-manual.sell", "gold-lao-manual.bar_sell"].filter((id) => summary.metrics[id]), summary, t));
+  return c;
+}
+
+// Silver: PML shop price per kg (optional, from the form) compared with the world price in LAK per kg
+function silverShopCard(summary, t) {
+  const c = card("shop");
+  const m = (id) => summary.metrics["silver-lao-manual." + id];
+  c.append(cardHead(t.card_silver_pml, "shop", false, t));
+  if (!m("sell") && !m("buy")) {
+    c.append(emptyState(t.silver_pml_empty_title, t.silver_pml_empty));
+    return c;
+  }
+  if (m("sell")) c.append(valueRow(t.row_pml_sell, m("sell"), t));
+  if (m("buy")) c.append(valueRow(t.row_pml_buy, m("buy"), t));
+  const sell = m("sell");
+  const world = sell ? onDay(summary, "calc.silver_world_lak_kg", sell.latest.source_date) : undefined;
+  if (sell) {
+    const row = el("div", "row");
+    row.append(el("span", "row-label", `${t.pml_vs_world} (${formatDate(sell.latest.source_date, t)})`));
+    const right = el("div", "row-right");
+    if (world === undefined) right.append(el("div", "change", t.not_enough_data));
+    else {
+      right.append(el("div", "value", formatNumber(world, "LAK")));
+      const diff = sell.latest.value - world;
+      const line = el("div", "change wrap");
+      line.append(el("span", "vs", `${t.shop_minus_world}: ${diff >= 0 ? "+" : "−"}${formatNumber(Math.abs(diff), "LAK")} LAK`), pctPill((diff / world) * 100));
+      right.append(line);
+    }
+    row.append(right);
+    c.append(row);
+  }
+  c.append(el("p", "note", t.note_silver_pml));
+  c.append(cardFoot(["silver-lao-manual.sell", "silver-lao-manual.buy"].filter((id) => summary.metrics[id]), summary, t));
   return c;
 }
 
@@ -175,6 +209,47 @@ export function render(view, ctx) {
     })
   );
   view.append(charts);
+
+  // Silver (world price automatic + PML shop price from the owner's form)
+  view.append(sectionTitle(t.silver_title));
+  const silver = el("div", "grid grid-2");
+  const silverCards = el("div", "stack");
+  silverCards.append(
+    metricCard(
+      {
+        title: "card_silver_world",
+        kind: "market",
+        note: "note_silver_world",
+        rows: [["row_xag_usd_oz", "silver-world.XAG_USD"], ["row_silver_lak_kg", "calc.silver_world_lak_kg"]],
+      },
+      summary,
+      t
+    ),
+    silverShopCard(summary, t)
+  );
+  const silverCharts = el("div", "stack");
+  silverCharts.append(
+    dailyChartCard({
+      title: t.chart_silver_lak,
+      summary,
+      rangeDays: ctx.range,
+      t,
+      unit: "LAK per kg",
+      seriesDefs: [
+        { metric: "calc.silver_world_lak_kg", label: t.series_silver_world_lak, kind: "market" },
+        { metric: "silver-lao-manual.sell", label: t.series_pml_sell, kind: "shop" },
+      ],
+    }),
+    dailyChartCard({
+      title: t.chart_silver_usd,
+      summary,
+      rangeDays: ctx.range,
+      t,
+      seriesDefs: [{ metric: "silver-world.XAG_USD", label: t.series_silver_world, kind: "market" }],
+    })
+  );
+  silver.append(silverCards, silverCharts);
+  view.append(silver);
 
   // Comparison table: every day with a Phouvong price. Bar vs LBB (both bars), jewellery vs our adjusted estimate.
   // Values in millions of LAK (46.26) with the unit in the title, so 6 columns fit a phone.

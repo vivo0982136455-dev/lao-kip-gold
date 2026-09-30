@@ -12,7 +12,7 @@
   "nav_group_system": "ລະບົບ",
   "page_overview": "ແດຊບອດ",
   "page_rates": "ອັດຕາແລກປ່ຽນ",
-  "page_gold": "ຄຳ",
+  "page_gold": "ຄຳ & ເງິນ",
   "page_economy": "ເສດຖະກິດລາວ",
   "page_forecast": "ຄາດຄະເນ & ຄວາມແມ່ນຍຳ",
   "page_settings": "ຂໍ້ມູນ & ຕັ້ງຄ່າ",
@@ -353,5 +353,24 @@
   "col_bar_vs_lbb": "ແທ່ງ vs LBB",
 
   "unit_million_lak": "ລ້ານກີບ",
+  "silver_title": "ເງິນ (Silver)",
+  "card_silver_world": "ເງິນໂລກ (Spot)",
+  "row_xag_usd_oz": "USD / ອອນ",
+  "row_silver_lak_kg": "ກີບ / 1 ກິໂລ",
+  "note_silver_world": "ປ່ຽນເປັນກີບ: USD/ອອນ × 32.1507 × USD→LAK ຕະຫຼາດ (ເງິນບໍລິສຸດ ລາຄາໂລກ)",
+  "card_silver_pml": "ຮ້ານເງິນ PML (ຈາກຮູບ · ບໍ່ບັງຄັບ)",
+  "row_pml_sell": "PML ຂາຍ (1 ກິໂລ)",
+  "row_pml_buy": "PML ຮັບຊື້ (1 ກິໂລ)",
+  "silver_pml_empty_title": "ຍັງບໍ່ມີລາຄາເງິນ PML",
+  "silver_pml_empty": "ເພີ່ມຄຳຖາມລາຄາເງິນ 2 ຂໍ້ຕໍ່ທ້າຍຟອມ ແລ້ວກົດ \"ເລືອກຮູບ\" ຂ້າງເທິງກັບຮູບລາຄາເງິນຂອງ PML (ບໍ່ບັງຄັບ)",
+  "pml_vs_world": "ເງິນໂລກ (ກີບ/ກິໂລ)",
+  "shop_minus_world": "PML − ລາຄາໂລກ",
+  "note_silver_pml": "ສ່ວນຕ່າງຈາກລາຄາໂລກ = ຄ່າຫຼອມ ຄ່າຂົນສົ່ງ ພາສີ ແລະ ກຳໄລຮ້ານ",
+  "chart_silver_lak": "ເງິນ (ກີບຕໍ່ 1 ກິໂລ)",
+  "chart_silver_usd": "ເງິນໂລກ (USD ຕໍ່ອອນ)",
+  "series_silver_world_lak": "ເງິນໂລກ ປ່ຽນເປັນກີບ",
+  "series_silver_world": "ເງິນໂລກ (ຕະຫຼາດ)",
+  "series_pml_sell": "PML ລາຄາຂາຍ",
+
   "months": ["ມ.ກ.", "ກ.ພ.", "ມ.ນ.", "ມ.ສ.", "ພ.ພ.", "ມິ.ຖ.", "ກ.ລ.", "ສ.ຫ.", "ກ.ຍ.", "ຕ.ລ.", "ພ.ຈ.", "ທ.ວ."]
 }

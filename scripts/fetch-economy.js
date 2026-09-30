@@ -51,6 +51,7 @@ const MONTHLY = {
   cpi_yoy: { key: "IMF.STA,CPI/LAO.CPI._T.YOY_PCH_PA_PT.M", unit: "%" }, // inflation vs same month last year
   cpi_index: { key: "IMF.STA,CPI/LAO.CPI._T.IX.M", unit: "index" }, // price level (for "real" values)
   gold_usd: { key: "IMF.RES,PCPS/G001.PGOLD.USD.M", unit: "USD per troy oz" }, // world gold, monthly average
+  silver_usd: { key: "IMF.RES,PCPS/G001.PSILVER.USD.M", unit: "USD per troy oz" }, // world silver, monthly average
 };
 const CPI_CATEGORIES_KEY = "IMF.STA,CPI/LAO.CPI..YOY_PCH_PA_PT.M";
 
