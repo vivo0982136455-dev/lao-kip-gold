@@ -9,7 +9,7 @@ const path = require("path");
 const { DATA_DIR, LATEST_DIR, HISTORY_DIR, readJson } = require("./lib/common");
 
 const DAYS_KEPT = 100; // charts show up to 90 days; keep a few extra
-const SOURCES = ["bol", "gold-world", "silver-world", "gold-thai", "fx-market", "gold-lbb", "bcel", "bcel-deposit", "gold-lao-manual", "silver-lao-manual"];
+const SOURCES = ["bol", "gold-world", "silver-world", "gold-thai", "fx-market", "fuel-thai", "gold-lbb", "bcel", "bcel-deposit", "gold-lao-manual", "silver-lao-manual"];
 const OUT_FILE = path.join(DATA_DIR, "summary.json");
 
 // Gold units
@@ -215,6 +215,16 @@ function main() {
     inputs: ["silver-world.XAG_USD", "fx-market.USD_LAK"],
     formula: (xag, usdLak) => xag * TROY_OZ_PER_KG * usdLak,
   });
+
+  // Thai fuel in LAK per litre (× THB→LAK market) - compared with fuel prices in Laos
+  for (const fuel of ["diesel", "gasohol95"]) {
+    derive(`calc.fuel_thai_${fuel}_lak`, {
+      kind: "market",
+      unit: "LAK per litre",
+      inputs: [`fuel-thai.${fuel}`, "fx-market.THB_LAK"],
+      formula: (thb, thbLak) => thb * thbLak,
+    });
+  }
 
   // Estimated Lao gold = Thai association bar price (THB per baht-weight) × THB→LAK (market)
   for (const side of ["sell", "buy"]) {

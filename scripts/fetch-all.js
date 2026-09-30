@@ -8,6 +8,7 @@ const SOURCES = [
   require("./fetch-silver-world"),
   require("./fetch-gold-thai"),
   require("./fetch-fx-market"),
+  require("./fetch-fuel-thai"),
   require("./fetch-gold-lbb"),
   require("./fetch-bcel"),
   require("./fetch-bcel-deposit"),

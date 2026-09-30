@@ -52,6 +52,8 @@ const MONTHLY = {
   cpi_index: { key: "IMF.STA,CPI/LAO.CPI._T.IX.M", unit: "index" }, // price level (for "real" values)
   gold_usd: { key: "IMF.RES,PCPS/G001.PGOLD.USD.M", unit: "USD per troy oz" }, // world gold, monthly average
   silver_usd: { key: "IMF.RES,PCPS/G001.PSILVER.USD.M", unit: "USD per troy oz" }, // world silver, monthly average
+  brent_usd: { key: "IMF.RES,PCPS/G001.POILBRE.USD.M", unit: "USD per barrel" }, // Brent crude oil, monthly average
+  tha_cpi_yoy: { key: "IMF.STA,CPI/THA.CPI._T.YOY_PCH_PA_PT.M", unit: "%" }, // Thailand inflation, for comparison
 };
 const CPI_CATEGORIES_KEY = "IMF.STA,CPI/LAO.CPI..YOY_PCH_PA_PT.M";
 
@@ -67,6 +69,9 @@ const INDICATORS = {
   "imf.PCPIPCH": { source: "imf", code: "PCPIPCH", unit: "%" },
   "imf.BCA_NGDPD": { source: "imf", code: "BCA_NGDPD", unit: "% of GDP" },
   "imf.GGXWDG_NGDP": { source: "imf", code: "GGXWDG_NGDP", unit: "% of GDP" },
+  // for comparison with Laos (Cost of living page): Thailand and the world average
+  "imf.PCPIPCH.THA": { source: "imf", code: "PCPIPCH", area: "THA", unit: "%" },
+  "imf.PCPIPCH.WORLD": { source: "imf", code: "PCPIPCH", area: "WEOWORLD", unit: "%" },
 };
 
 const round = (v) => Math.round(v * 1000) / 1000;
@@ -85,9 +90,10 @@ async function fromWorldBank(def) {
 }
 
 async function fromImf(def) {
-  const data = await fetchJson(`https://www.imf.org/external/datamapper/api/v1/${def.code}/LAO`);
-  const lao = data.values && data.values[def.code] && data.values[def.code].LAO;
-  if (!lao) throw new Error(`No LAO data in IMF response for ${def.code}`);
+  const area = def.area || "LAO";
+  const data = await fetchJson(`https://www.imf.org/external/datamapper/api/v1/${def.code}/${area}`);
+  const lao = data.values && data.values[def.code] && data.values[def.code][area];
+  if (!lao) throw new Error(`No ${area} data in IMF response for ${def.code}`);
   const values = Object.entries(lao)
     .filter(([year, v]) => Number(year) >= FIRST_YEAR && v !== null)
     .map(([year, v]) => [Number(year), round(parseAnyNumber(v, def.code) * (def.scale || 1))]);

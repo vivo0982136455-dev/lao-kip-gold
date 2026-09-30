@@ -17,7 +17,7 @@ concurrency:
 jobs:
   economy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +32,12 @@ jobs:
       - name: Fetch prices of everyday goods (WFP)
         if: always()
         run: node scripts/fetch-prices.js
+
+      # The Thai ministry price API is slow (~25 s per item); if it hangs, stop after 15 minutes and keep last week's prices
+      - name: Fetch Thai retail food prices (Ministry of Commerce)
+        if: always()
+        timeout-minutes: 15
+        run: node scripts/fetch-thai-prices.js
 
       - name: Commit changes
         if: always()

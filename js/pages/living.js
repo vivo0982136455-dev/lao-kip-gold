@@ -1,14 +1,18 @@
 // Page: Cost of living & savings.
+//   0) What you should know - short facts computed from the data (living-parts.js)
 //   1) Key numbers        - latest inflation, fastest-rising category, BCEL 12-month deposit, real interest
-//   2) Inflation          - monthly, all items + main categories (IMF), and every category ranked
-//   3) Everyday prices    - WFP market prices by province vs the national average (+ newest fuel estimate)
-//   4) 1,000,000 kip      - what it is worth today if kept as kip / USD / THB / gold, before and after inflation
-//   5) Deposit rates      - BCEL rates for every term, and the LAK rate after inflation
+//   2) Fuel               - Laos vs Thailand in kip, tomorrow's Thai price, trend vs world oil (living-parts.js)
+//   3) Inflation          - Laos vs Thailand, all items + main categories (IMF), and every category ranked
+//   4) Everyday prices    - WFP market prices by province vs the national average
+//   5) Monthly budget     - the same basket in Laos and Bangkok, editable (living-parts.js)
+//   6) 1,000,000 kip      - what it is worth today if kept as kip / USD / THB / gold, before and after inflation
+//   7) Deposit rates      - BCEL rates for every term, and the LAK rate after inflation
 // Everything is calculated here from stored files. It shows the PAST, it is not a forecast or advice.
 
 import { el, card, cardHead, sectionTitle, statTile, table, emptyState, pctPill } from "../ui.js";
 import { formatNumber, formatPct } from "../format.js";
 import { chartCard, mountCharts } from "../charts.js";
+import { monthText, monthShort, addMonths, lastOf, pct, nameTable, loadThai, factsBox, fuelSection, inflationCompare, budgetSection } from "./living-parts.js";
 
 const PERIODS = [1, 3, 5]; // years shown in charts / used for the savings comparison
 const MAIN_CATEGORIES = [
@@ -57,21 +61,12 @@ function loadPrices(rerender) {
     .finally(rerender);
 }
 
-// ---------- Small helpers ----------
-const monthText = (m, t) => `${t.months[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`; // "2026-08" -> "ส.ค. 2026"
-const monthShort = (m, t) => `${t.months[Number(m.slice(5, 7)) - 1]} ${m.slice(2, 4)}`; // "2026-08" -> "ส.ค. 26" (chart axis)
-const addMonths = (m, n) => {
-  const d = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + n, 1));
-  return d.toISOString().slice(0, 7);
-};
-const lastOf = (values) => (values && values.length ? values[values.length - 1] : null);
-const pct = (from, to) => ((to - from) / from) * 100;
-// Table whose first column (long names) may wrap, so the numbers still fit a phone screen
-const nameTable = (headers, rows) => {
-  const wrap = table(headers, rows);
-  wrap.classList.add("wrap-first");
-  return wrap;
-};
+// Name of the chosen place (national average or a province)
+function placeNameOf(t) {
+  if (!prices || !prices.market || market === prices.national_id) return t.living_national_avg;
+  const mk = prices.market.markets.find((x) => x.id === market);
+  return mk ? t.provinces[mk.province] || mk.province : t.living_national_avg;
+}
 
 function periodButtons(t, rerender) {
   const group = el("div", "segmented");
@@ -309,42 +304,9 @@ function pricesSection(ctx, view) {
 
   const grid = el("div", "grid grid-2");
   const right = el("div", "stack");
-  right.append(chart, fuelCard(ctx));
+  right.append(chart);
   grid.append(tableCard, right);
   view.append(grid);
-}
-
-// Newest national fuel prices (WFP model estimate - newer than the market survey)
-function fuelCard(ctx) {
-  const { t } = ctx;
-  const f = prices.fuel_estimate;
-  const c = card("estimated");
-  c.append(cardHead(t.living_fuel_title, "estimated", !!(f && f.stale), t));
-  if (!f || !f.values) {
-    c.append(el("p", "note", t.not_enough_data));
-    return c;
-  }
-  for (const id of ["diesel", "petrol"]) {
-    const list = f.values[id] || [];
-    const last = lastOf(list);
-    if (!last) continue;
-    const prev = list.length > 1 ? list[list.length - 2] : null;
-    const row = el("div", "row");
-    row.append(el("span", "row-label", `${t.items[id]} (${monthText(last[0], t)})`));
-    const right = el("div", "row-right");
-    const value = el("div", "value", formatNumber(last[1], "LAK"));
-    value.append(el("span", "unit", `LAK / ${t.units.L}`));
-    right.append(value);
-    if (prev) {
-      const line = el("div", "change");
-      line.append(pctPill(pct(prev[1], last[1]), { decimals: 1 }), el("span", "vs", `${t.change_vs} ${monthText(prev[0], t)}`));
-      right.append(line);
-    }
-    row.append(right);
-    c.append(row);
-  }
-  c.append(el("p", "note", t.living_fuel_note));
-  return c;
 }
 
 // ---------- 4) What 1,000,000 kip kept its value as ----------
@@ -459,19 +421,27 @@ export function render(view, ctx) {
     return;
   }
   loadPrices(ctx.rerender);
+  loadThai(ctx.rerender);
 
   view.append(el("p", "lead", t.living_lead));
   const filters = el("div", "filters");
   filters.append(periodButtons(t, ctx.rerender));
   view.append(filters);
+  const facts = factsBox(ctx, pricesState === "ok" ? prices : null, market);
+  if (facts) view.append(facts);
   view.append(keyNumbers(ctx));
+
+  fuelSection(ctx, pricesState === "ok" ? prices : null, years, view);
 
   view.append(sectionTitle(t.living_inflation_title));
   const infGrid = el("div", "grid grid-2");
+  const compare = inflationCompare(ctx, years);
+  if (compare) infGrid.append(compare);
   inflationSection(ctx, infGrid);
   view.append(infGrid);
 
   pricesSection(ctx, view);
+  if (pricesState === "ok") budgetSection(ctx, prices, market, placeNameOf(t), view);
   savingsSection(ctx, view);
   depositSection(ctx, view);
 

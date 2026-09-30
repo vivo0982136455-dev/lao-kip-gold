@@ -10,6 +10,7 @@ function decimalsFor(value, unit) {
   if (unit.startsWith("%")) return 1;
   if (unit === "USD m") return 0;
   if (unit === "ratio") return 4;
+  if (unit === "index") return 1; // start of the period = 100
   return 2;
 }
 
@@ -34,6 +35,7 @@ export function unitLabel(unit) {
 // Compact axis label: 43,750,027 -> "43.75 ล้าน"
 export function formatAxis(value, unit, t) {
   if (Math.abs(value) >= 1e6) return (value / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + " " + t.million;
+  if (unit === "index") return value.toLocaleString("en-US", { maximumFractionDigits: 1 }); // 200, 134.8
   return formatNumber(value, unit);
 }
 

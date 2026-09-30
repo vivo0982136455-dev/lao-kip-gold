@@ -51,8 +51,8 @@ async function fetchText(url, extraHeaders = {}, timeoutMs = TIMEOUT_MS) {
 }
 
 // Download a URL and parse it as JSON.
-async function fetchJson(url, extraHeaders = {}) {
-  const text = await fetchText(url, { Accept: "application/json", ...extraHeaders });
+async function fetchJson(url, extraHeaders = {}, timeoutMs = TIMEOUT_MS) {
+  const text = await fetchText(url, { Accept: "application/json", ...extraHeaders }, timeoutMs);
   try {
     return JSON.parse(text);
   } catch {

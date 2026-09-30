@@ -290,7 +290,7 @@ th, td { padding: 7px 6px; text-align: right; border-top: 1px solid var(--grid);
 th { font-weight: 600; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.02em; border-top: 0; border-bottom: 1px solid var(--grid); }
 /* Long tables: fixed height with the header row staying visible */
 .table-wrap.scroll-y { max-height: 420px; overflow-y: auto; }
-.table-wrap.scroll-y thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.table-wrap.scroll-y thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; white-space: normal; vertical-align: bottom; } /* long series names wrap instead of widening the table */
 th:first-child, td:first-child { text-align: left; }
 td .sub { color: var(--muted); font-size: 0.74rem; margin-left: 4px; }
 tr.clickable { cursor: pointer; }
@@ -382,6 +382,49 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .up-save-status { font-size: var(--fs-sm); font-weight: 600; color: var(--text-2); }
 .up-save-status.ok { color: var(--up); }
 .up-save-status.warn { color: var(--warn-text); }
+
+/* ---------- Cost of living v2: facts, budget ---------- */
+.facts-card { margin-bottom: 12px; }
+.facts { list-style: none; margin: 0; padding: 0; }
+.facts li {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0;
+  border-top: 1px solid var(--grid); font-size: 0.86rem; color: var(--text);
+}
+.facts li:first-child { border-top: 0; }
+.facts li > span:first-child { min-width: 0; }
+.facts li .delta { flex: none; }
+.budget-card { margin-top: 2px; }
+.budget-inputs { margin: 10px 0 6px; }
+.segmented.small-seg { display: flex; }
+.segmented.small-seg button { flex: 1; min-width: 0; min-height: 44px; }
+.budget-table th, .budget-table td { padding: 6px 3px; vertical-align: middle; }
+.budget-table td:first-child { min-width: 5.4em; }
+.budget-table td .sub-line { display: block; color: var(--muted); font-size: 0.7rem; }
+/* 16px text: phones do not zoom in when the box is tapped */
+.qty-input {
+  font: inherit; font-size: 16px; font-variant-numeric: tabular-nums; width: 3.1em; min-height: 34px; padding: 4px 5px; text-align: right;
+  border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); color-scheme: inherit;
+}
+.qty-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* no up/down arrows inside the small box (they hide the number on computers) */
+.qty-input { -moz-appearance: textfield; appearance: textfield; }
+.qty-input::-webkit-outer-spin-button, .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.budget-body { display: grid; gap: 4px; }
+@media (min-width: 1100px) {
+  .budget-body { grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); gap: 28px; align-items: start; }
+  .budget-side .budget-summary { margin-top: 0; }
+}
+.total-row td { font-weight: 650; border-top: 2px solid var(--border-strong); white-space: normal; }
+.budget-summary { margin-top: 8px; }
+.value.small-value { font-size: var(--fs-lg); }
+@media (max-width: 420px) {
+  .budget-table table { font-size: 0.8rem; }
+  /* "show as table" under charts: smaller, and the date column may wrap, so 4-5 columns fit a phone */
+  .table-wrap.scroll-y table { font-size: 0.76rem; }
+  .table-wrap.scroll-y th, .table-wrap.scroll-y td { padding: 6px 3px; }
+  .table-wrap.scroll-y td:first-child { white-space: normal; }
+}
+@media (min-width: 640px) { .budget-inputs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 /* Loading placeholder (instead of an empty page) */
 .skeleton { display: grid; gap: 12px; }

@@ -57,6 +57,10 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 10 | BCEL commercial bank rates USD/THB/CNY (note buy / sell) | `https://www.bcel.com.la/bcel/exchange-rate.html?lang=en` (HTML table) | every 30 min (published in daily "rounds") | ✅ Verified 2026-09-30. Label as BANK, separate from OFFICIAL (BOL) and MARKET. |
 | 11 | BCEL deposit interest rates (saving + fixed 3–60 months, LAK/USD/THB/CNY) | box on `https://www.bcel.com.la/bcel/home.html?lang=en` | daily | ✅ Verified 2026-09-30 |
 | 12 | Everyday prices: WFP market prices (12 items × 17 provinces, monthly) + WFP real-time national fuel estimate | HDX packages `wfp-food-prices-for-lao-people-s-democratic-republic`, `lao-people-s-democratic-republic-real-time-prices` (links looked up via CKAN `package_show`) | weekly | ✅ Verified 2026-09-30. Market data ~2–3 months late; some provinces carry old numbers forward. |
+| 13 | PML (Precious Metals Laos) silver bar price per 1 kg — shop price | Same Google Form/Sheet as #5 (2 optional silver questions); picture upload on the gold page | when entered | Manual, optional. Activates when the silver questions exist in the form. |
+| 14 | World silver spot XAG/USD | gold-api.com `/price/XAG` (goldprice.dev silver = 403 plan_gated) | every 30 min | ✅ Verified 2026-09-30 |
+| 15 | Thai retail fuel prices, Bangkok (diesel, gasohol 95 / 91), THB per litre, + tomorrow's price when announced | Bangchak `https://oil-price.bangchak.co.th/ApiOilPrice2/th` (the JSON the Bangchak site reads; Buddhist-era date). Backup: `https://api.chnwt.dev/thai-oil-api/latest` (PTT) | every 30 min | ✅ Verified 2026-09-30. MARKET. |
+| 16 | Thai retail food prices, Bangkok (9 items matching the WFP Lao items), daily min/max | Thai Ministry of Commerce open data `https://dataapi.moc.go.th/gis-product-prices?product_id=..&from_date=..&to_date=..` (plural path; the documented singular one answers 404) | weekly | ✅ Verified 2026-09-30. Very slow (10 days ≈ 15 s, 14 months ≈ time-out) and sometimes HTTP 500 → 3-week windows, one item at a time, second try at the end. No sugar in the retail list. |
 
 Checked and rejected (2026-09-30): LDB `kpv_gold` (Phouvong prices, API returns 401 = needs login → not allowed);
 talupa / goldrate24 / goldpricez / bullion-rates / livepriceofgold (only world spot × FX, nothing new);
@@ -123,6 +127,14 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Page `#/living`: monthly inflation (all + categories, ranked), everyday prices by province vs national average (+ fuel estimate),
   "1,000,000 kip kept as kip / USD / THB / gold" before and after inflation (1 / 3 / 5 years), BCEL deposit rates vs inflation (real rate).
 - Rules: everything computed from stored data; labelled as PAST results, never a forecast or investment advice.
+- v2 (2026-10-01, owner request "compare Laos with Thailand / world; fuel is the key; how much do I need to live in Laos"):
+  - "What you should know now" box: short sentences COMPUTED from the data (fuel Laos vs Thailand, inflation Laos vs Thailand,
+    same basket Laos vs Bangkok, fastest-rising category, real deposit rate, Brent year-on-year). Never typed in.
+  - Fuel section first: Lao diesel/petrol (WFP estimate, with its month) vs Thai pump prices today (#15, in kip),
+    tomorrow's Thai price when announced, and Lao diesel vs Brent on one index (start = 100).
+  - Inflation Laos vs Thailand (IMF monthly) + world (IMF yearly, labelled estimate).
+  - Monthly budget: the same basket in Laos (WFP) and Bangkok (#16 × market THB→LAK); quantities, people, other costs and
+    salary are editable and remembered on that device only; "total" compares only items priced in both places.
 
 ---
 

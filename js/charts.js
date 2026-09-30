@@ -259,9 +259,14 @@ function drawChart(canvas, { labels, tickLabels, series, unit, t }) {
 
 // Table twin: newest first, only rows that have a value
 function dataTable(labels, series, unit, t, firstColTitle) {
+  // Many columns of kip in the millions (gold): show millions with 3 decimals (46,259,000 -> 46.259)
+  // and say so in the header, so the table still fits a phone screen
+  const all = series.flatMap((s) => s.values.filter((v) => v !== null));
+  const million = String(unit).startsWith("LAK") && series.length >= 4 && all.length > 0 && all.every((v) => v >= 1e6);
+  const show = (v) => (v === null ? "—" : million ? (v / 1e6).toFixed(3) : formatNumber(v, unit));
   const tbl = el("table");
   const head = el("tr");
-  head.append(el("th", "", firstColTitle));
+  head.append(el("th", "", million ? `${firstColTitle} (${t.unit_million_lak})` : firstColTitle));
   for (const s of series) head.append(el("th", "", s.label));
   tbl.appendChild(el("thead")).append(head);
   const body = tbl.appendChild(el("tbody"));
@@ -269,7 +274,7 @@ function dataTable(labels, series, unit, t, firstColTitle) {
     if (series.every((s) => s.values[i] === null)) continue;
     const tr = el("tr");
     tr.append(el("td", "", labels[i]));
-    for (const s of series) tr.append(el("td", "", s.values[i] === null ? "—" : formatNumber(s.values[i], unit)));
+    for (const s of series) tr.append(el("td", "", show(s.values[i])));
     body.append(tr);
   }
   const wrap = el("div", "table-wrap scroll-y");
