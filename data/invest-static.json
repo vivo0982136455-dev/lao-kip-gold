@@ -1,0 +1,77 @@
+{
+  "_about": "Hand-checked facts for the economy tabs that no API provides. Every entry has its source link and the date it was published. 'checked' = the date someone last read the sources. Update by hand when a newer plan/report appears.",
+  "checked": "2026-10-01",
+  "sources": {
+    "kpl_plan": {
+      "source_name": "KPL Lao News Agency: Laos Targets 6% Annual Growth Under 2026–2030 Development Plan",
+      "source_url": "https://kpl.gov.la/en/detail.aspx/detail.aspx?id=97147",
+      "published": "2026-02-26"
+    },
+    "kpl_plan2": {
+      "source_name": "KPL Lao News Agency: Laos sets 6% growth target in new five-year development plan",
+      "source_url": "https://kpl.gov.la/En/detail.aspx/detail.aspx?id=97535",
+      "published": "2026-03-24"
+    },
+    "wb_lem": {
+      "source_name": "World Bank: Lao PDR Economic Monitor, December 2025",
+      "source_url": "https://thedocs.worldbank.org/en/doc/b8075e0bd6d885c64829a32c0d0eea26-0070062025/original/LEM-12-25-ONLINE.pdf",
+      "published": "2025-12"
+    },
+    "imf_art4": {
+      "source_name": "IMF: 2025 Article IV Consultation with Lao PDR (press release and staff report)",
+      "source_url": "https://www.elibrary.imf.org/view/journals/002/2026/050/article-A001-en.xml",
+      "published": "2026-02-20"
+    },
+    "lsb": {
+      "source_name": "Lao Statistics Bureau",
+      "source_url": "https://www.lsb.gov.la",
+      "published": null
+    }
+  },
+  "plan": {
+    "_about": "10th National Socio-Economic Development Plan 2026-2030 (NSEDP). op '>=' = at least, '<=' = at most. 'actual' says which automatic number is compared (see js/pages/eco-plan.js).",
+    "source": "kpl_plan",
+    "projects": { "total": 230, "ongoing": 61, "new": 169, "source": "kpl_plan2" },
+    "targets": [
+      { "id": "growth", "target": 6, "op": ">=", "unit": "%", "actual": "gdp_growth" },
+      { "id": "growth_agri", "target": 4.1, "op": ">=", "unit": "%", "actual": "agri_growth" },
+      { "id": "growth_ind", "target": 5.7, "op": ">=", "unit": "%", "actual": "ind_growth" },
+      { "id": "growth_srv", "target": 7.1, "op": ">=", "unit": "%", "actual": "srv_growth" },
+      { "id": "gdp_pc", "target": 3104, "op": ">=", "unit": "USD", "by": 2030, "actual": "gdp_pc" },
+      { "id": "inflation", "target": 5, "op": "<=", "unit": "%", "actual": "inflation" },
+      { "id": "debt", "target": 70, "op": "<=", "unit": "% of GDP", "actual": "debt" },
+      { "id": "reserves", "target": 5, "op": ">=", "unit": "months", "actual": "reserves" },
+      { "id": "revenue", "target": 20.95, "op": ">=", "unit": "% of GDP", "actual": "revenue" },
+      { "id": "budget", "target": 0, "op": ">=", "unit": "% of GDP", "actual": "budget" },
+      { "id": "investment", "target": 24, "op": ">=", "unit": "% of GDP", "actual": null },
+      { "id": "rice", "target": 4, "op": ">=", "unit": "million tonnes a year", "actual": null },
+      { "id": "agri_exports", "target": 1.9, "op": ">=", "unit": "USD bn a year", "actual": null },
+      { "id": "tourists", "target": 22, "op": ">=", "unit": "million visitors in 5 years", "actual": null }
+    ]
+  },
+  "facts": {
+    "_about": "Numbers quoted from the reports; the sentences are in i18n (inv_fact_*), the numbers here.",
+    "debt_peak": { "peak": 130, "peak_year": 2022, "now": 94, "now_year": 2024, "source": "wb_lem" },
+    "debt_edl": { "share": 40, "source": "wb_lem" },
+    "debt_china_half": { "multilateral": 18, "other_bilateral": 12, "source": "wb_lem" },
+    "debt_deferred": { "usd_bn": 2.3, "from": 2020, "to": 2024, "source": "wb_lem" },
+    "debt_service_avg": { "usd_bn": 1.3, "gdp": 6.3, "from": 2026, "to": 2029, "source": "wb_lem" },
+    "debt_bond": { "usd_m": 300, "coupon": 11.25, "month": "2025-11", "source": "wb_lem" },
+    "debt_crowd_out": { "source": "wb_lem" },
+    "debt_decree": { "no": "490/GOL", "date": "2025-07-10", "source": "wb_lem" },
+    "debt_restructure": { "source": "wb_lem" },
+    "imf_unsustainable": { "debt": 80.6, "year": 2025, "source": "imf_art4" },
+    "imf_advice": { "source": "imf_art4" },
+    "growth_drivers": { "tourists": 15, "source": "wb_lem" },
+    "fdi_2025": { "usd_m": 950, "gdp": 5.5, "exports_growth": 34, "source": "wb_lem" },
+    "reserves_sep2025": { "usd_bn": 2.8, "months": 3, "source": "wb_lem" },
+    "inflation_why": { "oct2025": 4, "avg2024": 23.3, "source": "wb_lem" }
+  },
+  "land": {
+    "_about": "No open, official land-price data for Laos was found (checked 2026-10-01). Listing sites show ASKING prices only.",
+    "listings": [
+      { "source_name": "FazWaz Laos – land for sale, Vientiane (asking prices)", "source_url": "https://www.fazwaz.la/en/land-for-sale/laos/vientiane" },
+      { "source_name": "Lao Properties – listings (asking prices)", "source_url": "https://laoproperties.com" }
+    ]
+  }
+}

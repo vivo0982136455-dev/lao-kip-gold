@@ -259,6 +259,7 @@ select {
 .stat[data-kind] { border-left: 3px solid var(--kind-color); }
 .stat-label { font-size: 0.78rem; color: var(--text-2); }
 .stat-value { font-size: var(--fs-2xl); font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; margin-top: 2px; }
+.stat-unit { font-size: 0.78rem; font-weight: 500; letter-spacing: 0; color: var(--text-2); margin-left: 5px; white-space: nowrap; }
 .stat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
 
 /* Direction hint */
@@ -425,6 +426,44 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
   .table-wrap.scroll-y td:first-child { white-space: normal; }
 }
 @media (min-width: 640px) { .budget-inputs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* ---------- Economy page: tabs, "latest or old", target status ---------- */
+.tabbar {
+  display: flex; gap: 6px; overflow-x: auto; margin: 2px 0 14px; padding: 2px 0 6px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity;
+}
+.tabbar::-webkit-scrollbar { display: none; }
+.tabbar button {
+  flex: none; scroll-snap-align: start; border-radius: 999px; padding: 6px 14px; min-height: 36px; font-size: 0.86rem;
+  background: var(--surface); color: var(--text-2);
+}
+.tabbar button[aria-selected="true"] { background: var(--text); border-color: var(--text); color: var(--page); font-weight: 600; }
+.tabpanel { display: grid; gap: 12px; }
+.tabpanel > .section-title { margin: 12px 0 0; }
+.tabpanel > .facts-card { margin-bottom: 0; }
+.tab-intro { font-size: 0.84rem; }
+.fresh { display: inline-flex; flex-wrap: wrap; gap: 2px 6px; font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+.stat .fresh { display: flex; }
+.fresh-ok { color: var(--text-2); }
+.fresh-old { color: var(--warn-text); font-weight: 600; }
+.fresh-stale { color: var(--bad-text); font-weight: 600; }
+.status { display: inline-block; font-size: 0.72rem; font-weight: 600; border-radius: 999px; padding: 1px 8px; margin-top: 4px; white-space: nowrap; }
+.status-met { color: var(--up); background: var(--up-bg); }
+.status-near { color: var(--warn-text); background: var(--warn-bg); }
+.status-far { color: var(--bad-text); background: var(--bad-bg); }
+.status-none { color: var(--flat); background: var(--flat-bg); }
+.facts li .status { flex: none; margin-top: 0; }
+.plan-table td { vertical-align: top; }
+.plan-table td .sub-line { display: block; color: var(--muted); font-size: 0.7rem; margin-top: 2px; }
+.plan-actual .fresh { margin-top: 0; }
+.plan-table td:nth-child(2) { min-width: 4.6em; }
+.plan-actual { text-align: right; }
+.plan-value { font-weight: 650; }
+.plan-actual .sub-line { display: block; color: var(--muted); font-size: 0.7rem; }
+.watch-list { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 0.86rem; color: var(--text); }
+.watch-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.watch-links .btn { min-height: 36px; font-size: 0.82rem; }
+.disclaimer { margin-top: 16px; }
 
 /* Loading placeholder (instead of an empty page) */
 .skeleton { display: grid; gap: 12px; }

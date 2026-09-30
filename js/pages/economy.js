@@ -1,136 +1,115 @@
-// Page 4: Lao economy (Phase 4). Yearly data: World Bank (actual) + IMF (forecast, dashed line).
-// Monthly CPI comes from the IMF (automatic since 2026-09-30).
+// Page: Lao economy, for investors (8 tabs). Owner request 2026-09-30: "think like an investor".
+//   overview · GDP & structure · government plan 2026–2030 · foreign investment · public debt · inflation & kip · rubber · land
+// Yearly World Bank + IMF numbers come with the app (data/economy.json). The investor numbers (data/invest.json),
+// the hand-checked plan targets and report facts (data/invest-static.json) and the Thai rubber prices
+// (data/thai-prices.json) load only when this page is opened. Past data only - never investment advice.
 
-import { el, sectionTitle, statTile, emptyState } from "../ui.js";
-import { formatNumber } from "../format.js";
-import { chartCard, mountCharts } from "../charts.js";
+import { el, emptyState } from "../ui.js";
+import { mountCharts } from "../charts.js";
+import { lazyJson } from "../lazy.js";
+import { overviewTab } from "./eco-overview.js";
+import { gdpTab } from "./eco-gdp.js";
+import { planTab } from "./eco-plan.js";
+import { fdiTab } from "./eco-fdi.js";
+import { debtTab } from "./eco-debt.js";
+import { inflationTab } from "./eco-inflation.js";
+import { rubberTab, landTab } from "./eco-rubber.js";
 
-const FIRST_YEAR = 2010;
-
-// actual: indicator id for actual data (World Bank). forecast: IMF indicator.
-// If there is no World Bank series, IMF years before this year count as "actual/estimate".
-const CHARTS = [
-  { title: "eco_gdp", actual: "wb.NY.GDP.MKTP.CD", forecast: "imf.NGDPD" },
-  { title: "eco_growth", actual: "wb.NY.GDP.MKTP.KD.ZG", forecast: "imf.NGDP_RPCH" },
-  { title: "eco_inflation", actual: "wb.FP.CPI.TOTL.ZG", forecast: "imf.PCPIPCH" },
-  { title: "eco_debt", forecast: "imf.GGXWDG_NGDP" },
-  { title: "eco_current_account", forecast: "imf.BCA_NGDPD" },
-  { title: "eco_fdi", actual: "wb.BX.KLT.DINV.CD.WD" },
-  { title: "eco_fx_avg", actual: "wb.PA.NUS.FCRF" },
+const TABS = [
+  ["overview", overviewTab],
+  ["gdp", gdpTab],
+  ["plan", planTab],
+  ["fdi", fdiTab],
+  ["debt", debtTab],
+  ["inflation", inflationTab],
+  ["rubber", rubberTab],
+  ["land", landTab],
 ];
 
-const SOURCE_LABEL = { worldbank: "World Bank", imf: "IMF" };
-const UNIT_KEYS = { "%": "unit_pct", "% of GDP": "unit_pct_gdp", "USD bn": "unit_usd_bn", "USD m": "unit_usd_m", "LAK per USD": "unit_lak_usd" };
-const unitName = (unit, t) => t[UNIT_KEYS[unit]] || unit;
-
-// "4.5%" or "18.30 USD bn"
-function valueWithUnit(v, unit, t) {
-  return unit.startsWith("%") ? `${formatNumber(v, unit)}%` : `${formatNumber(v, unit)} ${unitName(unit, t)}`;
-}
-
-// Split one chart into "actual" and "forecast" values for each year label
-function buildSeries(def, eco) {
-  const thisYear = new Date().getFullYear();
-  const act = def.actual && eco.indicators[def.actual];
-  const fc = def.forecast && eco.indicators[def.forecast];
-  let actualPoints;
-  let forecastPoints = [];
-
-  if (act && act.values.length) {
-    actualPoints = act.values;
-    const lastActual = actualPoints[actualPoints.length - 1][0];
-    if (fc) forecastPoints = fc.values.filter(([y]) => y > lastActual);
-  } else if (fc) {
-    // IMF only: years before this year = actual/estimate, this year onwards = forecast
-    actualPoints = fc.values.filter(([y]) => y < thisYear);
-    forecastPoints = fc.values.filter(([y]) => y >= thisYear);
-  } else {
-    return null;
+function savedTab() {
+  try {
+    const v = localStorage.getItem("eco_tab");
+    return TABS.some(([id]) => id === v) ? v : "overview";
+  } catch {
+    return "overview";
   }
-  // Start the dashed line at the last actual point so the two lines connect
-  const last = actualPoints[actualPoints.length - 1];
-  if (forecastPoints.length && last) forecastPoints = [last, ...forecastPoints];
-
-  const allYears = [...actualPoints, ...forecastPoints].map(([y]) => y).filter((y) => y >= FIRST_YEAR);
-  const maxYear = Math.max(...allYears);
-  const years = [];
-  for (let y = FIRST_YEAR; y <= maxYear; y++) years.push(y);
-  const pick = (points) => {
-    const m = new Map(points);
-    return years.map((y) => (m.has(y) ? m.get(y) : null));
-  };
-  const unit = (act || fc).unit;
-  const sources = [act && act.source, forecastPoints.length && fc && fc.source].filter(Boolean);
-  return {
-    years,
-    unit,
-    lastActual: last ? last[0] : null,
-    lastValue: last ? last[1] : null,
-    actual: pick(actualPoints),
-    forecast: forecastPoints.length ? pick(forecastPoints) : null,
-    sources: [...new Set(sources)],
-    stale: [act, fc].some((x) => x && x.stale),
-  };
 }
+let current = savedTab();
 
 export function render(view, ctx) {
-  const { t, economy: eco } = ctx;
-  if (!eco || !eco.indicators) {
+  const { t } = ctx;
+  if (!ctx.economy || !ctx.economy.indicators) {
     view.append(emptyState(t.eco_missing_title, t.eco_missing_text));
     return;
   }
-  view.append(el("p", "lead", t.economy_lead));
+  const invest = lazyJson("data/invest.json", ctx.rerender);
+  const facts = lazyJson("data/invest-static.json", ctx.rerender);
 
-  // Stat tiles: newest actual value of 4 key numbers
-  const stats = el("div", "stats");
-  for (const key of ["eco_growth", "eco_inflation", "eco_debt", "eco_gdp"]) {
-    const def = CHARTS.find((c) => c.title === key);
-    const s = buildSeries(def, eco);
-    if (!s || s.lastValue === null) continue;
-    stats.append(statTile(t[key], valueWithUnit(s.lastValue, s.unit, t), `${t.year} ${s.lastActual} · ${s.sources.map((x) => SOURCE_LABEL[x]).join(" + ")}`, "official"));
-  }
-  view.append(stats);
-
-  view.append(sectionTitle(t.eco_charts_title));
-  const grid = el("div", "grid grid-2");
-  for (const def of CHARTS) {
-    const s = buildSeries(def, eco);
-    if (!s) continue;
-    const series = [{ label: t.series_actual, kind: "official", values: s.actual }];
-    if (s.forecast) series.push({ label: t.series_imf_forecast, kind: "official", dashed: true, values: s.forecast });
-    const subtitle = [
-      `${t.unit}: ${unitName(s.unit, t)}`,
-      `${t.source}: ${s.sources.map((x) => SOURCE_LABEL[x]).join(" + ")}`,
-      `${def.actual ? t.latest_actual_year : t.latest_estimate_year} ${s.lastActual}`,
-      s.forecast ? t.dashed_is_forecast : null,
-      s.stale ? "⚠ " + t.stale_badge : null,
-    ].filter(Boolean).join(" · ");
-    grid.append(chartCard({ title: t[def.title], subtitle, labels: s.years.map(String), series, unit: s.unit, t, firstColTitle: t.year }));
+  // Switch tab, redraw, and bring the tab bar back into view if the page was scrolled down
+  function select(id) {
+    if (id === current) return;
+    current = id;
+    try {
+      localStorage.setItem("eco_tab", id);
+    } catch {
+      /* private mode */
+    }
+    ctx.rerender();
+    requestAnimationFrame(() => {
+      const bar = document.querySelector(".tabbar");
+      if (bar && bar.getBoundingClientRect().top < 0) window.scrollTo(0, window.scrollY + bar.getBoundingClientRect().top - 72);
+      const btn = document.getElementById("tab-" + id);
+      if (btn) btn.focus({ preventScroll: true });
+    });
   }
 
-  // Monthly CPI (IMF, automatic) - last 5 years; the Cost of living page has the details
-  const cpi = eco.monthly && eco.monthly.cpi_yoy;
-  if (cpi && cpi.values.length) {
-    const recent = cpi.values.slice(-60);
-    const labels = recent.map(([m]) => m);
-    grid.append(
-      chartCard({
-        title: t.eco_cpi_monthly,
-        subtitle: `${t.source}: IMF · ${t.latest_month} ${labels[labels.length - 1]}${cpi.stale ? " · ⚠ " + t.stale_badge : ""}`,
-        labels,
-        series: [{ label: t.eco_cpi_monthly, kind: "official", values: recent.map(([, v]) => v) }],
-        unit: "%",
-        t,
-        firstColTitle: t.month,
-      })
-    );
-  }
-  view.append(grid);
+  // e = everything a tab needs
+  const e = {
+    ...ctx,
+    invest: invest.data,
+    investState: invest.state,
+    stat: facts.data,
+    statState: facts.state,
+    go: select,
+  };
 
-  // Sources
-  const src = el("p", "note");
-  src.style.marginTop = "12px";
-  src.textContent = `${t.footer_sources}: ` + Object.values(eco.sources).filter((s) => s.source_name).map((s) => `${s.source_name} (${s.license})`).join(" · ");
-  view.append(src);
+  view.append(el("p", "lead", t.inv_lead));
+
+  // Tab bar: scrolls sideways on phones; left/right arrow keys move between tabs
+  const bar = el("div", "tabbar");
+  bar.setAttribute("role", "tablist");
+  bar.setAttribute("aria-label", t.inv_tabs_label);
+  for (const [id] of TABS) {
+    const b = el("button", "", t["inv_tab_" + id]);
+    b.type = "button";
+    b.id = "tab-" + id;
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(id === current));
+    b.setAttribute("aria-controls", "tabpanel");
+    b.tabIndex = id === current ? 0 : -1;
+    b.addEventListener("click", () => select(id));
+    bar.append(b);
+  }
+  bar.addEventListener("keydown", (ev) => {
+    if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+    ev.preventDefault();
+    const i = TABS.findIndex(([id]) => id === current);
+    const next = TABS[(i + (ev.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length][0];
+    select(next);
+  });
+  view.append(bar);
+
+  const panel = el("div", "tabpanel");
+  panel.id = "tabpanel";
+  panel.setAttribute("role", "tabpanel");
+  panel.setAttribute("aria-labelledby", "tab-" + current);
+  view.append(panel);
+  TABS.find(([id]) => id === current)[1](panel, e);
+
+  view.append(el("p", "note disclaimer", t.inv_disclaimer));
   mountCharts(view);
+
+  // Keep the chosen tab visible inside the sideways-scrolling bar (without moving the page)
+  const active = bar.querySelector('[aria-selected="true"]');
+  if (active) bar.scrollLeft = Math.max(0, active.offsetLeft - (bar.clientWidth - active.offsetWidth) / 2);
 }

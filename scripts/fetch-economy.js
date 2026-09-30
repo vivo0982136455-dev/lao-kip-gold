@@ -78,7 +78,7 @@ const round = (v) => Math.round(v * 1000) / 1000;
 
 async function fromWorldBank(def) {
   const url = `https://api.worldbank.org/v2/country/LAO/indicator/${def.code}?format=json&per_page=100&date=${FIRST_YEAR}:2040`;
-  const data = await fetchJson(url);
+  const data = await fetchJson(url, {}, 60000); // the World Bank API sometimes needs more than 20 s
   if (!Array.isArray(data) || !Array.isArray(data[1])) {
     throw new Error(`Unexpected World Bank response: ${JSON.stringify(data).slice(0, 120)}`);
   }
@@ -101,8 +101,8 @@ async function fromImf(def) {
 }
 
 // IMF SDMX -> list of { code, name, values: [["2026-08", 7.7], ...] } (one per series, e.g. per CPI category)
-async function fromImfSdmx(key) {
-  const data = await fetchJson(`${IMF_SDMX}${key}?startPeriod=${FIRST_MONTH}`);
+async function fromImfSdmx(key, startPeriod = FIRST_MONTH) {
+  const data = await fetchJson(`${IMF_SDMX}${key}?startPeriod=${startPeriod}`);
   const dims = data.structure && data.structure.dimensions;
   const set = data.dataSets && data.dataSets[0];
   if (!dims || !set || !set.series) throw new Error(`Unexpected IMF SDMX response for ${key}`);
@@ -237,4 +237,7 @@ async function main() {
   if (failed >= Object.keys(INDICATORS).length) process.exitCode = 1;
 }
 
-main();
+if (require.main === module) main();
+
+// shared with fetch-invest.js
+module.exports = { fromWorldBank, fromImf, fromImfSdmx, IMF_SDMX };

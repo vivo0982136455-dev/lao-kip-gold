@@ -155,8 +155,16 @@ function writeIfChanged(file, text) {
   }
   if (old === text) return false;
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, text);
-  return true;
+  // On Windows a file can be locked for a moment (virus scan, another program reading it): try 3 times
+  for (let attempt = 1; ; attempt++) {
+    try {
+      fs.writeFileSync(file, text);
+      return true;
+    } catch (err) {
+      if (attempt >= 3) throw err;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000); // wait 1 second
+    }
+  }
 }
 
 // History is a JSON array written with one record per line (small git diffs).

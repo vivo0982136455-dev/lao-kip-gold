@@ -1,4 +1,5 @@
-# Lao economy data (World Bank, IMF yearly + monthly CPI / gold) and WFP prices of everyday goods.
+# Lao economy data (World Bank, IMF yearly + monthly CPI / gold), investor data (debt by creditor, FDI by country,
+# rubber), WFP prices of everyday goods and Thai food + rubber prices.
 # Weekly: IMF and WFP publish on different days each month, weekly keeps us at most ~7 days behind.
 name: Fetch economy data
 
@@ -28,13 +29,19 @@ jobs:
       - name: Fetch economy data
         run: node scripts/fetch-economy.js
 
+      # Numbers for the economy tabs: GDP structure, debt by creditor + repayment schedule, FDI by country, world rubber
+      - name: Fetch investor data (World Bank IDS, IMF)
+        if: always()
+        timeout-minutes: 10
+        run: node scripts/fetch-invest.js
+
       # "if: always()" = prices still update even if one economy source failed
       - name: Fetch prices of everyday goods (WFP)
         if: always()
         run: node scripts/fetch-prices.js
 
       # The Thai ministry price API is slow (~25 s per item); if it hangs, stop after 15 minutes and keep last week's prices
-      - name: Fetch Thai retail food prices (Ministry of Commerce)
+      - name: Fetch Thai food and rubber prices (Ministry of Commerce)
         if: always()
         timeout-minutes: 15
         run: node scripts/fetch-thai-prices.js

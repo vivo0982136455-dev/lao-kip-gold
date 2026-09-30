@@ -99,6 +99,8 @@ const crosshair = {
 };
 
 // Latest-value tag of every line, drawn on the right axis (like trading platforms). Tags never overlap.
+// A line that stops well before the right edge (e.g. "actual" before a forecast) gets no tag: its value would
+// look like the value at the end of the chart. A few missing points at the end (weekends) are fine.
 const lastValueTags = {
   id: "lastValueTags",
   afterDraw(chart, _args, opts) {
@@ -107,9 +109,10 @@ const lastValueTags = {
     chart.data.datasets.forEach((ds, i) => {
       const meta = chart.getDatasetMeta(i);
       if (meta.hidden) return;
+      const minK = ds.data.length - 1 - Math.max(2, Math.floor(ds.data.length * 0.1));
       for (let k = ds.data.length - 1; k >= 0; k--) {
         if (ds.data[k] !== null && ds.data[k] !== undefined) {
-          tags.push({ y: meta.data[k].y, text: opts.format(ds.data[k]), color: ds.borderColor });
+          if (k >= minK) tags.push({ y: meta.data[k].y, text: opts.format(ds.data[k]), color: ds.borderColor });
           break;
         }
       }

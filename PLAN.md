@@ -60,7 +60,9 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 13 | PML (Precious Metals Laos) silver bar price per 1 kg — shop price | Same Google Form/Sheet as #5 (2 optional silver questions); picture upload on the gold page | when entered | Manual, optional. Activates when the silver questions exist in the form. |
 | 14 | World silver spot XAG/USD | gold-api.com `/price/XAG` (goldprice.dev silver = 403 plan_gated) | every 30 min | ✅ Verified 2026-09-30 |
 | 15 | Thai retail fuel prices, Bangkok (diesel, gasohol 95 / 91), THB per litre, + tomorrow's price when announced | Bangchak `https://oil-price.bangchak.co.th/ApiOilPrice2/th` (the JSON the Bangchak site reads; Buddhist-era date). Backup: `https://api.chnwt.dev/thai-oil-api/latest` (PTT) | every 30 min | ✅ Verified 2026-09-30. MARKET. |
-| 16 | Thai retail food prices, Bangkok (9 items matching the WFP Lao items), daily min/max | Thai Ministry of Commerce open data `https://dataapi.moc.go.th/gis-product-prices?product_id=..&from_date=..&to_date=..` (plural path; the documented singular one answers 404) | weekly | ✅ Verified 2026-09-30. Very slow (10 days ≈ 15 s, 14 months ≈ time-out) and sometimes HTTP 500 → 3-week windows, one item at a time, second try at the end. No sugar in the retail list. |
+| 16 | Thai retail food prices, Bangkok (9 items matching the WFP Lao items) + Thai rubber (cup lump 100%, fresh latex, unsmoked sheet), daily min/max | Thai Ministry of Commerce open data `https://dataapi.moc.go.th/gis-product-prices?product_id=..&from_date=..&to_date=..` (plural path; the documented singular one answers 404) | weekly | ✅ Verified 2026-09-30. Very slow (10 days ≈ 15 s, 14 months ≈ time-out) and sometimes HTTP 500 → 3-week windows, one item at a time, second try at the end. No sugar in the retail list. |
+| 17 | Investor data: World Bank indicators (GDP structure, trade, external debt, reserves), IMF (GDP per person, budget balance), World Bank IDS (government external debt by creditor + repayment schedule to 2032), IMF DIP (direct investment positions in Laos by investor country, mirror data), IMF PCPS rubber (RSS3 monthly) | `api.worldbank.org/v2/sources/6/...` (IDS), `api.imf.org/external/sdmx/2.1/data/IMF.STA,DIP/LAO..INWD_D_NETLA_FALL_ALL..A`, `IMF.RES,PCPS/G001.PRUBB.USD.M` | weekly | ✅ Verified 2026-10-01. DIP misses countries that do not report (e.g. Viet Nam) — said on the page. |
+| 18 | Hand-checked facts: NSEDP 2026–2030 targets (KPL, 26 Feb + 24 Mar 2026), World Bank Lao Economic Monitor (Dec 2025), IMF 2025 Article IV (Feb 2026) | `data/invest-static.json` (links + publish dates + `checked`) | when a new plan/report appears | Update by hand; never invent numbers |
 
 Checked and rejected (2026-09-30): LDB `kpv_gold` (Phouvong prices, API returns 401 = needs login → not allowed);
 talupa / goldrate24 / goldpricez / bullion-rates / livepriceofgold (only world spot × FX, nothing new);
@@ -122,6 +124,14 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Daily: store the hint (▲▼▬) made before BOL publishes; when BOL publishes, record whether it was right.
 - Show accuracy % over last 30 days, for kip direction and for gold estimate error (%).
 - Acceptance: accuracy numbers are computed only from stored history, never hard-coded.
+
+### Phase 7 — Economy for investors (added 2026-10-01, owner request "think like an investor")
+- Page `#/economy` rebuilt as 8 tabs: overview (key numbers + computed facts + what to watch per situation: savings / rubber farm / land & business),
+  GDP & structure, government plan 2026–2030 (targets vs latest actual + IMF forecast, status computed), foreign investment (yearly + by country),
+  public debt (by creditor, repayment schedule, why / effects / plan / can it work — quoted from World Bank + IMF with links),
+  inflation & kip, rubber (world + Thai prices in kip, yearly averages), land (no open data → said honestly, only listing links).
+- Rules: every number shows its source link, its year/month and a latest / old / failed label; report sentences carry the report's link + date;
+  Lao provincial rubber prices and land prices are NOT published online (checked 2026-10-01) → not invented. Past data + forecasts only, never advice.
 
 ### Phase 6 — Cost of living & savings page (added 2026-09-30, owner request)
 - Page `#/living`: monthly inflation (all + categories, ranked), everyday prices by province vs national average (+ fuel estimate),

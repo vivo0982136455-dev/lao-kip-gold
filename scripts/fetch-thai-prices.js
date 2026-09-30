@@ -1,5 +1,6 @@
-// Source #16: Thai retail prices of everyday food (Bangkok), Ministry of Commerce open data (no key).
-// Used to compare the same shopping basket in Laos (WFP prices) and Thailand.
+// Source #16: Thai retail prices of everyday food (Bangkok) + Thai rubber market prices, Ministry of Commerce open data (no key).
+// Food: compare the same shopping basket in Laos (WFP prices) and Thailand. Rubber: economy page, rubber tab.
+// Rubber history before the first run came from scripts/backfill-thai-rubber.js (one month per request).
 // Writes data/thai-prices.json (monthly averages). Run weekly: node scripts/fetch-thai-prices.js
 //
 // Real response (checked 2026-09-30), GET https://dataapi.moc.go.th/gis-product-prices?product_id=P11003&from_date=..&to_date=..
@@ -20,6 +21,7 @@ const API = "https://dataapi.moc.go.th/gis-product-prices";
 const WINDOW_DAYS = 21; // days asked per run
 const REQUEST_TIMEOUT_MS = 45000;
 const DAYS_KEPT = 62; // daily prices kept in the file
+const MONTHS_KEPT = 26; // monthly averages kept (rubber items keep more, see ITEMS)
 const SECOND_TRY_BEFORE_MS = 8 * 60000; // failed items get a second try if the first pass took less than this
 
 // Our item id (same ids as the WFP Lao prices) -> MOC product, and what to divide by to get the same unit
@@ -33,6 +35,10 @@ const ITEMS = {
   fish: { id: "P12017", per: 1, unit: "KG" }, // ปลานิล
   cooking_oil: { id: "P16006", per: 1, unit: "L" }, // น้ำมันถั่วเหลือง 1 ลิตร, บาท/ขวด
   garlic: { id: "P15001", per: 1, unit: "KG" }, // กระเทียมแห้ง มัดจุก หัวใหญ่
+  // Rubber (economy page, rubber tab): Thai market reference prices, บาท/กก.
+  rubber_cuplump: { id: "W16034", per: 1, unit: "KG", months: 120 }, // ยางก้อนถ้วย 100% ราคากลางเปิดตลาด
+  rubber_latex: { id: "W16036", per: 1, unit: "KG", months: 120 }, // น้ำยางสด ราคากลางเปิดตลาด
+  rubber_sheet: { id: "W16023", per: 1, unit: "KG", months: 120 }, // ยางแผ่นดิบชั้น 3 ราคาเกษตรกรขายได้ จ.สุราษฎร์ธานี
 };
 
 const dayStr = (d) => d.toISOString().slice(0, 10);
@@ -63,7 +69,7 @@ async function fetchItem(key, def, fromDay) {
 const round2 = (v) => Math.round(v * 100) / 100;
 
 // Merge the new daily prices into the stored ones, then update the monthly averages
-function mergeItem(before, fresh) {
+function mergeItem(before, fresh, keepMonths = MONTHS_KEPT) {
   const dayMap = new Map(before && before.days ? before.days : []);
   for (const [d, v] of fresh.days) dayMap.set(d, v);
   const days = [...dayMap.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-DAYS_KEPT);
@@ -80,18 +86,29 @@ function mergeItem(before, fresh) {
     const old = months.get(m);
     if (!old || vals.length >= old[1]) months.set(m, [round2(vals.reduce((a, b) => a + b, 0) / vals.length), vals.length]);
   }
-  const monthly = [...months.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-26).map(([m, [v, n]]) => [m, v, n]);
+  const monthly = [...months.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-keepMonths).map(([m, [v, n]]) => [m, v, n]);
   return { days, monthly };
+}
+
+const SOURCE = { source_name: "Ministry of Commerce Thailand - retail prices, Bangkok (MOC Open Data)", source_url: "https://data.moc.go.th/OpenData/GISProductPrice", license: "Thai government open data" };
+
+// One item per line (small diffs in git); items in the ITEMS order
+function writePrices(out) {
+  const keys = Object.keys(ITEMS).filter((k) => out.items[k]);
+  const text =
+    "{\n" +
+    `  "source": ${JSON.stringify(out.source)},\n  "unit_note": ${JSON.stringify(out.unit_note)},\n  "items": {\n` +
+    keys.map((k) => `    ${JSON.stringify(k)}: ${JSON.stringify(out.items[k])}`).join(",\n") +
+    "\n  }\n}\n";
+  JSON.parse(text);
+  writeIfChanged(OUT_FILE, text);
+  return text;
 }
 
 async function main() {
   const old = readJson(OUT_FILE, { items: {} });
   const now = new Date().toISOString();
-  const out = {
-    source: { source_name: "Ministry of Commerce Thailand - retail prices, Bangkok (MOC Open Data)", source_url: "https://data.moc.go.th/OpenData/GISProductPrice", license: "Thai government open data" },
-    unit_note: "THB per unit (KG / L / egg)",
-    items: {},
-  };
+  const out = { source: SOURCE, unit_note: "THB per unit (KG / L / egg)", items: {} };
   const keys = Object.keys(ITEMS);
   // Optional: only some items, e.g. "node scripts/fetch-thai-prices.js pork eggs" (the others stay as they are)
   const only = process.argv.slice(2);
@@ -106,7 +123,7 @@ async function main() {
     try {
       const fresh = await fetchItem(key, ITEMS[key], fromDay);
       if (!fresh.days.length) throw new Error("no prices returned");
-      const { days, monthly } = mergeItem(before, fresh);
+      const { days, monthly } = mergeItem(before, fresh, ITEMS[key].months);
       out.items[key] = { ...fresh, monthly, days, stale: false, last_error: null };
       console.log(`[OK]   thai-prices ${key}: ${days.length} days, ${monthly.length} months, latest ${fresh.latest.date}`);
       return true;
@@ -128,16 +145,11 @@ async function main() {
     failedKeys = again;
   }
   const failed = failedKeys.length;
-  out.items = Object.fromEntries(keys.filter((k) => out.items[k]).map((k) => [k, out.items[k]]));
-  const text =
-    "{\n" +
-    `  "source": ${JSON.stringify(out.source)},\n  "unit_note": ${JSON.stringify(out.unit_note)},\n  "items": {\n` +
-    Object.keys(out.items).map((k) => `    ${JSON.stringify(k)}: ${JSON.stringify(out.items[k])}`).join(",\n") +
-    "\n  }\n}\n";
-  JSON.parse(text);
-  writeIfChanged(OUT_FILE, text);
+  const text = writePrices(out);
   console.log(`Done: ${failed} failed. Wrote data/thai-prices.json (${(text.length / 1024).toFixed(0)} KB)`);
   if (failed === todo.length) process.exitCode = 1;
 }
 
-main();
+if (require.main === module) main();
+
+module.exports = { ITEMS, API, OUT_FILE, SOURCE, writePrices, round2 };
