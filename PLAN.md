@@ -53,6 +53,12 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 6 | Macro (annual) | World Bank API `https://api.worldbank.org/v2/country/LAO/indicator/{CODE}?format=json` — e.g. NY.GDP.MKTP.CD, NY.GDP.MKTP.KD.ZG, FP.CPI.TOTL.ZG, BX.KLT.DINV.CD.WD, PA.NUS.FCRF | 1×/month | Free, no key |
 | 7 | Macro forecasts | IMF DataMapper `https://www.imf.org/external/datamapper/api/v1/{INDICATOR}/LAO` — e.g. NGDP_RPCH, PCPIPCH, BCA_NGDPD, GGXWDG_NGDP | 1×/month | Free, no key |
 | 8 | Lao monthly CPI / inflation | Lao Statistics Bureau (laosis.lsb.gov.la) — no API | 1×/month | Manual entry (same Google Sheet, separate tab) |
+| 9 | **Real Lao gold price** — Lao Bullion Bank buy/sell (LAK per gram) | `https://laobullionbank.com/api/bullionmarkets/rategold` (+ `rategoldall` history since Aug 2025) — the JSON the LBB site itself reads | every 30 min (LBB updates 2–7×/business day) | ✅ Verified 2026-09-30. Undocumented → may change. Time is Vientiane despite "UTC" label. Replaces Phouvong as the premium basis. |
+| 10 | BCEL commercial bank rates USD/THB/CNY (note buy / sell) | `https://www.bcel.com.la/bcel/exchange-rate.html?lang=en` (HTML table) | every 30 min (published in daily "rounds") | ✅ Verified 2026-09-30. Label as BANK, separate from OFFICIAL (BOL) and MARKET. |
+
+Checked and rejected (2026-09-30): LDB `kpv_gold` (Phouvong prices, API returns 401 = needs login → not allowed);
+talupa / goldrate24 / goldpricez / bullion-rates / livepriceofgold (only world spot × FX, nothing new);
+Trading Economics / Investing.com (terms forbid scraping).
 
 ## Key formulas
 - Gold unit: 1 baht-weight = 15.244 g; 1 troy oz = 31.1035 g.
@@ -98,6 +104,8 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 - Action fetches the CSV daily (#5), computes shop premium and adjusted estimate.
 - Dashboard shows: actual Phouvong price vs estimate, difference in LAK and %.
 - Acceptance: entering a price in the form appears on the site after the next workflow run.
+- Update 2026-09-30 (owner decision "all automation"): the premium is now computed from Lao Bullion Bank (#9, automatic).
+  Phouvong entry stays as an OPTIONAL comparison. Lao gold is shown per Lao baht (15 g) AND per gram.
 
 ### Phase 4 — Economy page
 - Monthly workflow for World Bank (#6) and IMF (#7); manual CPI from the Sheet (#8).

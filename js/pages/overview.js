@@ -4,7 +4,9 @@ import { el, metricCard, sectionTitle, isStale } from "../ui.js";
 import { dailyChartCard, mountCharts } from "../charts.js";
 import { todayHintCard } from "./forecast.js";
 
-const SOURCE_NAMES = ["bol", "gold-world", "gold-thai", "fx-market", "gold-lao-manual"];
+// Sources that raise the "not updating" alert. The Phouvong form is optional, so it never alerts here
+// (its own card and the Settings page still show its status).
+const SOURCE_NAMES = ["bol", "gold-world", "gold-thai", "fx-market", "gold-lbb", "bcel"];
 
 export function render(view, ctx) {
   const { t, summary, hints } = ctx;
@@ -28,11 +30,13 @@ export function render(view, ctx) {
   top.append(
     metricCard(
       {
+        // Real Lao price (LBB, automatic) first; estimate and the optional Phouvong price under it
         title: "card_lao_gold",
-        kind: "estimated",
-        note: "note_lao_gold_est",
+        kind: "bank",
+        note: "note_lbb",
         rows: [
-          ["row_est_sell", "calc.lao_gold_est_sell"],
+          ["row_lbb_sell", "calc.lbb_sell_baht"],
+          ["row_lbb_buy", "calc.lbb_buy_baht"],
           ["row_adj_sell", "calc.lao_gold_adj_sell", { emptyText: t.need_shop_prices }],
           ["row_phouvong_sell", "gold-lao-manual.sell", { emptyText: t.not_configured_short }],
         ],
@@ -44,10 +48,20 @@ export function render(view, ctx) {
   view.append(top);
 
   view.append(sectionTitle(t.overview_rates));
-  const cards = el("div", "grid grid-3");
+  const cards = el("div", "grid grid-2");
   cards.append(
     metricCard({ title: "card_bol_usd", kind: "official", rows: [["row_sell", "bol.USD_LAK_sell"], ["row_buy", "bol.USD_LAK_buy"]] }, summary, t),
     metricCard({ title: "card_bol_thb", kind: "official", rows: [["row_sell", "bol.THB_LAK_sell"], ["row_buy", "bol.THB_LAK_buy"]] }, summary, t),
+    metricCard(
+      {
+        title: "card_bcel",
+        kind: "bank",
+        note: "note_bcel",
+        rows: [["row_usd_sell", "bcel.USD_LAK_sell"], ["row_usd_buy", "bcel.USD_LAK_buy"], ["row_thb_sell", "bcel.THB_LAK_sell"], ["row_thb_buy", "bcel.THB_LAK_buy"]],
+      },
+      summary,
+      t
+    ),
     metricCard(
       { title: "card_market_fx", kind: "market", note: "note_market_fx", rows: [["row_usd_lak", "fx-market.USD_LAK"], ["row_thb_lak", "fx-market.THB_LAK"]] },
       summary,
@@ -66,6 +80,7 @@ export function render(view, ctx) {
       t,
       seriesDefs: [
         { metric: "calc.bol_USD_LAK_mid", label: t.series_bol_mid, kind: "official" },
+        { metric: "calc.bcel_USD_LAK_mid", label: t.series_bcel_mid, kind: "bank" },
         { metric: "fx-market.USD_LAK", label: t.series_market, kind: "market" },
       ],
     }),
@@ -76,6 +91,7 @@ export function render(view, ctx) {
       t,
       seriesDefs: [
         { metric: "calc.bol_THB_LAK_mid", label: t.series_bol_mid, kind: "official" },
+        { metric: "calc.bcel_THB_LAK_mid", label: t.series_bcel_mid, kind: "bank" },
         { metric: "fx-market.THB_LAK", label: t.series_market, kind: "market" },
       ],
     })

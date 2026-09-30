@@ -7,6 +7,8 @@ const SOURCES = [
   require("./fetch-gold-world"),
   require("./fetch-gold-thai"),
   require("./fetch-fx-market"),
+  require("./fetch-gold-lbb"),
+  require("./fetch-bcel"),
   require("./fetch-lao-gold-manual"),
 ];
 

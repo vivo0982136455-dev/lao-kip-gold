@@ -169,16 +169,25 @@ function recordKey(r) {
 }
 
 // Add new records to data/history/<source>.json, skipping duplicates.
-// Returns how many records were really added.
-function appendHistory(source, newRecords) {
+// overwrite = true: a record with the same key REPLACES the stored one when its value changed
+// (used by BCEL, which can publish a 2nd "round" for the same day - the newest round wins).
+// Returns how many records were really added (or replaced).
+function appendHistory(source, newRecords, overwrite = false) {
   const file = path.join(HISTORY_DIR, `${source}.json`);
   const history = readJson(file, []);
-  const seen = new Set(history.map(recordKey));
+  const index = new Map(history.map((r, i) => [recordKey(r), i]));
   let added = 0;
   for (const r of newRecords) {
     const key = recordKey(r);
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (index.has(key)) {
+      const i = index.get(key);
+      if (overwrite && history[i].value !== r.value) {
+        history[i] = r;
+        added++;
+      }
+      continue;
+    }
+    index.set(key, history.length);
     history.push(r);
     added++;
   }
@@ -229,7 +238,7 @@ function saveSuccess(meta, records) {
     };
   }
   writeIfChanged(file, JSON.stringify(latest, null, 2) + "\n");
-  return appendHistory(meta.source, records);
+  return appendHistory(meta.source, records, meta.same_day_updates === true);
 }
 
 // Save a failed fetch: keep the old values, mark them stale, remember the error.

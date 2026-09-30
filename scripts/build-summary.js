@@ -9,11 +9,12 @@ const path = require("path");
 const { DATA_DIR, LATEST_DIR, HISTORY_DIR, readJson } = require("./lib/common");
 
 const DAYS_KEPT = 100; // charts show up to 90 days; keep a few extra
-const SOURCES = ["bol", "gold-world", "gold-thai", "fx-market", "gold-lao-manual"];
+const SOURCES = ["bol", "gold-world", "gold-thai", "fx-market", "gold-lbb", "bcel", "gold-lao-manual"];
 const OUT_FILE = path.join(DATA_DIR, "summary.json");
 
 // Gold units
-const GRAMS_PER_BAHT = 15.244;
+const GRAMS_PER_BAHT = 15.244; // Thai baht-weight (Thai association prices)
+const GRAMS_PER_LAO_BAHT = 15; // Lao "baht" (LBB sells 15 g and 7.5 g bars = 1 and ½ baht)
 const GRAMS_PER_TROY_OZ = 31.1035;
 
 // ---------- Day helpers (all days are Asia/Vientiane, UTC+7, no daylight saving) ----------
@@ -79,14 +80,16 @@ function combineDaily(inputs, formula) {
   return out;
 }
 
-// ---------- Shop premium (Phase 3) ----------
-// premium (per day) = Phouvong actual sell price ÷ our estimate (same day)
+// ---------- Lao premium (Phase 3, automatic since LBB was added) ----------
+// The REAL Lao price is Lao Bullion Bank's sell price per Lao baht (15 g) - it updates by itself.
+// premium (per day) = LBB sell price ÷ our estimate (same day)
 // avg_14d           = average premium of the last 14 days (shown on the Gold page)
 // adjusted estimate = estimate × average premium of the 14 days BEFORE that day
-//                     (never uses the same day's shop price, so accuracy tests stay honest)
-function addShopPremium(summary) {
+//                     (never uses the same day's real price, so accuracy tests stay honest)
+// The premium also absorbs the unit gap (Thai baht 15.244 g vs Lao baht 15 g) and the purity gap.
+function addLaoPremium(summary) {
   const m = summary.metrics;
-  const actual = m["gold-lao-manual.sell"];
+  const actual = m["calc.lbb_sell_baht"];
   const est = m["calc.lao_gold_est_sell"];
   summary.gold_premium = null;
   if (!actual || !est) return;
@@ -111,7 +114,7 @@ function addShopPremium(summary) {
     source: "calc",
     kind: "estimated",
     unit: "ratio",
-    sources: [...new Set([...est.sources, "gold-lao-manual"])],
+    sources: [...new Set([...est.sources, ...actual.sources])],
     latest: { value: premiums[premiums.length - 1][1], source_date: premiums[premiums.length - 1][0] },
     daily: premiums,
   });
@@ -123,13 +126,13 @@ function addShopPremium(summary) {
     })
     .filter(Boolean);
   const latestBefore = between(localDay(est.latest.source_date), -14, -1);
-  if (!latestBefore.length) return; // need at least one earlier shop price
+  if (!latestBefore.length) return; // need at least one earlier real price
 
   m["calc.lao_gold_adj_sell"] = makeMetric({
     source: "calc",
     kind: "estimated",
-    unit: "LAK per baht (shop)",
-    sources: [...new Set([...est.sources, "gold-lao-manual"])],
+    unit: "LAK per baht (15 g)",
+    sources: [...new Set([...est.sources, ...actual.sources])],
     latest: { value: est.latest.value * mean(latestBefore), source_date: est.latest.source_date },
     daily: adjDaily,
   });
@@ -214,8 +217,28 @@ function main() {
     });
   }
 
-  // Phouvong shop premium + adjusted estimate (Phase 3)
-  addShopPremium(summary);
+  // Lao Bullion Bank per Lao baht (15 g) - LBB itself prices per gram
+  for (const side of ["sell", "buy"]) {
+    derive(`calc.lbb_${side}_baht`, {
+      kind: "bank",
+      unit: "LAK per baht (15 g)",
+      inputs: [`gold-lbb.${side}_g`],
+      formula: (perGram) => perGram * GRAMS_PER_LAO_BAHT,
+    });
+  }
+
+  // BCEL mid rate = (buy + sell) / 2 -> compared with BOL mid and market mid in charts
+  for (const cur of ["USD", "THB"]) {
+    derive(`calc.bcel_${cur}_LAK_mid`, {
+      kind: "bank",
+      unit: `LAK per ${cur}`,
+      inputs: [`bcel.${cur}_LAK_buy`, `bcel.${cur}_LAK_sell`],
+      formula: (buy, sell) => (buy + sell) / 2,
+    });
+  }
+
+  // Lao premium (vs LBB) + adjusted estimate (Phase 3)
+  addLaoPremium(summary);
 
   // Compact output: one metric per line keeps the file small and git diffs readable
   const lines = Object.entries(summary.metrics).map(([k, v]) => `    ${JSON.stringify(k)}: ${JSON.stringify(v)}`);

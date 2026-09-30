@@ -1,0 +1,28 @@
+{
+  "source": "gold-lbb",
+  "source_name": "Lao Bullion Bank (LBB)",
+  "source_url": "https://www.laobullionbank.com/gold-market",
+  "license": "Public price shown on the LBB website",
+  "kind": "bank",
+  "stale": false,
+  "last_success_at": "2026-09-30T08:46:11.436Z",
+  "last_error": null,
+  "records": [
+    {
+      "source": "gold-lbb",
+      "metric": "buy_g",
+      "value": 3060600,
+      "unit": "LAK per gram",
+      "fetched_at": "2026-09-30T08:46:11.365Z",
+      "source_date": "2026-09-30T06:23:00.000Z"
+    },
+    {
+      "source": "gold-lbb",
+      "metric": "sell_g",
+      "value": 3087200,
+      "unit": "LAK per gram",
+      "fetched_at": "2026-09-30T08:46:11.365Z",
+      "source_date": "2026-09-30T06:23:00.000Z"
+    }
+  ]
+}

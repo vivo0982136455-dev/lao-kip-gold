@@ -22,6 +22,7 @@
   --kind-market: #d95926; /* orange = market */
   --kind-estimated: #199e70; /* aqua   = our estimate */
   --kind-shop: #9085e9; /* violet = shop price typed in by owner */
+  --kind-bank: #e0609a; /* pink   = commercial bank / bullion bank (LBB, BCEL) */
   --ok: #0ca30c;
   --ok-bg: rgba(12, 163, 12, 0.14);
   --warn-text: #fab219;
@@ -51,6 +52,7 @@
   --kind-market: #eb6834;
   --kind-estimated: #1baf7a;
   --kind-shop: #4a3aa7;
+  --kind-bank: #c2336f;
   --ok: #006300;
   --ok-bg: rgba(12, 163, 12, 0.12);
   --warn-text: #7a5200;
@@ -149,6 +151,7 @@ select {
 .segmented.small { display: flex; }
 
 .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.stack { display: grid; gap: 12px; align-content: start; min-width: 0; } /* cards stacked inside one grid column */
 
 /* ---------- Cards ---------- */
 .card {
@@ -162,6 +165,7 @@ select {
 [data-kind="market"] { --kind-color: var(--kind-market); }
 [data-kind="estimated"] { --kind-color: var(--kind-estimated); }
 [data-kind="shop"] { --kind-color: var(--kind-shop); }
+[data-kind="bank"] { --kind-color: var(--kind-bank); }
 
 .card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; }
 .card-head h3 { font-size: 0.93rem; font-weight: 600; flex: 1 1 auto; min-width: 0; }

@@ -1,4 +1,4 @@
-// Page 3: Gold - world, Thai, estimated Lao gold, and the Phouvong shop price (Phase 3).
+// Page 3: Gold - real Lao price (Lao Bullion Bank), our estimate, the optional Phouvong price, Thai and world gold.
 
 import { el, card, cardHead, metricCard, sectionTitle, emptyState, table, rangeButtons, valueRow, cardFoot, sourceStatus } from "../ui.js";
 import { formatNumber, formatPct, formatDate } from "../format.js";
@@ -8,10 +8,16 @@ import { dailyChartCard, mountCharts } from "../charts.js";
 function phouvongCard(summary, t) {
   const c = card("shop");
   const status = sourceStatus("gold-lao-manual", summary);
-  c.append(cardHead(t.card_phouvong, "shop", status === "stale" || status === "error", t));
-
   const actual = summary.metrics["gold-lao-manual.sell"];
-  if (status === "not_configured" || !actual) {
+  // Optional source: warn only when there ARE prices and they stopped updating (an empty form is not an error)
+  c.append(cardHead(t.card_phouvong, "shop", !!actual && (status === "stale" || status === "error"), t));
+
+  if (!actual && status !== "not_configured") {
+    // Form is connected but nobody has typed a price yet
+    c.append(emptyState(t.phouvong_empty_title, t.phouvong_empty_text));
+    return c;
+  }
+  if (!actual) {
     const box = emptyState(t.phouvong_not_setup_title, t.phouvong_not_setup_text);
     const steps = el("ol", "steps");
     for (const k of ["setup_step_1", "setup_step_2", "setup_step_3", "setup_step_4"]) steps.append(el("li", "", t[k]));
@@ -61,8 +67,24 @@ export function render(view, ctx) {
   filters.append(rangeButtons(ctx.range, t, ctx.setRange));
   view.append(filters);
 
+  // Row 1: real Lao price (LBB) | our estimate.  Row 2: Phouvong (optional) | Thai + world stacked.
   const grid = el("div", "grid grid-2");
   grid.append(
+    metricCard(
+      {
+        title: "card_lbb",
+        kind: "bank",
+        note: "note_lbb",
+        rows: [
+          ["row_lbb_sell_baht", "calc.lbb_sell_baht"],
+          ["row_lbb_buy_baht", "calc.lbb_buy_baht"],
+          ["row_lbb_sell_g", "gold-lbb.sell_g"],
+          ["row_lbb_buy_g", "gold-lbb.buy_g"],
+        ],
+      },
+      summary,
+      t
+    ),
     metricCard(
       {
         title: "card_lao_gold_est",
@@ -76,8 +98,10 @@ export function render(view, ctx) {
       },
       summary,
       t
-    ),
-    phouvongCard(summary, t),
+    )
+  );
+  const markets = el("div", "stack");
+  markets.append(
     metricCard(
       {
         title: "card_gold_thai",
@@ -103,6 +127,7 @@ export function render(view, ctx) {
       t
     )
   );
+  grid.append(phouvongCard(summary, t), markets);
   view.append(grid);
 
   // Charts
@@ -112,11 +137,13 @@ export function render(view, ctx) {
   charts.append(
     dailyChartCard({
       title: t.chart_gold_lak,
+      subtitle: t.chart_gold_lak_sub,
       summary,
       rangeDays: ctx.range,
       t,
       unit: "LAK per baht",
       seriesDefs: [
+        { metric: "calc.lbb_sell_baht", label: t.series_lbb, kind: "bank" },
         { metric: "gold-lao-manual.sell", label: t.series_phouvong, kind: "shop" },
         hasAdj
           ? { metric: "calc.lao_gold_adj_sell", label: t.series_lao_gold_adj, kind: "estimated" }

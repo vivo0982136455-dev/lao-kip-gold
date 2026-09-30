@@ -22,9 +22,9 @@ function pctText(acc, t) {
   return acc.total ? `${Math.round((acc.correct / acc.total) * 100)}%` : t.not_enough_data;
 }
 
-// Gold estimate error for days where the owner typed a Phouvong price (last 30 days)
+// Gold estimate error vs the real Lao price (Lao Bullion Bank sell per 15 g), last 30 days
 export function goldErrors(summary) {
-  const actual = summary.metrics["gold-lao-manual.sell"];
+  const actual = summary.metrics["calc.lbb_sell_baht"];
   const adj = summary.metrics["calc.lao_gold_adj_sell"];
   const raw = summary.metrics["calc.lao_gold_est_sell"];
   if (!actual) return [];
@@ -132,7 +132,7 @@ export function render(view, ctx) {
     view.append(c);
   }
 
-  // Gold estimate vs Phouvong
+  // Gold estimate vs Lao Bullion Bank
   view.append(sectionTitle(t.gold_error_title));
   if (!errs.length) {
     view.append(emptyState(t.not_enough_data, t.gold_error_empty));
@@ -141,7 +141,7 @@ export function render(view, ctx) {
     const unit = "LAK";
     c.append(
       table(
-        [t.col_date, t.col_phouvong, t.col_estimate, t.col_error, t.col_adjusted, t.col_error],
+        [t.col_date, t.col_lbb, t.col_estimate, t.col_error, t.col_adjusted, t.col_error],
         errs
           .slice()
           .reverse()
