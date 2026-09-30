@@ -1,5 +1,6 @@
 {
   "flat_threshold_pct": 0.02,
   "hints": [
+    {"target_date":"2026-09-30","made_at":"2026-09-30T02:12:33.404Z","basis":{"from_day":"2026-09-29","to_day":"2026-09-30","usd_pct":0.0461,"thb_pct":0.0981},"hint":{"usd":"up","thb":"up"},"status":"pending"}
   ]
 }
