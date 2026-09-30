@@ -32,6 +32,13 @@ async function main() {
     console.error(`[FAIL] summary: ${err.message}`);
   }
 
+  // Weekly long history for the "1 year" / "all" chart ranges
+  try {
+    require("./build-long").main();
+  } catch (err) {
+    console.error(`[FAIL] long: ${err.message}`);
+  }
+
   // Kip direction hints + accuracy check (Phase 5)
   try {
     require("./update-forecast").main();

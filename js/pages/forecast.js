@@ -3,10 +3,17 @@
 // Nothing is hard-coded.
 
 import { el, card, cardHead, sectionTitle, statTile, table, emptyState } from "../ui.js";
-import { formatDate, formatNumber, formatPct, todayVientiane, addDays } from "../format.js";
+import { formatDate, formatPct, todayVientiane, addDays, formatAxis } from "../format.js";
 
 const ARROW = { up: "▲", down: "▼", flat: "▬" };
 const WINDOW_DAYS = 30;
+
+// Table whose cells may wrap (status words are long, especially in Lao) so it fits a phone
+const wrapTable = (headers, rows) => {
+  const w = table(headers, rows);
+  w.classList.add("wrap-all");
+  return w;
+};
 
 // ---------- Shared helpers (also used by the Overview page) ----------
 
@@ -58,7 +65,7 @@ export function todayHintCard(hints, t, withLink) {
   } else {
     for (const cur of ["usd", "thb"]) {
       const row = el("div", "hint-row");
-      row.append(el("div", "hint-arrow", ARROW[h.hint[cur]]));
+      row.append(el("div", "hint-arrow " + h.hint[cur], ARROW[h.hint[cur]]));
       const text = el("div", "hint-text");
       text.append(el("strong", "", `${t["hint_cur_" + cur]}: ${t["dir_" + h.hint[cur]]}`));
       let status = t.hint_waiting;
@@ -124,9 +131,9 @@ export function render(view, ctx) {
     };
     const c = card(null);
     c.append(
-      table(
+      wrapTable(
         [t.col_date, `USD ${t.col_hint}`, `USD ${t.col_actual}`, `THB ${t.col_hint}`, `THB ${t.col_actual}`],
-        list.map((h) => [formatDate(h.target_date, t), ARROW[h.hint.usd], mark(h, "usd"), ARROW[h.hint.thb], mark(h, "thb")])
+        list.map((h) => [formatDate(h.target_date, t), el("span", "dir-" + h.hint.usd, ARROW[h.hint.usd]), mark(h, "usd"), el("span", "dir-" + h.hint.thb, ARROW[h.hint.thb]), mark(h, "thb")])
       )
     );
     view.append(c);
@@ -138,19 +145,20 @@ export function render(view, ctx) {
     view.append(emptyState(t.not_enough_data, t.gold_error_empty));
   } else {
     const c = card(null);
-    const unit = "LAK";
+    // Values in millions ("46.31 ล้าน") so 6 columns fit a phone; the unit is in the section title
+    const m = (v) => formatAxis(v, "LAK", t);
     c.append(
-      table(
+      wrapTable(
         [t.col_date, t.col_lbb, t.col_estimate, t.col_error, t.col_adjusted, t.col_error],
         errs
           .slice()
           .reverse()
           .map((e) => [
             formatDate(e.day, t),
-            formatNumber(e.actual, unit),
-            formatNumber(e.raw, unit),
+            m(e.actual),
+            m(e.raw),
             formatPct(e.rawErr),
-            e.adj === null ? "—" : formatNumber(e.adj, unit),
+            e.adj === null ? "—" : m(e.adj),
             e.adjErr === null ? "—" : formatPct(e.adjErr),
           ])
       )

@@ -1,7 +1,7 @@
 // Shared building blocks for all pages: cards, value rows, badges, tables.
 // Text from data files is always inserted with textContent (never innerHTML).
 
-import { formatNumber, unitLabel, formatChange, formatDate, toMs } from "./format.js";
+import { formatNumber, unitLabel, formatChange, formatDate, formatPct, toMs, ARROWS, directionOf } from "./format.js";
 
 // ---------- DOM helper ----------
 export function el(tag, className, text) {
@@ -94,6 +94,23 @@ export function sourceLink(src) {
   return link;
 }
 
+// ---------- Up / down pills (green ▲ / red ▼ / grey ▬ - colour never without the arrow) ----------
+
+// Pill from a percent: "▲ +3.2%". options: { decimals, plain (no background), text (override label) }
+export function pctPill(pct, options = {}) {
+  const dir = directionOf(pct, options.flatBelow);
+  const pill = el("span", `delta ${dir}${options.plain ? " plain" : ""}`);
+  const text = options.text !== undefined ? options.text : formatPct(pct, options.decimals === undefined ? 2 : options.decimals);
+  pill.textContent = `${ARROWS[dir]} ${text}`;
+  return pill;
+}
+
+// Pill from latest vs previous value: "▲ +12 (+0.05%)"
+export function deltaPill(latest, prev, unit, options = {}) {
+  const c = formatChange(latest, prev, unit);
+  return pctPill(c.pct, { ...options, text: options.pctOnly ? formatPct(c.pct, options.decimals === undefined ? 2 : options.decimals) : c.text });
+}
+
 // One line: label | big value + change vs previous day
 export function valueRow(label, metric, t, options = {}) {
   const row = el("div", "row");
@@ -109,8 +126,9 @@ export function valueRow(label, metric, t, options = {}) {
   value.append(el("span", "unit", unitLabel(metric.unit)));
   right.append(value);
   if (metric.prev) {
-    const c = formatChange(metric.latest.value, metric.prev.value, metric.unit);
-    right.append(el("div", "change", `${c.arrow} ${c.text} ${t.change_vs} ${formatDate(metric.prev.day, t)}`));
+    const line = el("div", "change");
+    line.append(deltaPill(metric.latest.value, metric.prev.value, metric.unit), el("span", "vs", `${t.change_vs} ${formatDate(metric.prev.day, t)}`));
+    right.append(line);
   } else {
     right.append(el("div", "change", t.no_prev));
   }
@@ -176,12 +194,14 @@ export function sectionTitle(text) {
   return el("h2", "section-title", text);
 }
 
-// Range buttons 7 / 30 / 90 days. onChange(days) is called on click.
+// Range buttons: 7 days / 1 month / 3 months / 1 year / all (0 = all). onChange(days) is called on click.
+// 1 year and "all" use data/long.json (weekly points, loaded only when asked for).
+export const RANGES = [7, 30, 90, 365, 0];
 export function rangeButtons(current, t, onChange) {
   const group = el("div", "segmented");
   group.setAttribute("role", "group");
   group.setAttribute("aria-label", t.range_label);
-  for (const days of [7, 30, 90]) {
+  for (const days of RANGES) {
     const b = el("button", "", t["range_" + days]);
     b.type = "button";
     b.setAttribute("aria-pressed", String(days === current));

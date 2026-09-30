@@ -37,17 +37,26 @@ export function formatAxis(value, unit, t) {
   return formatNumber(value, unit);
 }
 
-// Change vs previous day: { arrow, text } e.g. { arrow: "▲", text: "+12 (+0.05%)" }
+// Change vs previous day: { arrow, text, pct, dir } e.g. { arrow: "▲", text: "+12 (+0.05%)", dir: "up" }
 export function formatChange(latest, prev, unit) {
   const diff = latest - prev;
   const pct = prev ? (diff / prev) * 100 : 0;
   // Treat tiny changes (rounding noise) as "no change"
   const same = Math.abs(pct) < 0.005;
-  const arrow = same ? "▬" : diff > 0 ? "▲" : "▼";
+  const dir = same ? "flat" : diff > 0 ? "up" : "down";
+  const arrow = ARROWS[dir];
   const sign = diff > 0 ? "+" : diff < 0 ? "−" : "";
   const diffText = sign + formatNumber(Math.abs(diff), unit);
   const pctText = sign + Math.abs(pct).toFixed(2) + "%";
-  return { arrow, text: same ? "0.00%" : `${diffText} (${pctText})`, pct };
+  return { arrow, text: same ? "0.00%" : `${diffText} (${pctText})`, pct, dir };
+}
+
+export const ARROWS = { up: "▲", down: "▼", flat: "▬" };
+
+// Direction of a percent change: below `flatBelow` (in %) counts as flat
+export function directionOf(pct, flatBelow = 0.005) {
+  if (pct === null || pct === undefined || Number.isNaN(pct) || Math.abs(pct) < flatBelow) return "flat";
+  return pct > 0 ? "up" : "down";
 }
 
 // "2026-09-28" or an ISO time -> Date object in UTC milliseconds.

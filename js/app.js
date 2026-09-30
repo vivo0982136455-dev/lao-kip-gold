@@ -3,8 +3,8 @@
 // No build step - plain ES modules.
 
 import { icon } from "./icons.js";
-import { el } from "./ui.js";
-import { destroyCharts } from "./charts.js";
+import { el, RANGES } from "./ui.js";
+import { destroyCharts, setLongData, needsLong } from "./charts.js";
 import { formatDate, toMs } from "./format.js";
 import * as overview from "./pages/overview.js";
 import * as rates from "./pages/rates.js";
@@ -24,6 +24,13 @@ const ROUTES = [
   { path: "forecast", title: "page_forecast", icon: "forecast", group: "nav_group_analysis", page: forecast },
   { path: "settings", title: "page_settings", icon: "settings", group: "nav_group_system", page: settings },
 ];
+// Phone bottom tab bar: the 4 most used pages + "more" (opens the full menu). Labels are i18n keys.
+const BOTTOM_TABS = [
+  { path: "overview", label: "tab_overview", icon: "dashboard" },
+  { path: "rates", label: "tab_rates", icon: "exchange" },
+  { path: "gold", label: "tab_gold", icon: "gold" },
+  { path: "living", label: "tab_living", icon: "coin" },
+];
 
 const state = {
   lang: "th",
@@ -33,7 +40,9 @@ const state = {
   summary: null,
   economy: null,
   hints: null,
+  long: null, // data/long.json, loaded only when a 1-year / all range is chosen
   loadError: null,
+  lastPath: null, // page shown last time (fade only when the page really changes)
 };
 
 // ---------- Remembered choices (localStorage can fail in private mode) ----------
@@ -112,6 +121,31 @@ function buildSidebar(currentPath) {
   }
 }
 
+// ---------- Phone bottom tab bar ----------
+function buildBottomNav(currentPath) {
+  const t = state.t;
+  const nav = document.getElementById("bottom-nav");
+  nav.replaceChildren();
+  for (const tab of BOTTOM_TABS) {
+    const a = el("a");
+    a.href = "#/" + tab.path;
+    if (tab.path === currentPath) a.setAttribute("aria-current", "page");
+    a.append(icon(tab.icon, 22), el("span", "", t[tab.label]));
+    nav.append(a);
+  }
+  // "More": the other pages live in the side menu
+  const more = el("a");
+  more.href = "#";
+  more.setAttribute("role", "button");
+  if (!BOTTOM_TABS.some((x) => x.path === currentPath)) more.setAttribute("aria-current", "page");
+  more.append(icon("menu", 22), el("span", "", t.tab_more));
+  more.addEventListener("click", (e) => {
+    e.preventDefault();
+    openMenu(true);
+  });
+  nav.append(more);
+}
+
 // ---------- Top bar ----------
 function renderTopbar(route) {
   const t = state.t;
@@ -140,13 +174,28 @@ function render() {
     node.textContent = t[node.dataset.i18n] ?? node.dataset.i18n;
   });
   buildSidebar(route.path);
+  buildBottomNav(route.path);
   renderTopbar(route);
 
   destroyCharts();
   const view = document.getElementById("view");
+  const samePage = state.lastPath === route.path;
+  const keepScroll = samePage ? window.scrollY : 0; // a redraw on the same page must not jump to the top
   view.replaceChildren();
+  // Short fade only when the page changes (not when a filter redraws it)
+  view.classList.remove("enter");
+  if (!samePage) {
+    void view.offsetWidth; // restart the animation
+    view.classList.add("enter");
+  }
+  state.lastPath = route.path;
   if (!state.summary) {
-    view.append(el("p", "muted", state.loadError ? t.load_error : t.loading));
+    if (state.loadError) view.append(el("p", "muted", t.load_error));
+    else {
+      const sk = el("div", "skeleton");
+      sk.append(el("div"), el("div"), el("div"));
+      view.append(sk);
+    }
     return;
   }
   route.page.render(view, {
@@ -163,6 +212,7 @@ function render() {
     rerender: render,
   });
   view.focus({ preventScroll: true });
+  if (samePage && keepScroll) window.scrollTo(0, keepScroll);
 }
 
 // ---------- Settings that re-draw the page ----------
@@ -178,17 +228,30 @@ function setTheme(theme) {
   applyTheme();
   render(); // charts read colours from CSS, so redraw
 }
-function setRange(days) {
+async function setRange(days) {
   state.range = days;
   save("range", String(days));
+  await ensureLong();
   render();
+}
+
+// 1 year / all ranges need the weekly history file (loaded once, only when asked for)
+async function ensureLong() {
+  if (!needsLong(state.range) || state.long) return;
+  try {
+    state.long = await getJson("data/long.json");
+    setLongData(state.long);
+  } catch {
+    /* no long file: charts fall back to the ~100 days in summary.json */
+  }
 }
 
 // ---------- Start ----------
 async function start() {
   state.lang = load("lang", "th") === "lo" ? "lo" : "th";
   state.theme = load("theme", "dark") === "light" ? "light" : "dark";
-  state.range = [7, 30, 90].includes(Number(load("range", "30"))) ? Number(load("range", "30")) : 30;
+  const savedRange = Number(load("range", "30"));
+  state.range = RANGES.includes(savedRange) ? savedRange : 30;
   applyTheme();
 
   // Load texts and all data at the same time (faster). Economy / forecast are optional.
@@ -207,6 +270,7 @@ async function start() {
   else state.loadError = summary.reason;
   state.economy = eco.status === "fulfilled" ? eco.value : null;
   state.hints = hints.status === "fulfilled" ? hints.value : null;
+  await ensureLong();
 
   openMenu(false);
   render();

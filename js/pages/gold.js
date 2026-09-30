@@ -146,8 +146,8 @@ export function render(view, ctx) {
         { metric: "calc.lbb_sell_baht", label: t.series_lbb, kind: "bank" },
         { metric: "gold-lao-manual.sell", label: t.series_phouvong, kind: "shop" },
         hasAdj
-          ? { metric: "calc.lao_gold_adj_sell", label: t.series_lao_gold_adj, kind: "estimated" }
-          : { metric: "calc.lao_gold_est_sell", label: t.series_lao_gold_est, kind: "estimated" },
+          ? { metric: "calc.lao_gold_adj_sell", label: t.series_lao_gold_adj, kind: "estimated", dashed: true }
+          : { metric: "calc.lao_gold_est_sell", label: t.series_lao_gold_est, kind: "estimated", dashed: true }, // dashed = estimate (and tells it apart from the bank line)
         { metric: "calc.gold_world_lak", label: t.series_gold_world_lak, kind: "market" },
       ],
     }),

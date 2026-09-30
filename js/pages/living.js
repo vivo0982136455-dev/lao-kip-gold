@@ -6,7 +6,7 @@
 //   5) Deposit rates      - BCEL rates for every term, and the LAK rate after inflation
 // Everything is calculated here from stored files. It shows the PAST, it is not a forecast or advice.
 
-import { el, card, cardHead, sectionTitle, statTile, table, emptyState } from "../ui.js";
+import { el, card, cardHead, sectionTitle, statTile, table, emptyState, pctPill } from "../ui.js";
 import { formatNumber, formatPct } from "../format.js";
 import { chartCard, mountCharts } from "../charts.js";
 
@@ -59,6 +59,7 @@ function loadPrices(rerender) {
 
 // ---------- Small helpers ----------
 const monthText = (m, t) => `${t.months[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`; // "2026-08" -> "ส.ค. 2026"
+const monthShort = (m, t) => `${t.months[Number(m.slice(5, 7)) - 1]} ${m.slice(2, 4)}`; // "2026-08" -> "ส.ค. 26" (chart axis)
 const addMonths = (m, n) => {
   const d = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + n, 1));
   return d.toISOString().slice(0, 7);
@@ -136,6 +137,7 @@ function inflationSection(ctx, grid) {
       title: t.living_inflation_chart,
       subtitle: `${t.living_inflation_sub} · ${t.source}: IMF · ${t.latest_month} ${monthText(last, t)}${all.stale ? " · ⚠ " + t.stale_badge : ""}`,
       labels: months.map((m) => monthText(m, t)),
+      tickLabels: months.map((m) => monthShort(m, t)),
       series,
       unit: "%",
       t,
@@ -234,8 +236,8 @@ function pricesSection(ctx, view) {
       id,
       month: m.months[i],
       price: local[i],
-      yearText: yearAgo ? formatPct(pct(yearAgo, local[i]), 1) : "—",
-      natText: nat && nat[i] ? formatPct(pct(nat[i], local[i]), 1) : "—",
+      yearText: yearAgo ? pctPill(pct(yearAgo, local[i]), { decimals: 1 }) : "—",
+      natText: nat && nat[i] ? pctPill(pct(nat[i], local[i]), { decimals: 1, plain: true }) : "—",
       name,
     });
   }
@@ -295,6 +297,7 @@ function pricesSection(ctx, view) {
     title: `${t.items[item] || item} (${t.lak_per} ${t.units[m.items[item].unit] || m.items[item].unit})`,
     subtitle: t.living_prices_chart_sub,
     labels: months.map((mo) => monthText(mo, t)),
+    tickLabels: months.map((mo) => monthShort(mo, t)),
     series: [
       ...(isNational ? [] : [{ label: placeName(market), kind: "market", values: (m.prices[item][market] || []).slice(startIdx) }]),
       { label: t.living_national_avg, kind: "market", color: "--cat-1", values: m.prices[item][NAT].slice(startIdx) },
@@ -332,7 +335,11 @@ function fuelCard(ctx) {
     const value = el("div", "value", formatNumber(last[1], "LAK"));
     value.append(el("span", "unit", `LAK / ${t.units.L}`));
     right.append(value);
-    if (prev) right.append(el("div", "change", `${formatPct(pct(prev[1], last[1]), 1)} ${t.change_vs} ${monthText(prev[0], t)}`));
+    if (prev) {
+      const line = el("div", "change");
+      line.append(pctPill(pct(prev[1], last[1]), { decimals: 1 }), el("span", "vs", `${t.change_vs} ${monthText(prev[0], t)}`));
+      right.append(line);
+    }
     row.append(right);
     c.append(row);
   }
@@ -379,6 +386,7 @@ function savingsSection(ctx, view) {
       title: `${t.living_savings_chart} (${monthText(start, t)} → ${monthText(end, t)})`,
       subtitle: t.living_savings_chart_sub,
       labels: months.map((m) => monthText(m, t)),
+      tickLabels: months.map((m) => monthShort(m, t)),
       series: assets.map((a) => ({ label: t["asset_" + a.id], kind: "estimated", color: a.color, values: months.map((m) => Math.round(real(a, m))) })),
       unit: "LAK",
       t,
@@ -393,7 +401,7 @@ function savingsSection(ctx, view) {
       t["asset_" + a.id],
       formatNumber(nominal, "LAK"),
       formatNumber(r, "LAK"),
-      el("span", r < START ? "neg-text" : "ok-text", formatPct(pct(START, r), 1)),
+      pctPill(pct(START, r), { decimals: 1 }),
     ]);
   const c = card("estimated");
   c.append(cardHead(`${t.living_savings_table} ${monthText(start, t)}`, "estimated", false, t));
@@ -415,15 +423,15 @@ function depositSection(ctx, view) {
   terms.sort((a, b) => termValue(a) - termValue(b));
   const cur = (c, term) => {
     const x = m[`bcel-deposit.${c}_${term}`];
-    return x ? `${x.latest.value.toFixed(2)}%` : "—";
+    return x ? x.latest.value.toFixed(2) : "—"; // the card title says "% per year"
   };
   const rows = terms.map((term) => {
     const lak = m[`bcel-deposit.LAK_${term}`];
-    const realText = lak && inf ? formatPct(((1 + lak.latest.value / 100) / (1 + inf[1] / 100) - 1) * 100, 1) : "—";
+    const real = lak && inf ? ((1 + lak.latest.value / 100) / (1 + inf[1] / 100) - 1) * 100 : null;
     return [
       term === "saving" ? t.term_saving : `${t.term_fixed} ${termValue(term)} ${t.term_months}`,
       cur("LAK", term),
-      el("span", realText.startsWith("−") ? "neg-text" : "", realText),
+      real === null ? "—" : pctPill(real, { decimals: 1 }),
       cur("USD", term),
       cur("THB", term),
       cur("CNY", term),

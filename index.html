@@ -8,7 +8,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23e0b43c%22/%3E%3Ctext x=%2216%22 y=%2223%22 font-size=%2220%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-weight=%22700%22 fill=%22%230f1115%22%3E%E2%82%AD%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;600&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Lao:wght@400;600&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <!-- Chart.js from CDN. "defer" = does not block the page; the numbers show first.
        Some networks block cdnjs → load the same file from jsDelivr instead, then tell app.js to redraw. -->
@@ -45,7 +45,13 @@
         <span id="topbar-updated" class="topbar-updated"></span>
       </header>
 
-      <main id="view" class="view" tabindex="-1"></main>
+      <main id="view" class="view" tabindex="-1">
+        <!-- Shown until the data arrives (replaced by js/app.js) -->
+        <div class="skeleton"><div></div><div></div><div></div></div>
+      </main>
+
+      <!-- Phone bottom tab bar (built by js/app.js; hidden on wide screens) -->
+      <nav id="bottom-nav" class="bottom-nav" aria-label="Menu"></nav>
 
       <footer class="site-footer">
         <p data-i18n="disclaimer"></p>

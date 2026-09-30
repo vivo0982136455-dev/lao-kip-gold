@@ -1,7 +1,7 @@
 // Page 2: Exchange rates - all 7 BOL currencies + market rates + history chart.
 
-import { el, card, cardHead, metricCard, sectionTitle, isStale, cardFoot, rangeButtons, table } from "../ui.js";
-import { formatNumber, formatChange, formatPct } from "../format.js";
+import { el, card, cardHead, metricCard, sectionTitle, isStale, cardFoot, rangeButtons, table, deltaPill } from "../ui.js";
+import { formatNumber } from "../format.js";
 import { dailyChartCard, mountCharts } from "../charts.js";
 
 const CURRENCIES = ["USD", "THB", "CNY", "GBP", "EUR", "JPY", "KRW"];
@@ -16,11 +16,7 @@ function bcelCard(summary, t) {
     const buy = summary.metrics[`bcel.${cur}_LAK_buy`];
     const sell = summary.metrics[`bcel.${cur}_LAK_sell`];
     if (sell) ids.push(`bcel.${cur}_LAK_sell`);
-    let change = "—";
-    if (sell && sell.prev) {
-      const ch = formatChange(sell.latest.value, sell.prev.value, sell.unit);
-      change = `${ch.arrow} ${formatPct(ch.pct)}`;
-    }
+    const change = sell && sell.prev ? deltaPill(sell.latest.value, sell.prev.value, sell.unit, { pctOnly: true }) : "—";
     const name = el("span", "", cur);
     name.append(el("span", "sub", t["cur_" + cur]));
     return [name, buy ? formatNumber(buy.latest.value, buy.unit) : "—", sell ? formatNumber(sell.latest.value, sell.unit) : "—", change];
@@ -97,12 +93,9 @@ export function render(view, ctx) {
     tr.append(name);
     tr.append(el("td", "", buy ? formatNumber(buy.latest.value, buy.unit) : "—"));
     tr.append(el("td", "", sell ? formatNumber(sell.latest.value, sell.unit) : "—"));
-    let change = "—";
-    if (sell && sell.prev) {
-      const c = formatChange(sell.latest.value, sell.prev.value, sell.unit);
-      change = `${c.arrow} ${formatPct(c.pct)}`;
-    }
-    tr.append(el("td", "", change));
+    const td = el("td");
+    td.append(sell && sell.prev ? deltaPill(sell.latest.value, sell.prev.value, sell.unit, { pctOnly: true }) : "—");
+    tr.append(td);
     tr.addEventListener("click", () => choose(cur));
     tr.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -137,7 +130,8 @@ export function render(view, ctx) {
 
   // Chart for the selected currency
   view.append(sectionTitle(`${t.history_of} ${selected} → LAK`));
-  const seriesDefs = [{ daily: midDailyOf(summary, "bol", selected), label: t.series_bol_mid, kind: "official" }];
+  // longId: the weekly history in data/long.json used for the 1-year / all ranges
+  const seriesDefs = [{ daily: midDailyOf(summary, "bol", selected), longId: `calc.bol_${selected}_LAK_mid`, label: t.series_bol_mid, kind: "official" }];
   if (BCEL_CURRENCIES.includes(selected)) seriesDefs.push({ daily: midDailyOf(summary, "bcel", selected), label: t.series_bcel_mid, kind: "bank" });
   if (selected === "USD") seriesDefs.push({ metric: "fx-market.USD_LAK", label: t.series_market, kind: "market" });
   if (selected === "THB") seriesDefs.push({ metric: "fx-market.THB_LAK", label: t.series_market, kind: "market" });
