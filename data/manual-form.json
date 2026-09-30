@@ -1,0 +1,51 @@
+{
+  "form_id": "1FAIpQLSe9nGE_XCCiKMx2XpTorj0T8Dl91k6CHGjqho6rc37gLQLFFg",
+  "sheet_id": "1uKH9A0aoemxJfceglZpBXteIvwexp91VwW7S8sX0Azc",
+  "entries": {
+    "date": "897558322",
+    "sell": "2008066184",
+    "buy": "1666086970",
+    "note": "342470071",
+    "bar_sell": "1831663786",
+    "bar_buy": "1940006520"
+  },
+  "questions": [
+    {
+      "title": "วันที่",
+      "type": 9,
+      "entry": "897558322",
+      "role": "date"
+    },
+    {
+      "title": "ราคาขาย (กีบ ต่อ 1 บาท)",
+      "type": 0,
+      "entry": "2008066184",
+      "role": "sell"
+    },
+    {
+      "title": "ราคารับซื้อ (กีบ ต่อ 1 บาท)",
+      "type": 0,
+      "entry": "1666086970",
+      "role": "buy"
+    },
+    {
+      "title": "หมายเหตุ",
+      "type": 0,
+      "entry": "342470071",
+      "role": "note"
+    },
+    {
+      "title": "ทองแท่ง ราคาขาย (กีบ ต่อ 1 บาท)",
+      "type": 0,
+      "entry": "1831663786",
+      "role": "bar_sell"
+    },
+    {
+      "title": "ทองแท่ง ราคารับซื้อ (กีบ ต่อ 1 บาท)",
+      "type": 0,
+      "entry": "1940006520",
+      "role": "bar_buy"
+    }
+  ],
+  "direct_submit_ok": true
+}

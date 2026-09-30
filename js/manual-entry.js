@@ -1,0 +1,68 @@
+// Save shop prices into the owner's Google Form - from the page, no server.
+// Question IDs come from data/manual-form.json (made by scripts/fetch-form-entries.js on every data run).
+//
+// Two ways (research 2026-09-30):
+//   1) direct: POST to the form's formResponse in "no-cors" mode (one tap). The browser cannot see
+//      Google's answer, so a short random tag is put in the Note and the Sheet is read back until
+//      the tag appears -> "saved" is only shown when the row is really in the Sheet.
+//   2) fallback: the form opened already filled in (official "pre-filled link"); the owner presses Submit.
+// Numbers are sent as plain digits; the date as YYYY-MM-DD (Google ignores other date formats).
+
+let formConfig = null;
+
+export async function loadFormConfig() {
+  if (formConfig) return formConfig;
+  const res = await fetch("data/manual-form.json", { cache: "no-cache" });
+  if (!res.ok) throw new Error("no form config");
+  formConfig = await res.json();
+  return formConfig;
+}
+
+// values: { date, sell, buy, bar_sell, bar_buy, silver_sell, silver_buy, note } -> entry fields
+function fields(config, values) {
+  const out = [];
+  for (const [role, value] of Object.entries(values)) {
+    const id = config.entries[role];
+    if (!id || value === null || value === undefined || value === "") continue;
+    out.push([`entry.${id}`, typeof value === "number" ? String(Math.round(value)) : String(value)]);
+  }
+  return out;
+}
+
+// Which prices the form can take (e.g. silver only after the owner added those questions)
+export function formHas(config, role) {
+  return !!(config && config.entries && config.entries[role]);
+}
+
+// The form opened with everything filled in; the owner only presses Submit
+export function prefilledUrl(config, values) {
+  const q = new URLSearchParams([["usp", "pp_url"], ...fields(config, values)]);
+  return `https://docs.google.com/forms/d/e/${config.form_id}/viewform?${q}`;
+}
+
+// A short random tag, e.g. "#k3f9x2"
+export function newTag() {
+  return "#" + Math.random().toString(36).slice(2, 8);
+}
+
+// Direct save. Resolves true when the tagged row is seen in the Sheet, false when not seen in time.
+// onStage("send" | "check")
+export async function saveDirect(config, values, tag, onStage = () => {}) {
+  const body = new URLSearchParams([...fields(config, values), ["fvv", "1"], ["pageHistory", "0"]]);
+  onStage("send");
+  // no-cors: the request is sent, but its answer is hidden from us (it is always "opaque")
+  await fetch(`https://docs.google.com/forms/d/e/${config.form_id}/formResponse`, { method: "POST", mode: "no-cors", body });
+  if (!config.sheet_id) return false;
+  onStage("check");
+  for (let i = 0; i < 10; i++) {
+    await new Promise((r) => setTimeout(r, 2500));
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${config.sheet_id}/gviz/tq?tqx=out:csv&_=${Date.now()}`;
+      const text = await (await fetch(url, { cache: "no-store" })).text();
+      if (text.includes(tag)) return true;
+    } catch {
+      /* try again */
+    }
+  }
+  return false;
+}

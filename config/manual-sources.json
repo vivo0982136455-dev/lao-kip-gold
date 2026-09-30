@@ -1,4 +1,5 @@
 {
-  "_help": "Paste the CSV link of the Phouvong Google Sheet here (optional). Monthly CPI is automatic (IMF) since 2026-09-30. Guide: docs/manual-entry-guide-th.md",
-  "lao_gold_csv_url": "https://docs.google.com/spreadsheets/d/1uKH9A0aoemxJfceglZpBXteIvwexp91VwW7S8sX0Azc/export?format=csv"
+  "_help": "Links for the owner's shop-price Google Form and its Sheet. Question IDs are found automatically (scripts/fetch-form-entries.js -> data/manual-form.json). Guide: docs/manual-entry-guide-th.md",
+  "lao_gold_csv_url": "https://docs.google.com/spreadsheets/d/1uKH9A0aoemxJfceglZpBXteIvwexp91VwW7S8sX0Azc/export?format=csv",
+  "shop_form_url": "https://docs.google.com/forms/d/e/1FAIpQLSe9nGE_XCCiKMx2XpTorj0T8Dl91k6CHGjqho6rc37gLQLFFg/viewform"
 }

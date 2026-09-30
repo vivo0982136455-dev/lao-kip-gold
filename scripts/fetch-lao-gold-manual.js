@@ -1,71 +1,50 @@
-// Source #5: Phouvong gold shop price, typed in by the owner (MANUAL, shop price).
-// Google Form -> Google Sheet -> "Publish to web" as CSV -> this script.
-// The link is set in config/manual-sources.json ("lao_gold_csv_url").
+// Source #5: Phouvong gold shop prices, from the owner's Google Form (MANUAL, shop price).
+// Entered by hand, or by the Gold page's "read from picture" button, which fills the same form.
+// Google Form -> Google Sheet (shared "anyone with the link") -> CSV link in config/manual-sources.json.
 //
-// Expected CSV columns (in this order, the header text does not matter):
-//   0 Timestamp | 1 Date | 2 Sell price (LAK per baht) | 3 Buy price (LAK per baht, optional) | 4 Note
-// The Sheet is the full truth: if you fix an entry, the history is rebuilt from the Sheet.
-// Several entries on the same day -> the LAST one counts.
+// Prices (LAK per 1 Lao baht = 15 g):
+//   sell / buy          = gold jewellery (ຄຳຮູບປະພັນ), Sheet columns C / D
+//   bar_sell / bar_buy  = KPV gold bar (ຄຳແທ່ງ), questions added at the end of the form (found by header words)
+// The Sheet is the full truth: the history is rebuilt from it every run (a fixed entry replaces the old one).
+// Plausibility: a price more than 15% away from Lao Bullion Bank's price that day is skipped
+// (catches typing / picture-reading mistakes and fake answers - the form link is public).
 
 const path = require("path");
-const {
-  LATEST_DIR,
-  fetchText,
-  parseCsv,
-  parseNumber,
-  makeRecord,
-  replaceHistory,
-  writeIfChanged,
-  runSource,
-  runIfMain,
-} = require("./lib/common");
-const { manualUrl, parseSheetDate, parseSheetTimestamp } = require("./lib/manual");
+const { LATEST_DIR, replaceHistory, writeIfChanged, runSource, runIfMain } = require("./lib/common");
+const { manualUrl } = require("./lib/manual");
+const { readShopPrices, lbbByDay, lbbNear } = require("./lib/manual-sheet");
 
 const META = {
   source: "gold-lao-manual",
-  source_name: "Phouvong Jewelry (manual entry)",
+  source_name: "Phouvong Jewelry (owner's form)",
   source_url: null,
-  license: "Prices typed in by the owner from the shop's public posts",
+  license: "Prices entered by the owner from the shop's public posts",
   kind: "shop",
 };
 
-// A Lao gold price per baht is tens of millions of LAK. Values far outside this are typing mistakes.
-const MIN_PRICE = 1000000;
+const PRICES = {
+  sell: { column: "sell", label: "jewellery sell" },
+  buy: { column: "buy", label: "jewellery buy" },
+  bar_sell: { column: "bar_sell", label: "bar sell" },
+  bar_buy: { column: "bar_buy", label: "bar buy" },
+};
+const MIN_PRICE = 1000000; // a baht of gold is tens of millions of LAK
 const MAX_PRICE = 1000000000;
-
-function readPrice(raw, label) {
-  const value = parseNumber(raw, label);
-  if (value < MIN_PRICE || value > MAX_PRICE) throw new Error(`${label} looks wrong: ${raw}`);
-  return value;
-}
+const MAX_GAP = 0.15; // 15% from LBB
 
 async function getRecords(url) {
-  const rows = parseCsv(await fetchText(url));
-  if (rows.length < 2) throw new Error("The sheet has no entries yet");
-
-  const byDay = new Map(); // day -> records (last entry of the day wins)
-  let skipped = 0;
-  for (const [i, row] of rows.slice(1).entries()) {
-    try {
-      const day = parseSheetDate(row[1]) || parseSheetDate(row[0]);
-      if (!day) throw new Error(`cannot read date "${row[1]}"`);
-      const enteredAt = parseSheetTimestamp(row[0]) || new Date(`${day}T00:00:00+07:00`).toISOString();
-      const base = { source: META.source, unit: "LAK per baht (shop)", fetched_at: enteredAt, source_date: day };
-      const records = [makeRecord({ ...base, metric: "sell", value: readPrice(row[2], "sell price") })];
-      if (String(row[3] || "").trim() !== "") {
-        records.push(makeRecord({ ...base, metric: "buy", value: readPrice(row[3], "buy price") }));
-      }
-      byDay.set(day, records);
-    } catch (err) {
-      skipped++;
-      console.warn(`       gold-lao-manual: skipped row ${i + 2}: ${err.message}`);
+  const lbb = lbbByDay();
+  const check = (value, day) => {
+    if (value < MIN_PRICE || value > MAX_PRICE) throw new Error(`looks wrong: ${value}`);
+    const ref = lbbNear(lbb, day);
+    if (ref && Math.abs(value / ref - 1) > MAX_GAP) {
+      throw new Error(`${value} is more than ${MAX_GAP * 100}% away from Lao Bullion Bank (${Math.round(ref)})`);
     }
-  }
-  if (byDay.size === 0) throw new Error(`No valid rows (${skipped} skipped)`);
-
-  replaceHistory(META.source, [...byDay.values()].flat());
-  const newestDay = [...byDay.keys()].sort().pop();
-  return byDay.get(newestDay); // "latest" = the newest day
+  };
+  const { records, latest, skipped } = await readShopPrices(url, { source: META.source, unit: "LAK per baht (shop)", prices: PRICES, check });
+  if (!records.length) throw new Error(skipped ? `No valid prices (${skipped} skipped)` : "The sheet has no entries yet");
+  replaceHistory(META.source, records);
+  return latest; // newest value of each price
 }
 
 async function run() {

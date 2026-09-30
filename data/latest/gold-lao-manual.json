@@ -1,12 +1,12 @@
 {
   "source": "gold-lao-manual",
-  "source_name": "Phouvong Jewelry (manual entry)",
+  "source_name": "Phouvong Jewelry (owner's form)",
   "source_url": null,
-  "license": "Prices typed in by the owner from the shop's public posts",
+  "license": "Prices entered by the owner from the shop's public posts",
   "kind": "shop",
   "configured": true,
   "stale": false,
-  "last_success_at": "2026-09-30T15:24:55.709Z",
+  "last_success_at": "2026-09-30T15:22:21.467Z",
   "last_error": null,
   "records": [
     {
@@ -21,6 +21,22 @@
       "source": "gold-lao-manual",
       "metric": "buy",
       "value": 45056000,
+      "unit": "LAK per baht (shop)",
+      "fetched_at": "2026-09-30T15:21:15.000Z",
+      "source_date": "2026-09-30"
+    },
+    {
+      "source": "gold-lao-manual",
+      "metric": "bar_sell",
+      "value": 46150000,
+      "unit": "LAK per baht (shop)",
+      "fetched_at": "2026-09-30T15:21:15.000Z",
+      "source_date": "2026-09-30"
+    },
+    {
+      "source": "gold-lao-manual",
+      "metric": "bar_buy",
+      "value": 45620000,
       "unit": "LAK per baht (shop)",
       "fetched_at": "2026-09-30T15:21:15.000Z",
       "source_date": "2026-09-30"

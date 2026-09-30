@@ -11,10 +11,19 @@ const SOURCES = [
   require("./fetch-bcel"),
   require("./fetch-bcel-deposit"),
   require("./fetch-lao-gold-manual"),
+  require("./fetch-silver-manual"),
 ];
 
 async function main() {
   const results = [];
+
+  // Question IDs of the owner's price form (the Gold page uses them to fill the form)
+  try {
+    await require("./fetch-form-entries").main();
+  } catch (err) {
+    console.error(`[FAIL] manual-form: ${err.message}`);
+  }
+
   for (const src of SOURCES) {
     // runSource() already catches errors; this extra try/catch is a safety net.
     try {

@@ -1,14 +1,19 @@
 // Page 3: Gold - real Lao price (Lao Bullion Bank), our estimate, the optional Phouvong price, Thai and world gold.
 
-import { el, card, cardHead, metricCard, sectionTitle, emptyState, table, rangeButtons, valueRow, cardFoot, sourceStatus } from "../ui.js";
+import { el, card, cardHead, metricCard, sectionTitle, emptyState, table, rangeButtons, valueRow, cardFoot, sourceStatus, pctPill } from "../ui.js";
 import { formatNumber, formatPct, formatDate } from "../format.js";
 import { dailyChartCard, mountCharts } from "../charts.js";
+import { uploadCard } from "./gold-upload.js";
 
-// Phouvong card: actual price vs our estimate (same day)
+// Value of a daily metric on one day (undefined when there is none)
+const onDay = (summary, id, day) => new Map((summary.metrics[id] || { daily: [] }).daily).get(day);
+
+// Phouvong card: jewellery + gold bar prices, bar compared with Lao Bullion Bank (bar vs bar, same day)
 function phouvongCard(summary, t) {
   const c = card("shop");
   const status = sourceStatus("gold-lao-manual", summary);
-  const actual = summary.metrics["gold-lao-manual.sell"];
+  const m = (id) => summary.metrics["gold-lao-manual." + id];
+  const actual = m("sell") || m("bar_sell");
   // Optional source: warn only when there ARE prices and they stopped updating (an empty form is not an error)
   c.append(cardHead(t.card_phouvong, "shop", !!actual && (status === "stale" || status === "error"), t));
 
@@ -26,29 +31,35 @@ function phouvongCard(summary, t) {
     return c;
   }
 
-  c.append(valueRow(t.row_phouvong_sell, actual, t));
-  if (summary.metrics["gold-lao-manual.buy"]) c.append(valueRow(t.row_phouvong_buy, summary.metrics["gold-lao-manual.buy"], t));
+  for (const [id, key] of [["sell", "row_phouvong_sell"], ["buy", "row_phouvong_buy"], ["bar_sell", "row_phouvong_bar_sell"], ["bar_buy", "row_phouvong_bar_buy"]]) {
+    if (m(id)) c.append(valueRow(t[key], m(id), t));
+  }
 
-  // Compare with the estimate for the SAME day as the shop price
-  const day = actual.latest.source_date;
-  const est = new Map((summary.metrics["calc.lao_gold_est_sell"] || { daily: [] }).daily).get(day);
-  const adj = new Map((summary.metrics["calc.lao_gold_adj_sell"] || { daily: [] }).daily).get(day);
-  const compare = (label, estimate) => {
+  // Compare with a reference price of the SAME day: shop - reference, in LAK and %
+  const compare = (label, shop, reference, diffLabel) => {
     const row = el("div", "row");
     row.append(el("span", "row-label", label));
     const right = el("div", "row-right");
-    if (estimate === undefined) {
+    if (reference === undefined) {
       right.append(el("div", "change", t.not_enough_data));
     } else {
-      const diff = actual.latest.value - estimate;
-      right.append(el("div", "value", formatNumber(estimate, "LAK")));
-      right.append(el("div", "change wrap", `${t.shop_minus_estimate}: ${diff >= 0 ? "+" : "−"}${formatNumber(Math.abs(diff), "LAK")} LAK (${formatPct((diff / estimate) * 100)})`));
+      const diff = shop - reference;
+      right.append(el("div", "value", formatNumber(reference, "LAK")));
+      const line = el("div", "change wrap");
+      line.append(el("span", "vs", `${diffLabel}: ${diff >= 0 ? "+" : "−"}${formatNumber(Math.abs(diff), "LAK")} LAK`), pctPill((diff / reference) * 100));
+      right.append(line);
     }
     row.append(right);
     return row;
   };
-  c.append(compare(`${t.row_est_sell} (${formatDate(day, t)})`, est));
-  c.append(compare(`${t.row_adj_sell} (${formatDate(day, t)})`, adj));
+  if (m("bar_sell")) {
+    const day = m("bar_sell").latest.source_date;
+    c.append(compare(`${t.row_lbb_sell} (${formatDate(day, t)})`, m("bar_sell").latest.value, onDay(summary, "calc.lbb_sell_baht", day), t.shop_bar_minus_lbb));
+  }
+  if (m("sell")) {
+    const day = m("sell").latest.source_date;
+    c.append(compare(`${t.row_adj_sell} (${formatDate(day, t)})`, m("sell").latest.value, onDay(summary, "calc.lao_gold_adj_sell", day), t.shop_minus_estimate));
+  }
 
   const p = summary.gold_premium;
   const premText = p && p.avg_14d ? `${formatPct((p.avg_14d - 1) * 100)} (${t.premium_days}: ${p.days_used})` : t.not_enough_data;
@@ -56,12 +67,15 @@ function phouvongCard(summary, t) {
   prem.append(el("span", "row-label", t.premium_avg_14d), el("div", "row-right value", premText));
   c.append(prem);
   c.append(el("p", "note", t.note_premium));
-  c.append(cardFoot(["gold-lao-manual.sell"], summary, t));
+  c.append(cardFoot(["gold-lao-manual.sell", "gold-lao-manual.bar_sell"].filter((id) => summary.metrics[id]), summary, t));
   return c;
 }
 
 export function render(view, ctx) {
   const { t, summary } = ctx;
+
+  // Save a shop price from its picture (Phouvong gold / PML silver)
+  view.append(uploadCard(ctx));
 
   const filters = el("div", "filters");
   filters.append(rangeButtons(ctx.range, t, ctx.setRange));
@@ -144,7 +158,8 @@ export function render(view, ctx) {
       unit: "LAK per baht",
       seriesDefs: [
         { metric: "calc.lbb_sell_baht", label: t.series_lbb, kind: "bank" },
-        { metric: "gold-lao-manual.sell", label: t.series_phouvong, kind: "shop" },
+        { metric: "gold-lao-manual.bar_sell", label: t.series_phouvong_bar, kind: "shop" },
+        { metric: "gold-lao-manual.sell", label: t.series_phouvong, kind: "shop", dashed: true }, // dashed = jewellery (the bar line is solid)
         hasAdj
           ? { metric: "calc.lao_gold_adj_sell", label: t.series_lao_gold_adj, kind: "estimated", dashed: true }
           : { metric: "calc.lao_gold_est_sell", label: t.series_lao_gold_est, kind: "estimated", dashed: true }, // dashed = estimate (and tells it apart from the bank line)
@@ -161,24 +176,37 @@ export function render(view, ctx) {
   );
   view.append(charts);
 
-  // Comparison table: every day with a Phouvong price
-  const actual = summary.metrics["gold-lao-manual.sell"];
-  if (actual && actual.daily.length) {
-    view.append(sectionTitle(t.compare_title));
-    const est = new Map((summary.metrics["calc.lao_gold_est_sell"] || { daily: [] }).daily);
-    const adj = new Map((summary.metrics["calc.lao_gold_adj_sell"] || { daily: [] }).daily);
-    const rows = actual.daily
-      .slice(-30)
+  // Comparison table: every day with a Phouvong price. Bar vs LBB (both bars), jewellery vs our adjusted estimate.
+  // Values in millions of LAK (46.26) with the unit in the title, so 6 columns fit a phone.
+  const shopDays = new Set([
+    ...((summary.metrics["gold-lao-manual.sell"] || {}).daily || []).map(([d]) => d),
+    ...((summary.metrics["gold-lao-manual.bar_sell"] || {}).daily || []).map(([d]) => d),
+  ]);
+  if (shopDays.size) {
+    view.append(sectionTitle(`${t.compare_title} (${t.unit_million_lak})`));
+    const mil = (v) => (v === undefined ? "—" : (v / 1e6).toFixed(2));
+    const rows = [...shopDays]
+      .sort()
       .reverse()
-      .map(([d, v]) => [
-        formatDate(d, t),
-        formatNumber(v, "LAK"),
-        est.has(d) ? formatNumber(est.get(d), "LAK") : "—",
-        est.has(d) ? formatPct(((v - est.get(d)) / est.get(d)) * 100) : "—",
-        adj.has(d) ? formatNumber(adj.get(d), "LAK") : "—",
-      ]);
+      .slice(0, 30)
+      .map((d) => {
+        const bar = onDay(summary, "gold-lao-manual.bar_sell", d);
+        const lbb = onDay(summary, "calc.lbb_sell_baht", d);
+        const orn = onDay(summary, "gold-lao-manual.sell", d);
+        const adj = onDay(summary, "calc.lao_gold_adj_sell", d);
+        return [
+          formatDate(d, t),
+          mil(bar),
+          mil(lbb),
+          bar !== undefined && lbb !== undefined ? pctPill(((bar - lbb) / lbb) * 100) : "—",
+          mil(orn),
+          mil(adj),
+        ];
+      });
     const c = card("shop");
-    c.append(table([t.col_date, t.col_phouvong, t.col_estimate, t.col_premium, t.col_adjusted], rows));
+    const tbl = table([t.col_date, t.col_phouvong_bar, "LBB", t.col_bar_vs_lbb, t.col_phouvong, t.col_adjusted], rows);
+    tbl.classList.add("wrap-all");
+    c.append(tbl);
     view.append(c);
   }
   mountCharts(view);
