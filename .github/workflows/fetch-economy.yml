@@ -8,6 +8,17 @@ on:
   schedule:
     - cron: "0 3 * * 1"      # every Monday, 03:00 UTC (10:00 Vientiane)
   workflow_dispatch:         # "Run workflow" button
+  push:                      # also when one of the weekly scripts changes: a new or changed fetcher is tried
+    branches: [main]         # on GitHub's servers the same day, not next Monday
+    paths:
+      - ".github/workflows/fetch-economy.yml"
+      - "scripts/fetch-economy.js"
+      - "scripts/fetch-invest.js"
+      - "scripts/fetch-prices.js"
+      - "scripts/fetch-thai-prices.js"
+      - "scripts/fetch-land-decisions.js"
+      - "scripts/fetch-rubber-world.js"
+      - "scripts/lib/**"
 
 permissions:
   contents: write

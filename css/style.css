@@ -133,7 +133,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible, select:focus-visib
 
 /* Sidebar: off-canvas on phones */
 .sidebar {
-  position: fixed; inset: 0 auto 0 0; z-index: 30; width: min(var(--sidebar-w), 82vw);
+  position: fixed; inset: 0 auto 0 0; z-index: 30; width: min(288px, 84vw); /* wide screens: var(--sidebar-w), see below */
   background: var(--sidebar); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; padding: 16px 12px;
   transform: translateX(-100%); transition: transform 0.2s ease; overflow-y: auto;
@@ -148,7 +148,8 @@ button:focus-visible, a:focus-visible, summary:focus-visible, select:focus-visib
   width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center;
   background: var(--accent-soft); color: var(--accent); font-size: 1.1rem; font-weight: 700;
 }
-.brand-text { font-size: 0.95rem; line-height: 1.2; }
+.brand-text { font-size: 0.95rem; line-height: 1.2; flex: 1 1 auto; min-width: 0; }
+.menu-close { flex: none; margin: -4px -4px -4px 0; } /* phones only: closes the slide-in menu */
 .nav-group { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 14px 10px 6px; }
 .nav-list { list-style: none; margin: 0; padding: 0; }
 .nav-link {
@@ -553,7 +554,7 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 @media (min-width: 900px) {
   .app { display: grid; grid-template-columns: var(--sidebar-w) minmax(0, 1fr); }
   .sidebar { position: sticky; top: 0; height: 100vh; transform: none; width: var(--sidebar-w); }
-  .backdrop, #menu-btn { display: none; }
+  .backdrop, .menu-close { display: none; }
   .topbar { padding: 12px 24px; }
 }
 @media (min-width: 1100px) {

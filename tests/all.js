@@ -4,7 +4,7 @@ const { spawnSync } = require("child_process");
 const path = require("path");
 
 const quick = process.argv.includes("quick");
-const TESTS = [["screens.js", quick ? ["quick"] : []], ["states.js", []], ["install.js", []], ["offline-label.js", []]];
+const TESTS = [["screens.js", quick ? ["quick"] : []], ["states.js", []], ["menu.js", []], ["install.js", []], ["offline-label.js", []]];
 const failed = [];
 for (const [file, args] of TESTS) {
   console.log("\n=== " + file + " " + args.join(" ") + " ===");

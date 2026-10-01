@@ -83,14 +83,15 @@ function applyTheme() {
 // ---------- Sidebar ----------
 const sidebar = document.getElementById("sidebar");
 const backdrop = document.getElementById("backdrop");
-const menuBtn = document.getElementById("menu-btn");
+const menuClose = document.getElementById("menu-close");
 
+// Phones: the side menu slides in. It is opened by "more" in the bottom bar (the only menu button) and closed by
+// its own close button, by a tap beside it, by Escape, or by choosing a page.
 function openMenu(open) {
   sidebar.classList.toggle("open", open);
   backdrop.classList.toggle("show", open);
-  menuBtn.setAttribute("aria-expanded", String(open));
-  menuBtn.replaceChildren(icon(open ? "close" : "menu", 22));
-  menuBtn.setAttribute("aria-label", open ? state.t.menu_close : state.t.menu_open);
+  const more = document.getElementById("more-btn");
+  if (more) more.setAttribute("aria-expanded", String(open));
 }
 
 function buildSidebar(currentPath) {
@@ -114,6 +115,9 @@ function buildSidebar(currentPath) {
     li.append(a);
     list.append(li);
   }
+
+  menuClose.replaceChildren(icon("close", 20));
+  menuClose.setAttribute("aria-label", t.menu_close);
 
   // Quick language switch at the bottom of the sidebar
   const langBox = document.getElementById("sidebar-lang");
@@ -142,7 +146,10 @@ function buildBottomNav(currentPath) {
   // "More": the other pages live in the side menu
   const more = el("a");
   more.href = "#";
+  more.id = "more-btn";
   more.setAttribute("role", "button");
+  more.setAttribute("aria-controls", "sidebar");
+  more.setAttribute("aria-expanded", String(sidebar.classList.contains("open")));
   if (!BOTTOM_TABS.some((x) => x.path === currentPath)) more.setAttribute("aria-current", "page");
   more.append(icon("menu", 22), el("span", "", t.tab_more));
   more.addEventListener("click", (e) => {
@@ -349,7 +356,7 @@ async function start() {
   retryWhileOffline();
 }
 
-menuBtn.addEventListener("click", () => openMenu(!sidebar.classList.contains("open")));
+menuClose.addEventListener("click", () => openMenu(false));
 backdrop.addEventListener("click", () => openMenu(false));
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") openMenu(false);
