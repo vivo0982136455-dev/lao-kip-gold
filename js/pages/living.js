@@ -135,6 +135,7 @@ function inflationSection(ctx, grid) {
       tickLabels: months.map((m) => monthShort(m, t)),
       series,
       unit: "%",
+      unitLabel: t.unit_pct_yoy,
       t,
       firstColTitle: t.month,
     })
@@ -298,6 +299,7 @@ function pricesSection(ctx, view) {
       { label: t.living_national_avg, kind: "market", color: "--cat-1", values: m.prices[item][NAT].slice(startIdx) },
     ],
     unit: "LAK",
+    unitLabel: `${t.lak_per} 1 ${t.units[m.items[item].unit] || m.items[item].unit}`,
     t,
     firstColTitle: t.month,
   });

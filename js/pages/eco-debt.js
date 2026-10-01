@@ -65,6 +65,7 @@ export function debtTab(panel, e) {
     const total = ds.years.map((y, i) => (ds.principal[i] === null ? null : Math.round((ds.principal[i] + (ds.interest[i] || 0)) * 10) / 10));
     const actual = ds.years.map((y, i) => (y <= stockYear ? total[i] : null));
     const due = ds.years.map((y, i) => (y >= stockYear ? total[i] : null)); // starts at the last real year so the lines meet
+    const dueOnly = ds.years.map((y, i) => (y > stockYear ? total[i] : null)); // what the table shows as "due"
     grid.append(
       chartCard({
         title: t.inv_debt_schedule,
@@ -72,7 +73,7 @@ export function debtTab(panel, e) {
         labels: ds.years.map(String),
         series: [
           { label: t.inv_debt_paid, kind: "official", values: actual },
-          { label: t.inv_debt_due, kind: "official", dashed: true, values: due },
+          { label: t.inv_debt_due, kind: "official", dashed: true, soft: true, values: due, shown: dueOnly },
           { label: t.inv_debt_china, kind: "official", color: "--cat-3", values: ds.china },
         ],
         unit: "USD m",

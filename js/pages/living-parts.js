@@ -325,6 +325,7 @@ export function inflationCompare(ctx, years) {
       { label: t.infl_thailand, kind: "official", color: "--cat-5", values: on(th) },
     ],
     unit: "%",
+    unitLabel: t.unit_pct_yoy,
     t,
     firstColTitle: t.month,
   });

@@ -64,6 +64,7 @@ export function inflationTab(panel, e) {
             { label: t.inv_kip_line, kind: "official", color: "--cat-3", values: kip },
           ],
           unit: "%",
+          unitLabel: t.unit_pct_yoy,
           t,
           firstColTitle: t.month,
         })
@@ -76,7 +77,7 @@ export function inflationTab(panel, e) {
   if (compare) grid.append(compare);
 
   // Yearly, with the IMF forecast and the plan's goal
-  const yearly = yearChart(e, { actual: "wb.FP.CPI.TOTL.ZG", forecast: "imf.PCPIPCH" }, { title: t.inv_infl_yearly, target: target && { value: target.target, label: t.inv_plan_target_line } });
+  const yearly = yearChart(e, { actual: "wb.FP.CPI.TOTL.ZG", forecast: "imf.PCPIPCH" }, { title: t.inv_infl_yearly, unitLabel: t.unit_pct_year, target: target && { value: target.target, label: t.inv_plan_target_line } });
   if (yearly) grid.append(yearly);
   // Official exchange rate, yearly average (World Bank): how far the kip has fallen over the years
   const fx = yearChart(e, { actual: "wb.PA.NUS.FCRF" }, { title: t.eco_fx_avg, firstYear: 2000 });

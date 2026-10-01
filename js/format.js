@@ -33,6 +33,16 @@ export function unitLabel(unit) {
   return unit.split(" ")[0]; // "LAK per USD" -> "LAK"
 }
 
+// Unit in words, for chart tables and sub-titles: "LAK per THB" -> "กีบต่อ 1 THB", "USD m" -> "ล้าน USD".
+// The words are in i18n (unit_names); a unit that is not listed is shown as it is.
+export function unitText(unit, t) {
+  const names = t.unit_names || {};
+  if (names[unit]) return names[unit];
+  const currency = /^LAK per ([A-Z]{3})$/.exec(unit);
+  if (currency) return `${t.lak_per} 1 ${currency[1]}`;
+  return unit;
+}
+
 // Compact axis label: 43,750,027 -> "43.75 ล้าน"
 export function formatAxis(value, unit, t) {
   if (Math.abs(value) >= 1e6) return (value / 1e6).toLocaleString("en-US", { maximumFractionDigits: 2 }) + " " + t.million;

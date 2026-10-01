@@ -291,7 +291,14 @@ th, td { padding: 7px 6px; text-align: right; border-top: 1px solid var(--grid);
 th { font-weight: 600; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.02em; border-top: 0; border-bottom: 1px solid var(--grid); }
 /* Long tables: fixed height with the header row staying visible */
 .table-wrap.scroll-y { max-height: 420px; overflow-y: auto; }
-.table-wrap.scroll-y thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; white-space: normal; vertical-align: bottom; } /* long series names wrap instead of widening the table */
+@media (min-width: 421px) { .table-wrap.scroll-y { padding-right: 8px; } } /* room next to the scroll bar (a phone needs the full width for 5 columns, and its scroll bar hides itself) */
+.table-wrap.scroll-y thead { position: sticky; top: 0; z-index: 1; }
+.table-wrap.scroll-y thead th { background: var(--surface); white-space: normal; vertical-align: bottom; } /* long series names wrap instead of widening the table */
+/* First header line of a chart's table: what the numbers are + their unit (stays visible while scrolling) */
+th.table-cap { text-align: left; border-bottom: 0; padding-bottom: 2px; font-size: 0.78rem; letter-spacing: 0; line-height: 1.35; }
+th.table-cap strong { display: block; color: var(--text); font-weight: 600; }
+th.table-cap span { display: block; color: var(--text-2); font-weight: 500; }
+td.soft { color: var(--text-2); } /* forecast / target: not a measured number */
 th:first-child, td:first-child { text-align: left; }
 td .sub { color: var(--muted); font-size: 0.74rem; margin-left: 4px; }
 tr.clickable { cursor: pointer; }
@@ -326,7 +333,26 @@ tr[aria-selected="true"] td { background: var(--accent-soft); }
 .chart-card h3 { font-size: 0.92rem; font-weight: 600; flex: 1 1 auto; min-width: 0; }
 .chart-head .delta, .card-head .delta { flex: none; } /* the pill never shrinks: it moves to the next line instead */
 .chart-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
-.chart-box { position: relative; height: 230px; margin-top: 10px; } /* includes the axis labels */
+.chart-box { position: relative; height: 230px; margin-top: 6px; } /* includes the axis labels */
+.chart-box canvas { touch-action: pan-y; } /* a finger moving sideways reads the chart; up / down still scrolls the page */
+/* Read-out above the plot: latest values, or the values of the touched point. It is also the legend. */
+.readout { margin-top: 8px; font-size: 0.78rem; }
+.readout-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 10px; font-size: 0.72rem; color: var(--muted); padding-bottom: 2px; border-bottom: 1px solid var(--grid); margin-bottom: 2px; }
+.readout-when { color: var(--text); font-weight: 600; }
+.readout-row {
+  display: flex; align-items: baseline; gap: 8px; width: 100%; min-height: 0; padding: 4px 0; border: 0; border-radius: 0;
+  background: none; color: inherit; font: inherit; text-align: left; white-space: normal;
+}
+button.readout-row { cursor: pointer; }
+button.readout-row:hover .readout-label { color: var(--text); }
+.readout-key { flex: none; width: 16px; height: 0; border-top: 2px solid; align-self: center; }
+.readout-key.dashed { border-top-style: dashed; }
+.readout-label { flex: 1 1 auto; min-width: 0; color: var(--text-2); }
+.readout-at { color: var(--muted); white-space: nowrap; }
+.readout-value { flex: none; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
+.readout-since { flex: none; min-width: 6.2em; text-align: right; font-size: 0.74rem; }
+.readout-row[aria-pressed="false"] { opacity: 0.45; }
+.readout-row[aria-pressed="false"] .readout-label { text-decoration: line-through; }
 @media (min-width: 900px) { .chart-box { height: 280px; } }
 .chart-empty { display: flex; align-items: center; justify-content: center; text-align: center; height: 100%; padding: 0 16px; color: var(--muted); font-size: 0.84rem; }
 details { margin-top: 8px; font-size: 0.8rem; }
@@ -424,6 +450,7 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
   .table-wrap.scroll-y table { font-size: 0.76rem; }
   .table-wrap.scroll-y th, .table-wrap.scroll-y td { padding: 6px 3px; }
   .table-wrap.scroll-y td:first-child { white-space: normal; }
+  .table-wrap.scroll-y table.few-cols td:first-child { white-space: nowrap; }
 }
 @media (min-width: 640px) { .budget-inputs { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 

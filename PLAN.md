@@ -154,6 +154,10 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Fonts: Noto Sans Thai + Noto Sans Lao (Google Fonts) with system fallbacks.
 - Number format: thousands separators; LAK without decimals; USD/THB with 2 decimals.
 - Footer disclaimer (TH/LO): data is for information only, not financial advice; estimates may be wrong.
+- Charts (2026-10-01, owner request): the values of a touched point are shown in a read-out ABOVE the plot
+  (latest values when nothing is touched), never in a box on top of the lines. Every "show as table" twin
+  names what the numbers are and their unit in its header. Lines are smooth but honest (monotone curve,
+  no invented peaks); dots only on the latest point, or on every point of a sparse hand-entered line.
 
 ## [CONSTRAINT]
 - Zero cost: no paid APIs, no servers, no databases.

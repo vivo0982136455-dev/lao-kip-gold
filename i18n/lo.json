@@ -168,11 +168,9 @@
   "latest_month": "ຂໍ້ມູນລ່າສຸດເດືອນ",
   "dashed_is_forecast": "ເສັ້ນປະ = ຄາດຄະເນ",
   "unit": "ຫົວໜ່ວຍ",
-  "unit_pct": "%",
   "unit_pct_gdp": "% ຂອງ GDP",
   "unit_usd_bn": "ຕື້ USD",
   "unit_usd_m": "ລ້ານ USD",
-  "unit_lak_usd": "ກີບຕໍ່ USD",
   "year": "ປີ",
   "month": "ເດືອນ",
 
@@ -639,9 +637,11 @@
   "inv_land_watch_2": "ເງິນເຟີ້ ແລະ ຄ່າເງິນກີບ: ເມື່ອກີບອ່ອນ ຄົນມັກເກັບມູນຄ່າໄວ້ໃນທີ່ດິນ ຄຳ ຫຼື ເງິນຕາຕ່າງປະເທດ",
   "inv_land_watch_3": "ດອກເບ້ຍຫຼັງຫັກເງິນເຟີ້: ຖ້າຕິດລົບ ການຝາກເງິນເສຍມູນຄ່າ",
   "inv_land_watch_4": "ເງິນລົງທຶນຕ່າງປະເທດ ແລະ ໂຄງການໃຫຍ່ (ເຊັ່ນ ທາງລົດໄຟລາວ–ຈີນ ເຂດເສດຖະກິດພິເສດ): ພື້ນທີ່ໃກ້ໂຄງການມັກມີຄວາມຕ້ອງການສູງຂຶ້ນ",
-  "inv_unit_usd_person": "USD ຕໍ່ຄົນ",
-  "inv_unit_pct_gni": "% ຂອງ GNI",
-  "inv_unit_pct_exports": "% ຂອງລາຍຮັບສົ່ງອອກ",
   "countries": {"CHN":"ຈີນ","THA":"ໄທ","FRA":"ຝຣັ່ງ","KOR":"ເກົາຫຼີໃຕ້","NLD":"ເນເທີແລນ","BEL":"ແບນຊິກ","JPN":"ຍີ່ປຸ່ນ","VNM":"ຫວຽດນາມ","SGP":"ສິງກະໂປ","MYS":"ມາເລເຊຍ","USA":"ສະຫະລັດ","GBR":"ອັງກິດ","AUS":"ອົດສະຕາລີ","DEU":"ເຢຍລະມັນ","IRL":"ໄອແລນ","LKA":"ສີລັງກາ","HKG":"ຮົງກົງ","IND":"ອິນເດຍ","RUS":"ຣັດເຊຍ","CHE":"ສະວິດເຊີແລນ","DNK":"ເດນມາກ","NOR":"ນໍເວ","AUT":"ອອສຕຣີ"},
-  "creditors": {"China":"ຈີນ","Bondholders":"ຜູ້ຖືພັນທະບັດ","World Bank-IDA":"ທະນາຄານໂລກ (IDA)","Asian Dev. Bank":"ທະນາຄານພັດທະນາອາຊີ (ADB)","Thailand":"ໄທ","Korea, Republic of":"ເກົາຫຼີໃຕ້","Russian Federation":"ຣັດເຊຍ","Hungary":"ຮັງກາຣີ","Japan":"ຍີ່ປຸ່ນ","European Investment Bank":"ທະນາຄານເພື່ອການລົງທຶນເອີຣົບ (EIB)","Viet Nam":"ຫວຽດນາມ","Malaysia":"ມາເລເຊຍ","Austria":"ອອສຕຣີ","International Fund for Agricultural Dev.":"ກອງທຶນພັດທະນາກະສິກຳ (IFAD)","Asian Infrastructure Investment Bank":"ທະນາຄານ AIIB","Nordic Development Fund":"ກອງທຶນພັດທະນານໍດິກ","India":"ອິນເດຍ","Multiple Lenders":"ເຈົ້າໜີ້ຫຼາຍລາຍ","OPEC Fund for International Dev.":"ກອງທຶນ OPEC","Kuwait":"ຄູເວດ","Netherlands":"ເນເທີແລນ","Sweden":"ສວີເດນ","Singapore":"ສິງກະໂປ","European Economic Community (EEC)":"ປະຊາຄົມເອີຣົບ (EEC)"}
+  "creditors": {"China":"ຈີນ","Bondholders":"ຜູ້ຖືພັນທະບັດ","World Bank-IDA":"ທະນາຄານໂລກ (IDA)","Asian Dev. Bank":"ທະນາຄານພັດທະນາອາຊີ (ADB)","Thailand":"ໄທ","Korea, Republic of":"ເກົາຫຼີໃຕ້","Russian Federation":"ຣັດເຊຍ","Hungary":"ຮັງກາຣີ","Japan":"ຍີ່ປຸ່ນ","European Investment Bank":"ທະນາຄານເພື່ອການລົງທຶນເອີຣົບ (EIB)","Viet Nam":"ຫວຽດນາມ","Malaysia":"ມາເລເຊຍ","Austria":"ອອສຕຣີ","International Fund for Agricultural Dev.":"ກອງທຶນພັດທະນາກະສິກຳ (IFAD)","Asian Infrastructure Investment Bank":"ທະນາຄານ AIIB","Nordic Development Fund":"ກອງທຶນພັດທະນານໍດິກ","India":"ອິນເດຍ","Multiple Lenders":"ເຈົ້າໜີ້ຫຼາຍລາຍ","OPEC Fund for International Dev.":"ກອງທຶນ OPEC","Kuwait":"ຄູເວດ","Netherlands":"ເນເທີແລນ","Sweden":"ສວີເດນ","Singapore":"ສິງກະໂປ","European Economic Community (EEC)":"ປະຊາຄົມເອີຣົບ (EEC)"},
+  "readout_latest": "ຫຼ້າສຸດ",
+  "readout_toggle": "ແຕະເພື່ອເຊື່ອງ / ສະແດງເສັ້ນນີ້",
+  "unit_pct_year": "% ຕໍ່ປີ",
+  "unit_pct_yoy": "% ທຽບກັບເດືອນດຽວກັນຂອງປີກ່ອນ",
+  "unit_names": {"%":"%","% of GDP":"% ຂອງ GDP","% of GNI":"% ຂອງ GNI","% of exports":"% ຂອງລາຍຮັບສົ່ງອອກ","% per year":"% ຕໍ່ປີ","USD bn":"ຕື້ USD","USD m":"ລ້ານ USD","USD per person":"USD ຕໍ່ຄົນ","USD per kg":"USD ຕໍ່ 1 ກິໂລ","THB per kg":"ບາດຕໍ່ 1 ກິໂລ","USD per troy oz":"USD ຕໍ່ 1 ອອນ (31.1 ກຣາມ)","LAK":"ກີບ","LAK per baht":"ກີບຕໍ່ຄຳ 1 ບາດ","LAK per kg":"ກີບຕໍ່ 1 ກິໂລກຣາມ","index":"ດັດຊະນີ (ເດືອນທຳອິດ = 100)","months":"ເດືອນ"}
 }

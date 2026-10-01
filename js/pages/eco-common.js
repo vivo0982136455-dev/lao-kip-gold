@@ -2,7 +2,7 @@
 // Every number on these tabs is shown with where it comes from and which year/month it is.
 
 import { el, card, cardHead, statTile, sourceLink } from "../ui.js";
-import { formatNumber, formatDate, todayVientiane } from "../format.js";
+import { formatNumber, formatDate, todayVientiane, unitText } from "../format.js";
 import { chartCard } from "../charts.js";
 
 export const THIS_YEAR = Number(todayVientiane().slice(0, 4));
@@ -183,11 +183,7 @@ export function fill(text, values) {
 // ---------- Yearly chart: actual (World Bank) + forecast (IMF, dashed) ----------
 const FIRST_YEAR = 2010;
 const SOURCE_LABEL = { worldbank: "World Bank", imf: "IMF" };
-const UNIT_KEYS = {
-  "%": "unit_pct", "% of GDP": "unit_pct_gdp", "USD bn": "unit_usd_bn", "USD m": "unit_usd_m", "LAK per USD": "unit_lak_usd",
-  "USD per person": "inv_unit_usd_person", months: "inv_unit_months", "% of GNI": "inv_unit_pct_gni", "% of exports": "inv_unit_pct_exports",
-};
-export const unitName = (unit, t) => t[UNIT_KEYS[unit]] || unit;
+export const unitName = unitText; // unit in words (i18n unit_names)
 export const sourceLabel = (id) => SOURCE_LABEL[id] || id;
 
 // "4.5%" or "18.30 พันล้าน USD"
@@ -229,28 +225,42 @@ export function buildSeries(e, def, firstYear = FIRST_YEAR) {
     lastValue: last ? last[1] : null,
     actual: pick(actualPoints),
     forecast: forecastPoints.length ? pick(forecastPoints) : null,
+    // without the repeated last real year: what the read-out and the table show as "forecast"
+    forecastOnly: forecastPoints.length ? pick(last ? forecastPoints.slice(1) : forecastPoints) : null,
     sources: [...new Set([act && act.source, forecastPoints.length && fc && fc.source].filter(Boolean))],
     stale: [act, fc].some((x) => x && x.stale),
     isEstimate: !act,
   };
 }
 
-// Chart card for a yearly indicator. target: { value, label } draws a grey dashed line (a goal, not data).
-export function yearChart(e, def, { title, target, firstYear } = {}) {
+// Chart card for a yearly indicator. target: { value, label, year? } draws a grey dashed line (a goal, not data).
+// The line crosses the whole chart so every year can be compared with it, but the read-out and the table show
+// the goal only where it applies: the years of the plan, or the one year it must be reached by (target.year).
+// unitLabel: the unit in words when the plain unit says too little (e.g. "% ต่อปี" instead of "%")
+export function yearChart(e, def, { title, target, firstYear, unitLabel } = {}) {
   const { t } = e;
   const s = buildSeries(e, def, firstYear);
   if (!s) return null;
   const series = [{ label: t.series_actual, kind: "official", values: s.actual }];
-  if (s.forecast) series.push({ label: t.series_imf_forecast, kind: "official", dashed: true, values: s.forecast });
-  if (target) series.push({ label: target.label, kind: "official", color: "--muted", dashed: true, values: s.years.map(() => target.value) });
+  if (s.forecast) series.push({ label: t.series_imf_forecast, kind: "official", dashed: true, soft: true, values: s.forecast, shown: s.forecastOnly });
+  if (target) {
+    const period = e.stat && e.stat.plan && e.stat.plan.period;
+    const applies = (y) => (target.year ? y === target.year : !period || (y >= period[0] && y <= period[1]));
+    const shown = s.years.map((y) => (applies(y) ? target.value : null));
+    series.push({
+      label: target.label, kind: "official", color: "--muted", dashed: true, soft: true,
+      values: s.years.map(() => target.value),
+      shown: shown.some((v) => v !== null) ? shown : undefined,
+    });
+  }
   const subtitle = [
-    `${t.unit}: ${unitName(s.unit, t)}`,
+    `${t.unit}: ${unitLabel || unitName(s.unit, t)}`,
     `${t.source}: ${s.sources.map(sourceLabel).join(" + ")}`,
     `${s.isEstimate ? t.latest_estimate_year : t.latest_actual_year} ${s.lastActual}`,
     s.forecast ? t.dashed_is_forecast : null,
     s.stale ? "⚠ " + t.inv_fetch_failed : null,
   ].filter(Boolean).join(" · ");
-  return chartCard({ title, subtitle, labels: s.years.map(String), series, unit: s.unit, t, firstColTitle: t.year });
+  return chartCard({ title, subtitle, labels: s.years.map(String), series, unit: s.unit, unitLabel, t, firstColTitle: t.year });
 }
 
 export { formatNumber };

@@ -31,6 +31,7 @@
   "plan": {
     "_about": "10th National Socio-Economic Development Plan 2026-2030 (NSEDP). op '>=' = at least, '<=' = at most. 'actual' says which automatic number is compared (see js/pages/eco-plan.js).",
     "source": "kpl_plan",
+    "period": [2026, 2030],
     "projects": { "total": 230, "ongoing": 61, "new": 169, "source": "kpl_plan2" },
     "targets": [
       { "id": "growth", "target": 6, "op": ">=", "unit": "%", "actual": "gdp_growth" },

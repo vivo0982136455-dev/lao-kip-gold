@@ -168,11 +168,9 @@
   "latest_month": "ข้อมูลล่าสุดเดือน",
   "dashed_is_forecast": "เส้นประ = คาดการณ์",
   "unit": "หน่วย",
-  "unit_pct": "%",
   "unit_pct_gdp": "% ของ GDP",
   "unit_usd_bn": "พันล้าน USD",
   "unit_usd_m": "ล้าน USD",
-  "unit_lak_usd": "กีบต่อ USD",
   "year": "ปี",
   "month": "เดือน",
 
@@ -639,9 +637,11 @@
   "inv_land_watch_2": "เงินเฟ้อและค่าเงินกีบ: เมื่อกีบอ่อน คนมักเก็บมูลค่าไว้ในที่ดิน ทอง หรือเงินตราต่างประเทศ",
   "inv_land_watch_3": "ดอกเบี้ยหลังหักเงินเฟ้อ: ถ้าติดลบ การฝากเงินเสียมูลค่า",
   "inv_land_watch_4": "เงินลงทุนต่างชาติและโครงการใหญ่ (เช่น รถไฟลาว–จีน เขตเศรษฐกิจพิเศษ): พื้นที่ใกล้โครงการมักมีความต้องการสูงขึ้น",
-  "inv_unit_usd_person": "USD ต่อคน",
-  "inv_unit_pct_gni": "% ของ GNI",
-  "inv_unit_pct_exports": "% ของรายได้ส่งออก",
   "countries": {"CHN":"จีน","THA":"ไทย","FRA":"ฝรั่งเศส","KOR":"เกาหลีใต้","NLD":"เนเธอร์แลนด์","BEL":"เบลเยียม","JPN":"ญี่ปุ่น","VNM":"เวียดนาม","SGP":"สิงคโปร์","MYS":"มาเลเซีย","USA":"สหรัฐฯ","GBR":"สหราชอาณาจักร","AUS":"ออสเตรเลีย","DEU":"เยอรมนี","IRL":"ไอร์แลนด์","LKA":"ศรีลังกา","HKG":"ฮ่องกง","IND":"อินเดีย","RUS":"รัสเซีย","CHE":"สวิตเซอร์แลนด์","DNK":"เดนมาร์ก","NOR":"นอร์เวย์","AUT":"ออสเตรีย"},
-  "creditors": {"China":"จีน","Bondholders":"ผู้ถือพันธบัตร","World Bank-IDA":"ธนาคารโลก (IDA)","Asian Dev. Bank":"ธนาคารพัฒนาเอเชีย (ADB)","Thailand":"ไทย","Korea, Republic of":"เกาหลีใต้","Russian Federation":"รัสเซีย","Hungary":"ฮังการี","Japan":"ญี่ปุ่น","European Investment Bank":"ธนาคารเพื่อการลงทุนยุโรป (EIB)","Viet Nam":"เวียดนาม","Malaysia":"มาเลเซีย","Austria":"ออสเตรีย","International Fund for Agricultural Dev.":"กองทุนพัฒนาการเกษตร (IFAD)","Asian Infrastructure Investment Bank":"ธนาคาร AIIB","Nordic Development Fund":"กองทุนพัฒนานอร์ดิก","India":"อินเดีย","Multiple Lenders":"เจ้าหนี้หลายราย","OPEC Fund for International Dev.":"กองทุน OPEC","Kuwait":"คูเวต","Netherlands":"เนเธอร์แลนด์","Sweden":"สวีเดน","Singapore":"สิงคโปร์","European Economic Community (EEC)":"ประชาคมยุโรป (EEC)"}
+  "creditors": {"China":"จีน","Bondholders":"ผู้ถือพันธบัตร","World Bank-IDA":"ธนาคารโลก (IDA)","Asian Dev. Bank":"ธนาคารพัฒนาเอเชีย (ADB)","Thailand":"ไทย","Korea, Republic of":"เกาหลีใต้","Russian Federation":"รัสเซีย","Hungary":"ฮังการี","Japan":"ญี่ปุ่น","European Investment Bank":"ธนาคารเพื่อการลงทุนยุโรป (EIB)","Viet Nam":"เวียดนาม","Malaysia":"มาเลเซีย","Austria":"ออสเตรีย","International Fund for Agricultural Dev.":"กองทุนพัฒนาการเกษตร (IFAD)","Asian Infrastructure Investment Bank":"ธนาคาร AIIB","Nordic Development Fund":"กองทุนพัฒนานอร์ดิก","India":"อินเดีย","Multiple Lenders":"เจ้าหนี้หลายราย","OPEC Fund for International Dev.":"กองทุน OPEC","Kuwait":"คูเวต","Netherlands":"เนเธอร์แลนด์","Sweden":"สวีเดน","Singapore":"สิงคโปร์","European Economic Community (EEC)":"ประชาคมยุโรป (EEC)"},
+  "readout_latest": "ล่าสุด",
+  "readout_toggle": "แตะเพื่อซ่อน / แสดงเส้นนี้",
+  "unit_pct_year": "% ต่อปี",
+  "unit_pct_yoy": "% เทียบกับเดือนเดียวกันของปีก่อน",
+  "unit_names": {"%":"%","% of GDP":"% ของ GDP","% of GNI":"% ของ GNI","% of exports":"% ของรายได้ส่งออก","% per year":"% ต่อปี","USD bn":"พันล้าน USD","USD m":"ล้าน USD","USD per person":"USD ต่อคน","USD per kg":"USD ต่อ 1 กก.","THB per kg":"บาทต่อ 1 กก.","USD per troy oz":"USD ต่อ 1 ออนซ์ (31.1 กรัม)","LAK":"กีบ","LAK per baht":"กีบต่อทอง 1 บาท","LAK per kg":"กีบต่อ 1 กิโลกรัม","index":"ดัชนี (เดือนแรก = 100)","months":"เดือน"}
 }

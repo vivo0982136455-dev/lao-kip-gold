@@ -25,8 +25,8 @@ export function gdpTab(panel, e) {
   const grid = el("div", "grid grid-2");
   const charts = [
     yearChart(e, { actual: "wb.NY.GDP.MKTP.CD", forecast: "imf.NGDPD" }, { title: t.eco_gdp }),
-    yearChart(e, { actual: "wb.NY.GDP.MKTP.KD.ZG", forecast: "imf.NGDP_RPCH" }, { title: t.eco_growth, target: target("growth") && { value: target("growth").target, label: t.inv_plan_target_line } }),
-    yearChart(e, { actual: "wb.NY.GDP.PCAP.CD", forecast: "imf.NGDPDPC" }, { title: t.inv_gdppc_title, target: target("gdp_pc") && { value: target("gdp_pc").target, label: fill(t.inv_plan_target_by, { year: target("gdp_pc").by }) } }),
+    yearChart(e, { actual: "wb.NY.GDP.MKTP.KD.ZG", forecast: "imf.NGDP_RPCH" }, { title: t.eco_growth, unitLabel: t.unit_pct_year, target: target("growth") && { value: target("growth").target, label: t.inv_plan_target_line } }),
+    yearChart(e, { actual: "wb.NY.GDP.PCAP.CD", forecast: "imf.NGDPDPC" }, { title: t.inv_gdppc_title, target: target("gdp_pc") && { value: target("gdp_pc").target, year: target("gdp_pc").by, label: fill(t.inv_plan_target_by, { year: target("gdp_pc").by }) } }),
   ];
   for (const c of charts) if (c) grid.append(c);
 
@@ -78,6 +78,7 @@ export function gdpTab(panel, e) {
           { label: t.inv_sector_agri, kind: "official", color: "--cat-4", values: line("wb.NV.AGR.TOTL.ZS") },
         ],
         unit: "%",
+        unitLabel: t.unit_pct_gdp,
         t,
         firstColTitle: t.year,
       })
