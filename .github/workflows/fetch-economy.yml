@@ -1,6 +1,8 @@
 # Lao economy data (World Bank, IMF yearly + monthly CPI / gold), investor data (debt by creditor, FDI by country,
-# rubber), WFP prices of everyday goods, Thai food + rubber prices, the official land price decisions per province
-# and the world rubber numbers (who sells, who buys, who grows it, world prices).
+# rubber), WFP prices of everyday goods, Thai food + rubber prices, the official land price decisions per province,
+# the world rubber numbers (who sells, who buys, who grows it, world prices), who buys Lao rubber at which border
+# price (UN Comtrade, Viet Nam Customs), the population numbers (World Bank, Lao Statistics Bureau / UNFPA) and
+# the central bank's policy rate and reserve requirement (Bank of the Lao PDR).
 # Weekly: IMF and WFP publish on different days each month, weekly keeps us at most ~7 days behind.
 name: Fetch economy data
 
@@ -18,6 +20,9 @@ on:
       - "scripts/fetch-thai-prices.js"
       - "scripts/fetch-land-decisions.js"
       - "scripts/fetch-rubber-world.js"
+      - "scripts/fetch-rubber-borders.js"
+      - "scripts/fetch-population.js"
+      - "scripts/fetch-bol-policy.js"
       - "scripts/lib/**"
 
 permissions:
@@ -30,7 +35,7 @@ concurrency:
 jobs:
   economy:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -71,6 +76,26 @@ jobs:
         if: always()
         timeout-minutes: 10
         run: node scripts/fetch-rubber-world.js
+
+      # Who buys Lao rubber and at what border price: buyers per year (UN Comtrade), rubber imported from Laos by
+      # month (Viet Nam Customs: one small public PDF per new month), farm-gate prices in the Philippines.
+      - name: Fetch buyers and border prices of Lao rubber
+        if: always()
+        timeout-minutes: 10
+        run: node scripts/fetch-rubber-borders.js
+
+      # Population: yearly numbers and projections (World Bank), by province and age (Lao Statistics Bureau / UNFPA)
+      - name: Fetch population numbers
+        if: always()
+        timeout-minutes: 10
+        run: node scripts/fetch-population.js
+
+      # The central bank's policy rate and reserve requirement, every change with its date (two small pages of
+      # bol.gov.la; the server forgets its intermediate certificate, scripts/lib/aia.js completes the chain)
+      - name: Fetch the central bank's policy rate and reserve requirement
+        if: always()
+        timeout-minutes: 5
+        run: node scripts/fetch-bol-policy.js
 
       - name: Commit changes
         if: always()

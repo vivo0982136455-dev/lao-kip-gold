@@ -9,6 +9,9 @@ export const THIS_YEAR = Number(todayVientiane().slice(0, 4));
 export const lastOf = (a) => (a && a.length ? a[a.length - 1] : null);
 export const pct = (from, to) => ((to - from) / from) * 100;
 export const monthText = (m, t) => `${t.months[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`; // "2026-08" -> "ส.ค. 2026"
+// "2026-04-10" -> "10 เม.ย. 2026": always with the year (formatDate leaves the year out when it is this year,
+// which is wrong for the date of a rule or of an event that stays on the page for years)
+export const dayFull = (day, t) => `${Number(day.slice(8, 10))} ${t.months[Number(day.slice(5, 7)) - 1]} ${day.slice(0, 4)}`;
 export const monthShort = (m, t) => `${t.months[Number(m.slice(5, 7)) - 1]} ${m.slice(2, 4)}`; // "ส.ค. 26"
 const monthsAgo = (m) => {
   const now = todayVientiane();
@@ -155,8 +158,8 @@ export function factsCard(t, title, facts, note, kind = "estimated") {
   return c;
 }
 
-// Table with a bar per row. rows: [{ label, sub, value, text, share }]; bar length = value / max (from 0).
-// value: null = a row without a bar (e.g. a total)
+// Table with a bar per row. rows: [{ label, cls, sub, value, text, share }]; bar length = value / max (from 0).
+// value: null = a row without a bar (e.g. a total); cls = class of the name (e.g. "focus-name")
 export function barTable(headers, rows) {
   const max = Math.max(...rows.map((r) => r.value || 0), 0) || 1;
   const tbl = el("table");
@@ -167,7 +170,7 @@ export function barTable(headers, rows) {
   for (const r of rows) {
     const tr = el("tr");
     const name = el("td");
-    name.append(el("span", "", r.label));
+    name.append(el("span", r.cls || "", r.label));
     if (r.sub) name.append(el("span", "sub-line", r.sub));
     const cell = el("td");
     const wrap = el("div", "bar-cell");

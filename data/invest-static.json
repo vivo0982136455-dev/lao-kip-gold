@@ -27,6 +27,51 @@
       "source_url": "https://www.lsb.gov.la",
       "published": null
     },
+    "bol_rate": {
+      "source_name": "Bank of the Lao PDR: BOL interest rate (policy rate, 1 week)",
+      "source_url": "https://www.bol.gov.la/en/interestRate",
+      "published": null
+    },
+    "bol_reserve": {
+      "source_name": "Bank of the Lao PDR: reserve requirement rate",
+      "source_url": "https://www.bol.gov.la/en/reservRate",
+      "published": null
+    },
+    "wb_lem_2606": {
+      "source_name": "World Bank: Lao PDR Economic Monitor, June 2026 - Consolidating Reform Momentum Amid Volatility",
+      "source_url": "https://documents.worldbank.org/curated/en/099070126060026616/pdf/P507388-269d1f43-ea9c-4e6d-b07c-beda59f90cc5.pdf",
+      "published": "2026-07-06"
+    },
+    "kpl_minwage": {
+      "source_name": "KPL Lao News Agency: Lao Govt Raises Minimum Wage to Address Rising Living Costs",
+      "source_url": "https://kpl.gov.la/En/detail.aspx?id=86305",
+      "published": "2024-10-03"
+    },
+    "kpl_minwage_review": {
+      "source_name": "KPL Lao News Agency: Tripartite Committee Reviews Minimum Wage Adjustment Amid Rising Living Costs",
+      "source_url": "https://kpl.gov.la/en/detail.aspx/detail.aspx?id=97476",
+      "published": "2026-03-20"
+    },
+    "sdg_ldc": {
+      "source_name": "Lao PDR SDG portal (Ministry of Foreign Affairs): the Lao PDR's commitment to graduate from LDC status",
+      "source_url": "https://sdg.gov.la/en/ldc_graduation",
+      "published": null
+    },
+    "eu_eudr": {
+      "source_name": "European Commission: Regulation (EU) 2023/1115 on deforestation-free products",
+      "source_url": "https://environment.ec.europa.eu/topics/forests/deforestation/regulation-deforestation-free-products_en",
+      "published": null
+    },
+    "lsb_phc": {
+      "source_name": "Lao Statistics Bureau: 2025 Population and Housing Census advances to data processing, analysis and reporting",
+      "source_url": "https://www.lsb.gov.la/phc/?p=1511&lang=en",
+      "published": "2026-07-07"
+    },
+    "land_law_2019": {
+      "source_name": "Land Law No. 70/NA of 21 June 2019, Articles 3, 110, 117, 120, 123, 132 (unofficial English translation)",
+      "source_url": "https://laolandinfo.org/wp-content/uploads/2021/05/Land-Law-2019_Eng-Unofficial-Translation.pdf",
+      "published": "2019-06-21"
+    },
     "moic_dit": {
       "source_name": "Lao Ministry of Industry and Commerce, Department of Internal Trade: national average prices of goods 2011–2023",
       "source_url": "https://www.dit.moic.gov.la/uploads/statistic/statistic_20241010095656.pdf",
@@ -131,21 +176,21 @@
       { "province": "Vientiane Capital", "decided": "2024-02-26", "source": "thaipublica_land", "pdf": "https://thaipublica.org/wp-content/uploads/2024/05/%E0%B8%A3%E0%B8%B2%E0%B8%84%E0%B8%B2%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B8%99%E0%B8%84%E0%B8%A3%E0%B8%AB%E0%B8%A5%E0%B8%A7%E0%B8%87%E0%B9%80%E0%B8%A7%E0%B8%B5%E0%B8%A2%E0%B8%87%E0%B8%88%E0%B8%B1%E0%B8%99%E0%B8%97%E0%B8%99%E0%B9%8C.pdf", "note": "inv_land_thai_translation" }
     ],
     "vientiane": {
-      "_about": "Vientiane Capital, Decision 142 of 26 Feb 2024: official assessed land prices, LAK per square metre, by road class. Summary made from the 976 price lines of the Thai translation published by ThaiPublica (computed 2026-10-01): per district [lowest, middle (median of the price lines), highest]. 'villages' = number of villages named in the district's heading. The full table by village is in the linked PDF.",
+      "_about": "Vientiane Capital, Decision 142 of 26 Feb 2024: official assessed land prices, LAK per square metre, by road class. Summary made from the 976 price lines of the Thai translation published by ThaiPublica (computed 2026-10-01): per district [lowest, middle (median of the price lines), highest]. 'villages' = number of villages named in the district's heading. The full table by village is in the linked PDF and is NOT copied here (it is the publisher's translation); 'page' = the page of that PDF (62 pages) on which the district's heading stands, so the page can send the reader straight there.",
       "decided": "2024-02-26",
       "source": "thaipublica_land",
       "pdf": "https://thaipublica.org/wp-content/uploads/2024/05/%E0%B8%A3%E0%B8%B2%E0%B8%84%E0%B8%B2%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B8%99%E0%B8%84%E0%B8%A3%E0%B8%AB%E0%B8%A5%E0%B8%A7%E0%B8%87%E0%B9%80%E0%B8%A7%E0%B8%B5%E0%B8%A2%E0%B8%87%E0%B8%88%E0%B8%B1%E0%B8%99%E0%B8%97%E0%B8%99%E0%B9%8C.pdf",
       "classes": ["main", "connecting", "branch", "track"],
       "districts": [
-        { "key": "Chanthabouly", "villages": 30, "main": [1000000, 6350000, 6800000], "connecting": [400000, 4300000, 5100000], "branch": [180000, 1500000, 3400000], "track": [80000, 1500000, 1700000] },
-        { "key": "Sikhottabong", "villages": 60, "main": [150000, 3000000, 6000000], "connecting": [150000, 700000, 4500000], "branch": [20000, 150000, 3000000], "track": [10000, 50000, 1500000] },
-        { "key": "Xaysetha", "villages": 48, "main": [1000000, 3250000, 6500000], "connecting": [80000, 1500000, 4800000], "branch": [30000, 600000, 3200000], "track": [10000, 150000, 1600000] },
-        { "key": "Sisattanak", "villages": 37, "main": [2000000, 3000000, 6500000], "connecting": [300000, 1300000, 4800000], "branch": [100000, 600000, 3200000], "track": [50000, 250000, 1600000] },
-        { "key": "Naxaithong", "villages": 54, "main": [90000, 275000, 1000000], "connecting": [25000, 50000, 150000], "branch": [8000, 20000, 30000], "track": [5000, 7500, 12000] },
-        { "key": "Xaythany", "villages": 104, "main": [32000, 600000, 3000000], "connecting": [15000, 50000, 1000000], "branch": [5000, 18000, 300000], "track": [3000, 10000, 60000] },
-        { "key": "Hadxaifong", "villages": 60, "main": [250000, 1000000, 2500000], "connecting": [30000, 150000, 1800000], "branch": [15000, 50000, 1200000], "track": [10000, 15000, 600000] },
-        { "key": "Sangthong", "villages": 35, "main": [50000, 80000, 80000], "connecting": [8000, 10000, 60000], "branch": [2000, 5000, 40000], "track": [1000, 2000, 20000] },
-        { "key": "Pakngum", "villages": 53, "main": [32000, 35000, 40000], "connecting": [15000, 15000, 15000], "branch": [10000, 10000, 10000], "track": [4000, 4000, 4000] }
+        { "key": "Chanthabouly", "page": 1, "villages": 30, "main": [1000000, 6350000, 6800000], "connecting": [400000, 4300000, 5100000], "branch": [180000, 1500000, 3400000], "track": [80000, 1500000, 1700000] },
+        { "key": "Sikhottabong", "page": 6, "villages": 60, "main": [150000, 3000000, 6000000], "connecting": [150000, 700000, 4500000], "branch": [20000, 150000, 3000000], "track": [10000, 50000, 1500000] },
+        { "key": "Xaysetha", "page": 17, "villages": 48, "main": [1000000, 3250000, 6500000], "connecting": [80000, 1500000, 4800000], "branch": [30000, 600000, 3200000], "track": [10000, 150000, 1600000] },
+        { "key": "Sisattanak", "page": 27, "villages": 37, "main": [2000000, 3000000, 6500000], "connecting": [300000, 1300000, 4800000], "branch": [100000, 600000, 3200000], "track": [50000, 250000, 1600000] },
+        { "key": "Naxaithong", "page": 33, "villages": 54, "main": [90000, 275000, 1000000], "connecting": [25000, 50000, 150000], "branch": [8000, 20000, 30000], "track": [5000, 7500, 12000] },
+        { "key": "Xaythany", "page": 38, "villages": 104, "main": [32000, 600000, 3000000], "connecting": [15000, 50000, 1000000], "branch": [5000, 18000, 300000], "track": [3000, 10000, 60000] },
+        { "key": "Hadxaifong", "page": 50, "villages": 60, "main": [250000, 1000000, 2500000], "connecting": [30000, 150000, 1800000], "branch": [15000, 50000, 1200000], "track": [10000, 15000, 600000] },
+        { "key": "Sangthong", "page": 56, "villages": 35, "main": [50000, 80000, 80000], "connecting": [8000, 10000, 60000], "branch": [2000, 5000, 40000], "track": [1000, 2000, 20000] },
+        { "key": "Pakngum", "page": 59, "villages": 53, "main": [32000, 35000, 40000], "connecting": [15000, 15000, 15000], "branch": [10000, 10000, 10000], "track": [4000, 4000, 4000] }
       ]
     },
     "listings": [
@@ -153,5 +198,105 @@
       { "source_name": "RentsBuy – Luang Prabang listings (asking prices)", "source_url": "https://rentsbuy.com/city/luang-prabang/", "province": "Louangphabang" },
       { "source_name": "VS Real Estate Laos – land (asking prices, central Vientiane)", "source_url": "https://vsrealestatelaos.com/listings/land/", "province": "Vientiane Capital" }
     ]
+  },
+  "population": {
+    "_about": "Facts for the Population tab that no API provides. Sentences are in i18n (pop_*).",
+    "census": { "start": "2025-11-03", "end": "2025-12-28", "status": "2026-07-07", "source": "lsb_phc" },
+    "work": { "agri_from": 58, "agri_to": 67, "period_from": "2018/19", "period_to": "2024/25", "self_employed": 44, "family_work": 30, "source": "wb_lem_2606" },
+    "median_age": { "years": 25, "year": 2025, "source": "wb_lem_2606" },
+    "tourists": { "million": 4.6, "growth": 11.2, "year": 2025, "source": "wb_lem_2606" }
+  },
+  "policy": {
+    "_about": "What the State decided and what follows from it, for the Policy tab. One entry = one fact read in its source; the sentences are in i18n (pol_<area>_<id>), the numbers here. 'affects' = which numbers on the site the area moves; 'tab' = where to look at the effect. The two money items 'rate' and 'reserve' are the fallback: the page shows data/bol-policy.json (read from the central bank's site every week) when that file is there.",
+    "areas": [
+      {
+        "id": "money", "affects": ["kip", "inflation", "savings"], "tab": "inflation",
+        "items": [
+          { "id": "rate", "rate": 7, "date": "2026-08-25", "old": 8, "old_date": "2026-02-24", "source": "bol_rate" },
+          { "id": "fx", "band": 1, "notice": "313/BOL", "date": "2026-04-10", "old_band": 6.5, "old_notice": "191/BOL", "old_month": "2025-03", "source": "wb_lem_2606" },
+          { "id": "reserve", "kip": 8, "foreign": 11, "date": "2024-08-27", "source": "bol_reserve" },
+          { "id": "dollar", "share": 66, "month": "2026-03", "source": "wb_lem_2606" },
+          { "id": "reserves", "usd_bn": 4.3, "months": 3.8, "month": "2026-04", "before": 3.5, "source": "wb_lem_2606" },
+          { "id": "fatf", "month": "2025-02", "source": "wb_lem_2606" }
+        ]
+      },
+      {
+        "id": "tax", "affects": ["prices", "business"], "tab": "plan",
+        "items": [
+          { "id": "vat", "rate": 10, "old": 7, "year": 2024, "source": "wb_lem" },
+          { "id": "excise", "source": "wb_lem_2606" },
+          { "id": "revenue", "revenue": 21.2, "revenue_before": 19, "tax": 17, "tax_before": 14.6, "year": 2025, "source": "wb_lem_2606" },
+          { "id": "balance", "balance": 1.9, "primary": 5, "year": 2025, "source": "wb_lem_2606" },
+          { "id": "interest", "gdp": 3.2, "share": 16, "year": 2025, "source": "wb_lem_2606" },
+          { "id": "exempt", "trillion": 6, "from": 2021, "to": 2025, "source": "wb_lem_2606" }
+        ]
+      },
+      {
+        "id": "fuel", "affects": ["inflation", "living"], "tab": "living",
+        "items": [
+          { "id": "shock", "diesel": 20000, "diesel_peak": 52650, "diesel_june": 25000, "petrol": 22370, "petrol_peak": 42440, "petrol_june": 30000, "peak": "2026-04", "source": "wb_lem_2606" },
+          { "id": "cut", "month": "2026-03", "premium": 40, "premium_new": 15, "regular": 30, "regular_new": 15, "diesel": 10, "diesel_new": 0, "source": "wb_lem_2606" },
+          { "id": "cost", "trillion": 1.6, "gdp": 0.4, "source": "wb_lem_2606" },
+          { "id": "inflation", "jan": 5.1, "peak": 10.2, "month": "2026-04", "source": "wb_lem_2606" }
+        ]
+      },
+      {
+        "id": "wages", "affects": ["living", "business"], "tab": "population",
+        "items": [
+          { "id": "min", "lak": 2500000, "old": 1600000, "date": "2024-10-01", "source": "kpl_minwage" },
+          { "id": "review", "date": "2026-03-19", "labour": 4100000, "government": 3610451, "employers": 2831680, "source": "kpl_minwage_review" },
+          { "id": "civil", "pct": 30, "year": 2026, "source": "wb_lem_2606" }
+        ]
+      },
+      {
+        "id": "debt", "affects": ["kip", "risk"], "tab": "debt",
+        "items": [
+          { "id": "level", "pct": 87.1, "year": 2025, "before": 94, "source": "wb_lem_2606" },
+          { "id": "deferral", "usd_bn": 2.9, "from": 2020, "to": 2025, "source": "wb_lem_2606" },
+          { "id": "service", "usd_bn": 1.5, "from": 2026, "to": 2030, "gdp": 13, "year": 2026, "source": "wb_lem_2606" },
+          { "id": "decree", "no": "490/GOL", "date": "2025-07-10", "source": "wb_lem" }
+        ]
+      },
+      {
+        "id": "trade", "affects": ["rubber", "business"], "tab": "rubber",
+        "items": [
+          { "id": "ldc", "month": "2026-11", "resolution": "A/RES/76/8", "source": "sdg_ldc" },
+          { "id": "exports", "pct": 73, "before": 64.3, "fdi": 8, "china": 38, "year": 2025, "source": "wb_lem_2606" },
+          { "id": "eudr", "large": "2026-12-30", "small": "2027-06-30", "source": "eu_eudr" },
+          { "id": "quota", "source": "forest_trends" }
+        ]
+      },
+      {
+        "id": "land", "affects": ["land"], "tab": "land",
+        "items": [
+          { "id": "own", "source": "land_law_2019" },
+          { "id": "foreign", "lease": 30, "state": 50, "source": "land_law_2019" },
+          { "id": "condo", "source": "land_law_2019" },
+          { "id": "reval", "years": 3, "source": "land_law_2019" }
+        ]
+      }
+    ],
+    "outlook": {
+      "source": "wb_lem_2606",
+      "years": [2025, 2026, 2027, 2028],
+      "first_forecast": 2026,
+      "rows": {
+        "growth": [4.8, 3.8, 3.7, 3.7],
+        "inflation": [7.7, 9.4, 6.8, 5.7],
+        "fiscal": [1.9, 1.0, 1.1, 1.3],
+        "debt": [87.1, 81.7, 75.8, 71.3],
+        "current_account": [12.0, 6.2, 3.1, 2.0]
+      }
+    },
+    "calendar": [
+      { "id": "wage", "when": "2026", "source": "kpl_minwage_review" },
+      { "id": "census", "when": "2026-2027", "source": "lsb_phc" },
+      { "id": "ldc", "when": "2026-11", "source": "sdg_ldc" },
+      { "id": "eudr_large", "when": "2026-12-30", "source": "eu_eudr" },
+      { "id": "eudr_small", "when": "2027-06-30", "source": "eu_eudr" },
+      { "id": "debt", "when": "2026-2030", "source": "wb_lem_2606" },
+      { "id": "plan", "when": "2026-2030", "source": "kpl_plan" }
+    ],
+    "advice": { "source": "wb_lem_2606", "items": ["fuel", "transfers", "revenue", "debt", "money", "business", "energy"] }
   }
 }

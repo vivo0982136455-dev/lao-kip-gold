@@ -59,7 +59,10 @@ const CHECK = `
       ["overview", {}, "overview"],
       ["gold", {}, "gold"],
       ["living", {}, "living"],
+      ["population", { eco_tab: "population" }, "economy"],
+      ["policy", { eco_tab: "policy" }, "economy"],
       ["rubber market", { eco_tab: "rubber", eco_rubber_view: "market" }, "economy"],
+      ["rubber who buys", { eco_tab: "rubber", eco_rubber_view: "buyers" }, "economy"],
       ["rubber by province", { eco_tab: "rubber", eco_rubber_view: "lao" }, "economy"],
       ["rubber ASEAN", { eco_tab: "rubber", eco_rubber_view: "asean" }, "economy"],
       ["rubber world", { eco_tab: "rubber", eco_rubber_view: "world" }, "economy"],
@@ -69,6 +72,18 @@ const CHECK = `
       const r = await open(store, hash, name.replace(/ /g, ""));
       check("live screen: " + name, r.cards > 0 && r.overflow <= 0 && !r.badText.length && !r.placeholders.length, JSON.stringify(r));
     }
+    // the policy tab shows the central bank's own numbers (read on GitHub's servers every week), not a failed copy
+    await open({ eco_tab: "policy" }, "economy", "policyrate");
+    const lever = await page.eval(`const tile = document.querySelector("#view .stats .stat"); return tile ? { value: tile.querySelector(".stat-value").textContent, label: tile.querySelector(".fresh").textContent, charts: document.querySelectorAll("#view canvas").length } : null;`);
+    check("live: policy tab - policy rate from the central bank's page, with its chart", !!lever && /^\d+(\.\d+)?%$/.test(lever.value) && !lever.label.includes("⚠") && lever.charts === 1, JSON.stringify(lever));
+    // the "who buys" view has its two data files (buyers per year, daily border markets)
+    await open({ eco_tab: "rubber", eco_rubber_view: "buyers", eco_rubber_border_kind: "cuplump" }, "economy", "buyers");
+    const buyers = await page.eval(`return { tiles: document.querySelectorAll("#view .stat").length, charts: document.querySelectorAll("#view canvas").length, failed: document.getElementById("view").innerText.includes("⚠") };`);
+    check("live: rubber 'who buys' view - buyers, border months and the two Thai border markets", buyers.tiles >= 7 && buyers.charts === 2 && !buyers.failed, JSON.stringify(buyers));
+    // one menu button on phones: the "more" tab of the bottom bar (no second button in the top bar)
+    const menu = await page.eval(`return { top: !!document.getElementById("menu-btn"), more: !!document.getElementById("more-btn") };`);
+    check("live: one menu button (bottom bar), none in the top bar", !menu.top && menu.more, JSON.stringify(menu));
+
     // the entry form knows the new questions (no "question missing" line), nothing is sent
     await open({ eco_tab: "rubber", eco_rubber_view: "mine" }, "economy", "form");
     await page.eval(`document.querySelector(".own-rubber .btn-primary").click();`);

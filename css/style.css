@@ -269,6 +269,7 @@ select {
 .stat-value { font-size: var(--fs-2xl); font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; margin-top: 2px; }
 .stat-unit { font-size: 0.78rem; font-weight: 500; letter-spacing: 0; color: var(--text-2); margin-left: 5px; white-space: nowrap; }
 .stat-sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.stat-sub .delta { white-space: normal; } /* a pill with words ("+96% from 2024") may wrap inside a narrow tile */
 
 /* Direction hint */
 .hint-card { display: grid; gap: 10px; align-content: start; }
@@ -519,6 +520,37 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .watch-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .watch-links .btn { min-height: 36px; font-size: 0.82rem; }
 .disclaimer { margin-top: 16px; }
+
+/* Population tab - age pyramid: men to the left, women to the right, bars grow from the middle.
+   Bar length = people, measured from 0, the same scale on both sides. */
+.pyramid { display: grid; gap: 3px; margin-top: 8px; font-size: 0.74rem; }
+.pyr-row { display: grid; grid-template-columns: minmax(0, 1fr) 3.6em minmax(0, 1fr); align-items: center; gap: 6px; }
+.pyr-side { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pyr-left { justify-content: flex-end; }
+.pyr-track { flex: 1 1 auto; min-width: 0; display: flex; }
+.pyr-left .pyr-track { justify-content: flex-end; }
+.pyr-bar { height: 12px; min-width: 1px; }
+.pyr-men { background: var(--cat-1); border-radius: 4px 0 0 4px; }
+.pyr-women { background: var(--cat-2); border-radius: 0 4px 4px 0; }
+.pyr-num { flex: none; width: 2.4em; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.pyr-left .pyr-num { text-align: right; }
+.pyr-age { text-align: center; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pyr-head { color: var(--muted); padding-bottom: 2px; }
+.pyr-head .pyr-age { color: var(--muted); }
+.pyr-key { flex: none; width: 10px; height: 10px; border-radius: 2px; }
+
+/* Policy tab */
+.policy-affects { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 2px 0 10px; font-size: 0.74rem; }
+.policy-affects-label { color: var(--muted); }
+.tag { padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-2); white-space: nowrap; }
+.policy-card { display: flex; flex-direction: column; }
+.policy-card .watch-links { margin-top: auto; padding-top: 12px; }
+.policy-list li { line-height: 1.5; overflow-wrap: anywhere; }
+.calendar-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 0.86rem; }
+.calendar-list li { display: grid; grid-template-columns: 6.4em minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.cal-when { font-weight: 650; font-variant-numeric: tabular-nums; }
+.cal-what { overflow-wrap: anywhere; }
+.calendar-list li.past { color: var(--muted); }
 
 /* Loading placeholder (instead of an empty page) */
 .skeleton { display: grid; gap: 12px; }

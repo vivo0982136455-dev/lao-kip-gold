@@ -97,13 +97,17 @@ function vientianeCard(e, own) {
   const rows = v.districts.map((d) => {
     const x = d[road.current];
     const name = el("span", "", t.vte_districts[d.key] || d.key);
-    name.append(el("span", "sub-line", fill(t.land_villages, { n: d.villages })));
+    const sub = el("span", "sub-line", fill(t.land_villages, { n: d.villages }));
+    // where this district starts in the source document: the way to one village's own price
+    if (d.page) sub.append(" · ", link(fill(t.land_vte_page, { n: d.page }), `${v.pdf}#page=${d.page}`));
+    name.append(sub);
     return [name, x ? k(x[0]) : "—", x ? k(x[1]) : "—", x ? k(x[2]) : "—"];
   });
   const tb = table([t.land_col_district, t.land_col_low, t.land_col_mid, t.land_col_high], rows);
   tb.classList.add("wrap-first");
   c.append(el("p", "note", t.land_vte_unit), tb);
   c.append(el("p", "note", t.land_vte_note));
+  if (v.districts.some((d) => d.page)) c.append(el("p", "note", t.land_vte_find));
   c.append(infoRow(t.land_full_table, link(t.inv_land_thai_translation + " (PDF)", v.pdf)));
   c.append(el("h4", "up-subtitle", t.land_own_title), ownLines(e, own, "Vientiane Capital"));
   c.append(el("h4", "up-subtitle", t.land_asking_title), listingLinks(e, "Vientiane Capital"));

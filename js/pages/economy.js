@@ -1,10 +1,15 @@
-// Page: Lao economy, for investors (8 tabs). Owner request 2026-09-30: "think like an investor".
-//   overview · GDP & structure · government plan 2026–2030 · foreign investment · public debt · inflation & kip · rubber · land
+// Page: Lao economy, for investors (10 tabs). Owner request 2026-09-30: "think like an investor".
+//   overview · population · GDP & structure · government plan 2026–2030 · policy · foreign investment · public debt ·
+//   inflation & kip · rubber · land
+// The order follows the questions an investor asks: who lives and works here (population), what they produce (GDP),
+// what the State wants (plan) and which rules it has set (policy), then money coming in (investment), money owed
+// (debt), prices and the kip, and the two things the owner follows closely (rubber, land).
 // Yearly World Bank + IMF numbers come with the app (data/economy.json). The investor numbers (data/invest.json),
-// the hand-checked plan targets and report facts (data/invest-static.json), the Thai rubber prices
-// (data/thai-prices.json), the world rubber numbers (data/rubber-world.json), the official land price decisions
-// (data/land.json) and the owner's own prices (data/own-prices.json) load only when their tab is opened.
-// Past data only - never investment advice.
+// the hand-checked plan targets, policy facts and report facts (data/invest-static.json), the population numbers
+// (data/population.json), the rubber files (data/thai-prices.json, rubber-world.json, rubber-borders.json,
+// rubber-daily.json), the official land price decisions (data/land.json) and the owner's own prices
+// (data/own-prices.json) load only when their tab is opened.
+// Past data and institutions' forecasts only - never investment advice.
 
 import { el, emptyState } from "../ui.js";
 import { mountCharts } from "../charts.js";
@@ -17,11 +22,15 @@ import { debtTab } from "./eco-debt.js";
 import { inflationTab } from "./eco-inflation.js";
 import { rubberTab } from "./eco-rubber.js";
 import { landTab } from "./eco-land.js";
+import { populationTab } from "./eco-population.js";
+import { policyTab } from "./eco-policy.js";
 
 const TABS = [
   ["overview", overviewTab],
+  ["population", populationTab],
   ["gdp", gdpTab],
   ["plan", planTab],
+  ["policy", policyTab],
   ["fdi", fdiTab],
   ["debt", debtTab],
   ["inflation", inflationTab],

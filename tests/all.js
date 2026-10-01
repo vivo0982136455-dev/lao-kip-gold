@@ -1,5 +1,5 @@
-// Run every local browser test, one after the other (about 15 minutes). Usage: node tests/all.js [quick]
-// quick = the short screen check (18 screens) instead of all 144.
+// Run every local browser test, one after the other (about 20 minutes). Usage: node tests/all.js [quick]
+// quick = the short screen check (21 screens) instead of all 168.
 const { spawnSync } = require("child_process");
 const path = require("path");
 

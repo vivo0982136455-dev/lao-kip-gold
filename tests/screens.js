@@ -1,7 +1,7 @@
 // Every screen of the site x Thai / Lao x dark / light x phone 380 / desktop 1440, in a real Edge (headless).
 // Checks: no sideways scroll, nothing sticking out of the screen, no "undefined" / "NaN" / unfilled {placeholder},
 // every chart drawn, no console errors. Saves pictures of the screens for a look by eye.
-// Usage: node tests/screens.js [quick]      quick = Thai dark phone only (18 screens instead of 144)
+// Usage: node tests/screens.js [quick]      quick = Thai dark phone only (21 screens instead of 168)
 const fs = require("fs");
 const path = require("path");
 const { ROOT, SHOTS, launch, startSite, sleep } = require("./browser.js");
@@ -18,8 +18,8 @@ const SCREENS = [
   ["living", "living", {}],
   ["forecast", "forecast", {}],
   ["settings", "settings", {}],
-  ...["overview", "gdp", "plan", "fdi", "debt", "inflation"].map((tab) => ["eco-" + tab, "economy", { eco_tab: tab }]),
-  ...["market", "lao", "asean", "world", "mine"].map((v) => ["rubber-" + v, "economy", { eco_tab: "rubber", eco_rubber_view: v }]),
+  ...["overview", "population", "gdp", "plan", "policy", "fdi", "debt", "inflation"].map((tab) => ["eco-" + tab, "economy", { eco_tab: tab }]),
+  ...["market", "buyers", "lao", "asean", "world", "mine"].map((v) => ["rubber-" + v, "economy", { eco_tab: "rubber", eco_rubber_view: v }]),
   ["land", "economy", { eco_tab: "land" }],
 ];
 const LOADING = { th: "กำลังโหลดข้อมูล", lo: "ກຳລັງໂຫຼດຂໍ້ມູນ" };

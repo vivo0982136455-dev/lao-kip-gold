@@ -1,5 +1,6 @@
 // The states the big matrix does not reach: every year x kind of rubber x seller/buyer choice, every road class of
-// the land table, and the two entry forms opened and filled in (NOT saved: requests to Google are blocked here).
+// the land table, every kind of rubber of the Thai border markets, every "see the effect" button of the policy tab,
+// and the two entry forms opened and filled in (NOT saved: requests to Google are blocked here).
 // Usage: node tests/states.js
 const fs = require("fs");
 const path = require("path");
@@ -82,6 +83,36 @@ const CHECK = `
         const r = await page.eval(CHECK);
         const first = await page.eval(`const tr = document.querySelector("#view table tbody tr"); return tr ? tr.innerText.replace(/\\s+/g, " ") : "";`);
         report(`${lang} land road ${road}`, r, lang === "th" ? first : "");
+      }
+    }
+
+    // ---------- 2b. "who buys Lao rubber": every kind of rubber of the two Thai border markets ----------
+    const daily = JSON.parse(fs.readFileSync(path.join(ROOT, "data/rubber-daily.json"), "utf8"));
+    for (const lang of ["th", "lo"]) {
+      for (const kind of Object.keys(daily.thai_border.kinds)) {
+        await open(lang, { eco_tab: "rubber", eco_rubber_view: "buyers", eco_rubber_border_kind: kind });
+        const r = await page.eval(CHECK);
+        // the three tiles of the border card (Nong Khai, Chiang Rai, all markets): a price or the words "no trade"
+        const tiles = await page.eval(`return [...document.querySelectorAll('#view .stat[data-kind="market"] .stat-value')].map((x) => x.textContent.trim()).join(" | ");`);
+        const pressed = await page.eval(`return [...document.querySelectorAll('#view .choice button[aria-pressed="true"]')].length;`);
+        if (!tiles || pressed < 2) r.badText.push(`border card: tiles "${tiles}", pressed buttons ${pressed}`);
+        report(`${lang} buyers ${kind}`, r, lang === "th" ? tiles : "");
+      }
+    }
+
+    // ---------- 2c. policy tab: every "see the effect" button opens the tab it names ----------
+    const stat = JSON.parse(fs.readFileSync(path.join(ROOT, "data/invest-static.json"), "utf8"));
+    for (const lang of ["th", "lo"]) {
+      for (let i = 0; i < stat.policy.areas.length; i++) {
+        const area = stat.policy.areas[i];
+        await open(lang, { eco_tab: "policy" });
+        const r = await page.eval(CHECK);
+        await page.eval(`document.querySelectorAll("#view .policy-card .watch-links .btn")[${i}].click();`);
+        await sleep(400);
+        const where = await page.eval(`const tab = document.querySelector('.tabbar [aria-selected="true"]'); return location.hash + " " + (tab ? tab.id : "");`);
+        const want = area.tab === "living" ? "#/living " : `#/economy tab-${area.tab}`;
+        if (where !== want) r.badText.push(`button of "${area.id}" led to "${where}", expected "${want}"`);
+        report(`${lang} policy ${area.id} -> ${area.tab}`, r, lang === "th" ? where : "");
       }
     }
 

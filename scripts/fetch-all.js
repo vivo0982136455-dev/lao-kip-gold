@@ -37,6 +37,13 @@ async function main() {
     }
   }
 
+  // Daily rubber prices in the markets around Laos (its own file; asks its sources at most every 3 hours)
+  try {
+    await require("./fetch-rubber-daily").run();
+  } catch (err) {
+    console.error(`[FAIL] rubber-daily: ${err.message}`);
+  }
+
   // Rebuild the small file the web page reads
   try {
     require("./build-summary").main();

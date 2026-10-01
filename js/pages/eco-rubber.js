@@ -1,13 +1,17 @@
-// Economy tab 7: rubber (the owner owns a rubber farm). Five views, chosen with the buttons at the top:
+// Economy tab 7: rubber (the owner owns a rubber farm). Six views, chosen with the buttons at the top:
 //   market - world price (IMF, RSS3, monthly since 2000), Thai market prices (Ministry of Commerce: cup lump, latex,
 //            unsmoked sheet), each also in kip, and the average of every year
+//   buyers - where Lao rubber is sold and at what price: buyers per year, the Vietnamese border by month, the kinds
+//            of rubber bought, and the Thai central markets next to Laos as a reference    (eco-rubber-borders.js)
 //   lao    - Laos itself: rubber area by province (NAFRI 2018, the newest table by province), production by year
-//            (FAO), the ministry's yearly national price and the price at the Chinese border, who buys Lao rubber,
-//            single prices quoted in news. No daily or provincial price is published anywhere (re-checked 2026-10-01).
-//   asean  - the 10 ASEAN countries + China: trade by form of rubber, production, producer prices   (eco-rubber-world.js)
+//            (FAO), the ministry's yearly national price and the price at the Chinese border, single prices quoted
+//            in news. No daily or provincial price is published anywhere (re-checked 2026-10-01).
+//   asean  - the newest price in every ASEAN country + China + the world (eco-rubber-borders.js), then trade by
+//            form of rubber, production, producer prices                                    (eco-rubber-world.js)
 //   world  - world prices by month, the 10 biggest sellers and buyers, the biggest producers          (eco-rubber-world.js)
 //   mine   - the price the owner's buyer really paid: entry form + history                           (own-entry.js)
-// data/thai-prices.json, data/rubber-world.json and data/own-prices.json load only when this tab is opened.
+// data/thai-prices.json, data/rubber-world.json, data/rubber-borders.json, data/rubber-daily.json and
+// data/own-prices.json load only when this tab is opened.
 
 import { el, card, cardHead, pctPill, table, sourceLink } from "../ui.js";
 import { chartCard, dayRange, valuesFor } from "../charts.js";
@@ -16,7 +20,8 @@ import { lazyJson } from "../lazy.js";
 import {
   lastOf, pct, indicator, freshness, sourcesFoot, invTile, barTable, ready, fill, monthText, monthShort, staticSource, choice, whole, PROVINCES,
 } from "./eco-common.js";
-import { aseanView, worldView, laoBuyersCard, laoProductionChart } from "./eco-rubber-world.js";
+import { aseanView, worldView, laoProductionChart } from "./eco-rubber-world.js";
+import { buyersView, countryPricesCard } from "./eco-rubber-borders.js";
 import { rubberEntryCard, rubberEntriesCard, rubberByProvince, RUBBER_TYPES } from "./own-entry.js";
 
 const LB_PER_KG = 2.20462;
@@ -269,24 +274,28 @@ function provincesCard(r) {
 function laoView(panel, r) {
   const prov = provincesCard(r);
   if (prov) panel.append(prov);
-  const grid = el("div", "grid grid-2");
   if (r.world) {
     const chart = laoProductionChart(r);
-    if (chart) grid.append(chart);
-    const buyers = laoBuyersCard(r);
-    if (buyers) grid.append(buyers);
-  } else if (r.worldState === "loading") grid.append(el("p", "muted", r.t.loading));
-  if (grid.childNodes.length) panel.append(grid);
+    if (chart) panel.append(chart);
+  } else if (r.worldState === "loading") panel.append(el("p", "muted", r.t.loading));
   const lao = laoRubberCard(r, ratesByYear(r));
   if (lao) panel.append(lao);
 }
 
+// ---------- View: ASEAN + China - first the newest price in every country, then trade and production ----------
+function aseanPlusView(panel, r) {
+  const prices = countryPricesCard(r);
+  if (prices) panel.append(prices);
+  if (r.world) aseanView(panel, r);
+  else panel.append(el("p", "muted", r.worldState === "error" ? r.t.inv_load_error : r.t.loading));
+}
+
 // ---------- View 5: the owner's own selling prices ----------
 function mineView(panel, r) {
-  const { t, summary, thai, own } = r;
-  panel.append(rubberEntryCard(r, thai));
+  const { t, summary, thai, own, daily } = r;
+  panel.append(rubberEntryCard(r, thai, daily));
 
-  // His prices and the Thai market price of the same day, in kip (last 60 days: the Thai file keeps daily values that long)
+  // His prices and the Thai market price of the same day, in kip (last 60 days)
   const entries = own && own.rubber ? own.rubber.entries : [];
   const days = dayRange(60);
   const types = [...new Set(entries.map((e) => e.type))].filter((id) => RUBBER_TYPES[id]);
@@ -298,19 +307,23 @@ function mineView(panel, r) {
       color: i === 0 ? null : "--cat-" + (i + 1),
       values: valuesFor([...entries].reverse().filter((e) => e.type === id).map((e) => [e.date, e.price]), days),
     }));
-    const cup = thai && thai.items && thai.items.rubber_cuplump;
     const rate = summary.metrics["fx-market.THB_LAK"];
-    if (cup && cup.days && rate) {
-      const rates = new Map(rate.daily);
-      series.push({ label: t.own_thai_cuplump_lak, kind: "market", values: valuesFor(cup.days.filter(([d]) => rates.has(d)).map(([d, v]) => [d, Math.round(v * rates.get(d))]), days) });
-    }
+    const rates = rate ? new Map(rate.daily) : new Map();
+    const inKip = (pairs) => valuesFor(pairs.filter(([d, v]) => v !== null && rates.has(d)).map(([d, v]) => [d, Math.round(v * rates.get(d))]), days);
+    // the two Thai markets next to Laos (cup lump); without them, the Thai national market price
+    const border = daily && daily.thai_border && daily.thai_border.kinds && daily.thai_border.kinds.cuplump;
+    const cup = thai && thai.items && thai.items.rubber_cuplump;
+    if (border && rate) {
+      series.push({ label: `${t.rb_m_nongkhai} · ${t.rb_kind_cuplump}`, kind: "market", values: inKip(border.days.map((x) => [x[0], x[1]])) });
+      series.push({ label: `${t.rb_m_chiangrai} · ${t.rb_kind_cuplump}`, kind: "market", color: "--cat-1", values: inKip(border.days.map((x) => [x[0], x[2]])) });
+    } else if (cup && cup.days && rate) series.push({ label: t.own_thai_cuplump_lak, kind: "market", values: inKip(cup.days) });
     panel.append(chartCard({ title: t.own_chart_title, subtitle: t.own_chart_sub, labels: days.map((d) => formatDate(d, t)), series, unit: "LAK per kg", t }));
   }
-  panel.append(rubberEntriesCard(r, own, thai));
+  panel.append(rubberEntriesCard(r, own, thai, daily));
   if (r.ownState === "loading") panel.append(el("p", "muted", t.loading));
 }
 
-const VIEWS = { market: marketView, lao: laoView, asean: aseanView, world: worldView, mine: mineView };
+const VIEWS = { market: marketView, buyers: buyersView, lao: laoView, asean: aseanPlusView, world: worldView, mine: mineView };
 
 export function rubberTab(panel, e) {
   const { t } = e;
@@ -319,6 +332,8 @@ export function rubberTab(panel, e) {
   const thaiFile = lazyJson("data/thai-prices.json", e.rerender);
   const worldFile = lazyJson("data/rubber-world.json", e.rerender);
   const ownFile = lazyJson("data/own-prices.json", e.rerender);
+  const bordersFile = lazyJson("data/rubber-borders.json", e.rerender);
+  const dailyFile = lazyJson("data/rubber-daily.json", e.rerender);
   const r = {
     ...e,
     thai: thaiFile.state === "ok" ? thaiFile.data : null,
@@ -327,14 +342,18 @@ export function rubberTab(panel, e) {
     worldState: worldFile.state,
     own: ownFile.state === "ok" ? ownFile.data : null,
     ownState: ownFile.state,
+    borders: bordersFile.state === "ok" ? bordersFile.data : null,
+    bordersState: bordersFile.state,
+    daily: dailyFile.state === "ok" ? dailyFile.data : null,
+    dailyState: dailyFile.state,
   };
   const view = choice(e, "rubber_view", Object.keys(VIEWS).map((id) => [id, t["rw_view_" + id]]), "market");
   view.bar.classList.add("choice-main");
   view.bar.setAttribute("aria-label", t.rw_views_label);
   panel.append(view.bar);
 
-  // The ASEAN and world views need data/rubber-world.json
-  if ((view.current === "asean" || view.current === "world") && !r.world) {
+  // The world view needs data/rubber-world.json (the other views say themselves what is still loading)
+  if (view.current === "world" && !r.world) {
     panel.append(el("p", "muted", r.worldState === "error" ? t.inv_load_error : t.loading));
     return;
   }

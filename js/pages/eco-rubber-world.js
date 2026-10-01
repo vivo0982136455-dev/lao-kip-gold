@@ -2,7 +2,7 @@
 //   ASEAN + China  - exports and imports of the 10 ASEAN countries and China, by form of rubber, with the average
 //                    price at the border; production, tapped area and the price received by producers (FAO)
 //   World + top 10 - world prices by month (TSR20, RSS3), the 10 biggest sellers and buyers
-//   Who buys Lao rubber - what the buyers' customs report (used on the "Laos" view)
+//   (who buys Lao rubber: eco-rubber-borders.js)
 // Trade numbers are what each country's customs reported to the UN. A country that has not reported a year yet
 // is shown with what its partners reported, marked "≈". Prices here are border prices, never farm prices.
 
@@ -273,42 +273,6 @@ export function worldView(panel, r) {
     pc.append(fresh, sourcesFoot(t, [w.sources.faostat], prod.updated));
     panel.append(pc);
   }
-}
-
-// ---------- Who buys rubber from Laos (used on the "Laos" view) ----------
-export function laoBuyersCard(r) {
-  const { t } = r;
-  const w = r.world;
-  const trade = w && w.trade;
-  if (!trade || !Object.keys(trade.years || {}).length) return null;
-  const yc = yearChoice(r);
-  const year = yc.current;
-  const y = trade.years[year];
-  const all = y.lao_buyers && y.lao_buyers["4001"];
-  const c = card("official");
-  c.append(cardHead(`${t.rw_buyers_title} (${year})`, "official", !!trade.stale, t));
-  c.append(controls(r, [t.year, yc]));
-  if (!all || !all.rows.length) {
-    c.append(el("p", "muted", t.rw_buyers_none));
-    return c;
-  }
-  const total = all.total;
-  const rows = all.rows.map(([iso, tonnes, usd]) => [countryName(t, w.names, iso), kt(tonnes), usdM(usd), perKg(tonnes === null ? 0 : usd, tonnes), shareText(usd, total[1])]);
-  rows.push([t.rw_buyers_total, kt(total[0]), usdM(total[1]), perKg(total[2], total[0]), ""]);
-  const tb = table([t.rw_col_buyer, t.rw_col_kt, t.rw_col_usd_m, t.rw_col_price, t.rw_col_share], rows);
-  tb.classList.add("wrap-all", "total-last");
-  c.append(tb);
-
-  // The forms Lao rubber was bought in, and what Laos itself reported (when it did)
-  const forms = trade.codes.filter((code) => code !== "4001" && y.lao_buyers[code]).map((code) => `${t["rw_code_" + code]} ${kt(y.lao_buyers[code].total[0])}`);
-  if (forms.length) c.append(el("p", "note", fill(t.rw_buyers_forms, { list: forms.join(" · ") })));
-  const own = y.X["4001"].rows.find((x) => x[0] === "LAO");
-  if (own) c.append(el("p", "note", fill(t.rw_lao_self, { kt: kt(own[1]), usd: usdM(own[2]), price: perKg(own[1] === null ? 0 : own[2], own[1]) })));
-  c.append(el("p", "note", t.rw_buyers_note));
-  const silent = y.missing.M.filter((iso) => iso !== "LAO"); // ASEAN / China buyers that have not reported this year
-  if (silent.length) c.append(el("p", "note", fill(t.rw_buyers_missing, { list: silent.map((iso) => countryName(t, w.names, iso)).join(", ") })));
-  c.append(tradeFoot(r, y, year));
-  return c;
 }
 
 // Laos' own production by year (FAO: an estimate, not an official Lao figure)

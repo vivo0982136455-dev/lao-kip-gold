@@ -8,6 +8,7 @@ import { el, card, cardHead, table, emptyState } from "../ui.js";
 import { formatNumber, formatDate, todayVientiane } from "../format.js";
 import { loadFormConfig, formHas, prefilledUrl, saveDirect, newTag } from "../manual-entry.js";
 import { PROVINCES, fill, whole } from "./eco-common.js";
+import { borderPriceLak } from "./eco-rubber-borders.js";
 
 // Kind of rubber: id -> [text written into the sheet (always Thai: the bot reads these words), Thai market item to compare with]
 export const RUBBER_TYPES = {
@@ -234,8 +235,18 @@ function entryCard(ctx, spec) {
   return c;
 }
 
+// The reference price for one own entry: the Thai central market nearest to that province (Nong Khai or
+// Chiang Rai, same kind of rubber, that day or up to 7 days before); without it, the Thai national market price.
+// -> { lak, label, date, exact } | null
+export function referencePrice(t, thai, daily, summary, type, province, day) {
+  const b = borderPriceLak(daily, summary, type, province, day);
+  if (b) return { lak: b.lak, label: `${t["rb_m_" + b.market]} · ${t["own_type_" + type]}`, date: b.date, exact: true };
+  const n = thaiPriceLak(thai, summary, type, day);
+  return n ? { lak: n.lak, label: `${t.own_an_thai} ${t["own_type_" + type]}`, date: n.date, exact: n.exact } : null;
+}
+
 // ---------- Rubber: the price the buyer paid ----------
-export function rubberEntryCard(ctx, thai) {
+export function rubberEntryCard(ctx, thai, daily) {
   const { t, summary } = ctx;
   const v = s.rubber.values;
   const note = (tag) => `${t.up_form_note} (${t.own_note_rubber})${tag ? " " + tag : ""}`;
@@ -272,11 +283,11 @@ export function rubberEntryCard(ctx, thai) {
     },
     analysis() {
       if (!v.price) return null;
-      const ref = thaiPriceLak(thai, summary, v.type, v.date);
+      const ref = referencePrice(t, thai, daily, summary, v.type, v.province, v.date);
       if (!ref) return null;
       const box = el("div", "up-analysis");
       const row = el("div", "row");
-      row.append(el("span", "row-label", `${t.own_an_thai} ${t["own_type_" + v.type]} (${formatDate(ref.date, t)})`));
+      row.append(el("span", "row-label", `${ref.label} (${formatDate(ref.date, t)})`));
       const right = el("div", "row-right");
       right.append(el("div", "value small-value", `${whole(ref.lak)} ${t.inv_rub_lak_kg}`));
       const line = el("div", "change wrap");
@@ -366,7 +377,7 @@ export function landEntryCard(ctx) {
 const placeLabel = (t, e) => [e.province ? t.provinces[e.province] || e.province : null, e.place].filter(Boolean).join(" · ") || "—";
 
 // own = data/own-prices.json (or null while loading). Returns a card with every rubber entry, newest first.
-export function rubberEntriesCard(ctx, own, thai) {
+export function rubberEntriesCard(ctx, own, thai, daily) {
   const { t, summary } = ctx;
   const c = card("own");
   c.append(cardHead(t.own_rubber_list, "own", !!(own && own.stale), t));
@@ -376,7 +387,7 @@ export function rubberEntriesCard(ctx, own, thai) {
     return c;
   }
   const rows = entries.map((e) => {
-    const ref = thaiPriceLak(thai, summary, e.type, e.date);
+    const ref = referencePrice(t, thai, daily, summary, e.type, e.province, e.date);
     return [
       formatDate(e.date, t),
       t["own_type_" + e.type] || e.type_text,
@@ -388,7 +399,7 @@ export function rubberEntriesCard(ctx, own, thai) {
   const tb = table([t.col_date, t.own_rubber_type, t.inv_rub_lak_kg, t.own_col_place, t.own_col_vs_thai], rows);
   tb.classList.add("wrap-all", "scroll-y");
   c.append(tb);
-  c.append(el("p", "note", t.own_vs_thai_note));
+  c.append(el("p", "note", daily ? t.own_vs_border_note : t.own_vs_thai_note));
   return c;
 }
 

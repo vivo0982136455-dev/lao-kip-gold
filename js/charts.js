@@ -289,6 +289,8 @@ function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, anim
       borderCapStyle: "round",
       // Smooth but honest: "monotone" never invents peaks or dips between real points
       cubicInterpolationMode: "monotone",
+      // A rate that is SET (a policy rate): flat until the day it is changed, then a step - never a slope
+      stepped: s.stepped ? "after" : false,
       pointRadius: (ctx) => (ctx.dataIndex === lastIndex ? 4 : sparse ? 3 : 0),
       pointHoverRadius: 5,
       pointBorderColor: surface, // 2px ring in the surface colour
@@ -341,12 +343,12 @@ function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, anim
 // Read-out above the plot: one row per line = colour key, name, value, change since the start of the period.
 // It shows the latest value of every line; while a point is touched / hovered it shows that point instead.
 // With two or more lines a row is also a button that hides / shows its line (as a legend does).
-function buildReadout({ labels, series, unit, t, whenPrefix }) {
+function buildReadout({ labels, series, unit, t, whenPrefix, since = true }) {
   const box = el("div", "readout");
   const head = el("div", "readout-head");
   const when = el("span", "readout-when");
   head.append(when);
-  const showSince = !isPct(unit) && unit !== "index"; // a % of a % (or of an index) would only confuse
+  const showSince = since && !isPct(unit) && unit !== "index"; // a % of a % (or of an index) would only confuse
   if (showSince) head.append(el("span", "readout-note", `▲▼ % = ${t.since_start}`));
   box.append(head);
 
@@ -442,13 +444,14 @@ function dataTable({ labels, series, unit, unitLabel, t, firstColTitle, title })
 }
 
 // A chart card. options: { title, subtitle, labels, tickLabels, series, unit, unitLabel, t, firstColTitle, periodText }
-//   series: [{ label, values, kind, color, dashed, shown, soft }]
+//   series: [{ label, values, kind, color, dashed, shown, soft, stepped }]
 //     shown = what the read-out and the table show, when it differs from the drawn values (see shownOf)
 //     soft  = forecast / target / not yet paid: quieter numbers in the table
 //   unitLabel: the unit in words; left out = from the unit code (format.js unitText)
 //   periodText (e.g. "30 วัน"): shows the change of the FIRST line over the period as a ▲/▼ pill.
+//   noSince: leave out the "% since the first point" of the read-out (a line that starts near zero gives +35,000%)
 // Call mountCharts(container) after the card is in the page.
-export function chartCard({ title, subtitle, labels, tickLabels, series, unit, unitLabel, t, firstColTitle, extraClass = "", periodText }) {
+export function chartCard({ title, subtitle, labels, tickLabels, series, unit, unitLabel, t, firstColTitle, extraClass = "", periodText, noSince = false }) {
   const c = card(null, "chart-card " + extraClass);
   const head = el("div", "chart-head");
   head.append(el("h3", "", title));
@@ -465,7 +468,7 @@ export function chartCard({ title, subtitle, labels, tickLabels, series, unit, u
     c.append(box);
   } else {
     // "ปี 2025" for yearly charts; dates and months already read well on their own
-    const readout = buildReadout({ labels, series, unit, t, whenPrefix: colTitle === t.year ? `${t.year} ` : "" });
+    const readout = buildReadout({ labels, series, unit, t, whenPrefix: colTitle === t.year ? `${t.year} ` : "", since: !noSince });
     c.append(readout.box, box);
     const canvas = el("canvas");
     canvas.setAttribute("role", "img");

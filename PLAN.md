@@ -51,7 +51,7 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 4 | Market FX USD/LAK, USD/THB, THB/LAK (mid-market) | A free no-key FX API (e.g. open.er-api.com) — VERIFY that LAK is included | every 30 min | Label as "market rate", never as official |
 | 5 | Lao shop gold price (Phouvong) | Manual entry: Google Form → Google Sheet published as CSV → fetched by Action | 1×/day | Owner enters by hand |
 | 6 | Macro (annual) | World Bank API `https://api.worldbank.org/v2/country/LAO/indicator/{CODE}?format=json` — e.g. NY.GDP.MKTP.CD, NY.GDP.MKTP.KD.ZG, FP.CPI.TOTL.ZG, BX.KLT.DINV.CD.WD, PA.NUS.FCRF | 1×/month | Free, no key |
-| 7 | Macro forecasts | IMF DataMapper `https://www.imf.org/external/datamapper/api/v1/{INDICATOR}/LAO` — e.g. NGDP_RPCH, PCPIPCH, BCA_NGDPD, GGXWDG_NGDP | 1×/month | Free, no key |
+| 7 | Macro forecasts | IMF DataMapper `https://www.imf.org/external/datamapper/api/v1/{INDICATOR}/LAO` — e.g. NGDP_RPCH, PCPIPCH, BCA_NGDPD, GGXWDG_NGDP | 1×/month | Free, no key. **Answers HTTP 403 to GitHub's runners** (found 2026-10-02 on the first weekly run) → since then the same WEO numbers are read from IMF SDMX first (`https://api.imf.org/external/sdmx/2.1/data/IMF.RES,WEO/LAO.NGDP_RPCH.A?startPeriod=2000`; world = `G001`; NGDPD in USD), DataMapper only as the backup. |
 | 8 | Lao monthly CPI / inflation (all items + 12 COICOP categories, index) + monthly world gold | IMF SDMX `https://api.imf.org/external/sdmx/2.1/data/IMF.STA,CPI/LAO.CPI..YOY_PCH_PA_PT.M` (send `Accept: application/json`), gold `IMF.RES,PCPS/G001.PGOLD.USD.M` | weekly | ✅ Verified 2026-09-30 (to Aug 2026). Replaced the manual CPI entry. |
 | 9 | **Real Lao gold price** — Lao Bullion Bank buy/sell (LAK per gram) | `https://laobullionbank.com/api/bullionmarkets/rategold` (+ `rategoldall` history since Aug 2025) — the JSON the LBB site itself reads | every 30 min (LBB updates 2–7×/business day) | ✅ Verified 2026-09-30. Undocumented → may change. Time is Vientiane despite "UTC" label. Replaces Phouvong as the premium basis. |
 | 10 | BCEL commercial bank rates USD/THB/CNY (note buy / sell) | `https://www.bcel.com.la/bcel/exchange-rate.html?lang=en` (HTML table) | every 30 min (published in daily "rounds") | ✅ Verified 2026-09-30. Label as BANK, separate from OFFICIAL (BOL) and MARKET. |
@@ -69,11 +69,21 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 22 | The owner's OWN prices: rubber price he was paid (LAK per kg, kind, province) and land prices he sees (total, area, province) | The same Google Form/Sheet as #5 (6 optional questions, found by the words ยาง / ที่ดิน in their titles); entered on the site (Economy > Rubber > "my prices", Economy > Land) | every data run (`fetch-own-prices.js`) | ✅ Questions verified in the real form 2026-10-01. Label OWN ("บันทึกเอง"); the site and the data file are public → no names / phone numbers / exact addresses. |
 | 23 | World natural rubber: every country's exports + imports (HS 4001 and the forms 400110 latex, 400121 smoked sheets, 400122 block rubber, 400129 other = raw cup lump / unsmoked sheet), last 3 years; production, tapped area, producer price by country; world prices TSR20 + RSS3 monthly | UN Comtrade free preview (`.../preview/C/A/HS?period=Y&partnerCode=0&flowCode=X\|M&cmdCode=...`, no reporterCode = all reporters, ONE period per call, ≤ 500 rows) · FAOSTAT bulk zips listed in `https://bulks-faostat.fao.org/production/datasets_E.json` (QCL, PP; the API itself now answers 401) · World Bank Pink Sheet xlsx (link read from the commodity-markets page) | weekly (`fetch-rubber-world.js`) | ✅ Verified 2026-10-01. A country that has not reported a year is estimated from its partners' reports ("≈", can be too low). |
 | 24 | Hand-checked tables: rubber area by Lao province (planted / tapped, 2018; Forest Trends 2020, Table 1, NAFRI data) · Vientiane Capital official assessed land prices summarised per district and road class (Decision 142 of 26 Feb 2024, ThaiPublica Thai translation, 481 villages) | `data/invest-static.json` → `rubber.provinces`, `land.vientiane` | by hand | ✅ Read 2026-10-01 (province rows sum to 257,887 ha, the printed total is 258,446) |
+| 25 | Daily rubber prices around Laos: Thai central markets Nong Khai + Chiang Rai + closing price of all 8 markets (cup lump 100%, fresh latex, unsmoked sheet, RSS3, and the EUDR price); Malaysia SMR 20 + latex in bulk; Shanghai futures RU + NR (most traded contract); market FX | Rubber Authority of Thailand `https://misdata.rubberthaiecon.com/report/repprices.php?selectrubber={1..5}&selectmm=M&selectyy=YYYY` (HTML table, Buddhist-era dates, since 2021-05) · LGM `https://www.lgm.gov.my/webv2api/api/rubberprice/month=M&year=YYYY` · SHFE `https://www.shfe.com.cn/data/tradedata/future/dailydata/kxYYYYMMDD.dat` · `open.er-api.com` | with the 30-minute job, but its sources are asked at most every 3 hours (`fetch-rubber-daily.js`) | ✅ Verified 2026-10-01. Thailand buys almost no Lao rubber → these are REFERENCE prices and the page says so. SHFE data © SHFE: shown with the source, personal non-commercial use. |
+| 26 | Who buys Lao rubber, at what border price: every reporter's imports of HS 4001 from Laos per year (2015 →), Laos' own declared exports by partner, the forms China / Viet Nam record; **rubber imported from Laos by MONTH** and Viet Nam's own rubber exports; Philippine farm-gate cup lump | UN Comtrade free preview (`partnerCode=418&flowCode=M`, `reporterCode=418&flowCode=X`, forms `cmdCode=400110,400121,400122,400129`) · Viet Nam Customs public PDFs `https://files.customs.gov.vn/CustomsCMS/TONG_CUC/{YYYY}/{M}/{D}/{yyyy}-t{m}-5n(vn-sb).pdf` and `-2x(vn-sb).pdf` (folder = day of publication in the following month: found by HEAD requests; read with `scripts/lib/pdf-text.js`) · PSA OpenSTAT PXWeb `.../DB/2M/NFG/0032M4AFN08.px` | weekly (`fetch-rubber-borders.js`; first fill: `all`) | ✅ Verified 2026-10-02: 31 of 32 months since 2024-01 (April 2024 has no file). The customs site's document LIST is behind a captcha → not used, only the public PDF files. Row "Cao su" = all rubber (slightly more than natural rubber). |
+| 27 | Population: 21 yearly indicators (people, age groups, urban, fertility, life expectancy, labour force, employment by sector, wage workers, remittances …), projections to 2050, newest values of the neighbours; people by province × sex × age group | World Bank API (`country/LAO/indicator/{CODE}`, projections `source=40`, neighbours `mrnev=1`; use `per_page=100&date=2000:2040`, 3 tries - long ranges answer 502) · HDX COD-PS `package_show?id=cod-ps-lao` → `lao_admpop_adm1_2024.csv` (Lao Statistics Bureau / UNFPA projection, CC BY-IGO) | weekly (`fetch-population.js`) | ✅ Verified 2026-10-02. Two counts of the same people (World Bank 7.87 m in 2025, LSB/UNFPA 7.63 m in 2024) - both shown with their source. `laosis.lsb.gov.la` cannot be opened from Node (old TLS key). |
+| 28 | Hand-checked POLICY facts (7 areas: money & kip, taxes & budget, fuel, wages, debt, trade & outside rules, land rules) + dates to watch + World Bank outlook table + World Bank reform priorities; population facts no API has (state of the 2025 census, the labour-market findings) | `data/invest-static.json` → `policy`, `population`. Read in: World Bank Lao Economic Monitor June 2026 and Dec 2025, KPL (minimum wage 2024 and the March 2026 review), Land Law 2019 (Art. 3, 110, 117, 120, 123, 132), EU EUDR page, sdg.gov.la (LDC graduation), Lao Statistics Bureau census page, Forest Trends 2020 | by hand, when a new report appears (World Bank: about June and December) | ✅ Read 2026-10-01 / 02. Numbers and dates in the data file, sentences in i18n (`pol_<area>_<id>`). Never advice; the World Bank's proposals are shown apart and labelled as proposals. |
+| 29 | The central bank's policy rate (1 week) and reserve requirement (kip / foreign currencies): every change with its date | Bank of the Lao PDR `https://www.bol.gov.la/en/interestRate` and `/en/reservRate` (one HTML table each; decimal comma; dates dd/mm/yyyy and dd-mm-yyyy). The server does not send its intermediate certificate → `scripts/lib/aia.js` completes the chain like a browser (never switches verification off). | weekly (`fetch-bol-policy.js`) | ✅ Verified 2026-10-02: 24 rate changes since 2008 (7% since 25 Aug 2026), 7 reserve changes. The parser refuses the page when two rows read by hand are missing. Hand-checked fallback in #28. Lesson: the June 2026 World Bank report still said 8% - a policy number is taken from the primary source, a report only explains it. |
 
 Checked and rejected (2026-10-01, Lao rubber and land prices): Facebook / TikTok / WhatsApp (no free read API, and forbidden
 by [CONSTRAINT]); Selina Wamucii "Natural Rubber Price in Lao" (a January 2023 export unit value under a current-month title);
 MOIC Laotradestat (login); chnrubber.org Lao purchase prices (yuan, irregular, server refuses connections); listing sites
 RentsBuy / FazWaz-AsiaVillas / Yula / 4321property (terms forbid automated access, asking prices only, mostly stale).
+
+Checked and rejected (2026-10-02, rubber prices by country): SGX rubber futures (terms of use of the data not clear);
+Bappebti Indonesia (the date of the price could not be verified); Cambodia (prices only inside news articles); the
+Viet Nam Customs document-list API (captcha - never bypassed; the monthly PDF files themselves are public).
+Indonesia, Cambodia and Myanmar therefore show their yearly average EXPORT price (UN Comtrade), and the page says so.
 
 Checked and rejected (2026-09-30): LDB `kpv_gold` (Phouvong prices, API returns 401 = needs login → not allowed);
 talupa / goldrate24 / goldpricez / bullion-rates / livepriceofgold (only world spot × FX, nothing new);
@@ -137,7 +147,7 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Acceptance: accuracy numbers are computed only from stored history, never hard-coded.
 
 ### Phase 7 — Economy for investors (added 2026-10-01, owner request "think like an investor")
-- Page `#/economy` rebuilt as 8 tabs: overview (key numbers + computed facts + what to watch per situation: savings / rubber farm / land & business),
+- Page `#/economy` rebuilt as 8 tabs (10 since Phase 9): overview (key numbers + computed facts + what to watch per situation: savings / rubber farm / land & business),
   GDP & structure, government plan 2026–2030 (targets vs latest actual + IMF forecast, status computed), foreign investment (yearly + by country),
   public debt (by creditor, repayment schedule, why / effects / plan / can it work — quoted from World Bank + IMF with links),
   inflation & kip, rubber (world + Thai prices in kip, yearly averages), land (no open data → said honestly, only listing links).
@@ -151,9 +161,8 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Added what does exist: official yearly Lao rubber price 2019-2023 (ministry PDF, hand-checked), yearly price of
   Lao rubber at the Chinese border (UN Comtrade, automatic), three prices quoted in news; official ASSESSED land
   prices per province = decision date + link from the Lao Official Gazette (automatic, weekly).
-- Still open (owner's choice): daily Thai border-market prices (Rubber Authority of Thailand: Nong Khai,
-  Chiang Rai), Chinese rubber futures and Malaysian LGM prices as extra reference lines; monthly price of Lao
-  rubber at the Vietnamese border (Viet Nam Customs table 5N - not verified yet).
+- Done 2026-10-02 (Phase 7d): daily Thai border-market prices (Nong Khai, Chiang Rai), Chinese rubber futures,
+  Malaysian LGM prices, and the monthly price of Lao rubber at the Vietnamese border (Viet Nam Customs table 5N).
 
 ### Phase 7c — Rubber by province / ASEAN / world, land for every province, own prices (2026-10-01, owner request)
 - Owner: "rubber: each province in Laos, then the 10 ASEAN countries + China, ending with the world; top 10
@@ -173,6 +182,44 @@ Trading Economics / Investing.com (terms forbid scraping).
   unfilled {placeholders} (`node tests/screens.js`), and every year x kind of rubber x seller/buyer choice, every
   road class and both entry forms opened and filled in but never saved (`node tests/states.js`).
 - Not wanted (owner, 2026-10-01): messages to Lark - Lark is the company's work app.
+
+### Phase 7d — Who buys Lao rubber, border markets, a price for every country (2026-10-02, owner request)
+- Owner: "I don't know which province border has sale in Thailand, please find it and show me; show which country
+  Laos sells rubber to and what is the price; also the price in each country: ASEAN + China + world."
+- Finding (said plainly on the page): the buyers' customs record Lao rubber going almost entirely to CHINA and
+  VIET NAM; THAILAND buys almost none (a few hundred tonnes in a few years). So no Thai border province "buys Lao
+  rubber": Nong Khai and Chiang Rai are the nearest open, published markets and are shown as REFERENCE prices.
+- Rubber tab = 6 views. New view "who buys" (second button): tiles, the table year by year (tonnes + USD per kg
+  per buyer), Lao rubber at the Vietnamese border by month next to Viet Nam's own export price and the world
+  price, which forms the buyers record, what Laos declared next to what the buyers recorded, and the two Thai
+  border markets day by day for four kinds of rubber. The "ASEAN + China" view starts with one table: the newest
+  price in every country, each row saying WHICH price it is (border, central market, export average, farm gate,
+  futures) and its date. Sources #25, #26.
+- Own prices are now compared with the central market nearest to the province of the entry (Chiang Rai for
+  Bokeo, Luang Namtha, Oudomxay, Phongsaly, Xayaboury, Luang Prabang; Nong Khai for the others).
+- Acceptance: `node tests/states.js` opens the view for every kind of rubber in Thai and Lao.
+
+### Phase 9 — Population and Policy tabs (2026-10-02, owner request "policy also has effect the economy")
+- Economy page = 10 tabs, in the order of an investor's questions: overview · POPULATION (who lives and works
+  here) · GDP · plan (what the State wants) · POLICY (which rules it has set) · foreign investment · debt ·
+  inflation & kip · rubber · land.
+- Population tab: 8 key numbers; "what these numbers say" (sentences COMPUTED from the data); people so far and
+  projected to 2050; age groups past / now / projected (peak of the working-age share); age pyramid; Laos next to
+  its neighbours; every province (the two focus provinces in bold); work by sector and money sent home; the state
+  of the 2025 census. Sources #27 + #28. A projection is always marked (dashed line, "*").
+- Policy tab, read in three layers - what the State decided (with date / notice number) → which numbers it moves
+  → where on this site the effect can be watched (a button per area): 8 tiles (the levers and where they stand),
+  "how to read a policy" (4 questions), one policy and its effect in one chart (the central bank's policy rate as a
+  STEPPED line next to monthly inflation, source #29), 7 areas, a calendar of dated events, the World Bank's forecast next to
+  the plan's targets, and the World Bank's reform priorities (labelled as proposals, not decisions). Source #28.
+- Rules: a fact without a source and a date does not go on the tab; a rule is labelled with the day it was last
+  checked, a measured value with its month (so it turns into "old data" by itself when no newer report was read);
+  never advice.
+- Acceptance: both tabs in `node tests/screens.js` (21 screens x Thai / Lao x dark / light x 380 / 1440 px);
+  every "see the effect" button of the policy tab opens the tab it names (`node tests/states.js`).
+- Also 2026-10-02: one menu button on phones (the "more" button of the bottom bar; the ☰ in the top bar was a
+  duplicate - owner's screenshot), a ✕ inside the menu; the weekly workflow also runs when one of its scripts is
+  pushed, so a new fetcher is proven on GitHub's servers the same day.
 
 ### Phase 8 — Install as an app (2026-10-01, owner agreed)
 - `manifest.webmanifest` (name, colours, icons 192 / 512 / maskable 512, 4 shortcuts) + `icons/` drawn by
