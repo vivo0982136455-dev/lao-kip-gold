@@ -62,6 +62,7 @@
 | `docs/install-app-th.md` | **วิธีติดตั้งเว็บเป็นแอป** บนโน้ตบุ๊ก (Edge) และมือถือ (Android / iPhone) |
 | `docs/todo-form-questions-th.md` | คำถาม 8 ข้อ (เงิน · ยาง · ที่ดิน) ที่เพิ่มท้ายฟอร์ม — ทำแล้ว เก็บไว้เป็นบันทึกชื่อคำถาม |
 | `scripts/` | สคริปต์ Node.js ดึงข้อมูล (ไม่ต้องติดตั้ง package ใด ๆ) |
+| `tests/` | ทดสอบเว็บใน**เบราว์เซอร์จริง** (Edge แบบไม่เปิดหน้าต่าง ไม่ต้องติดตั้ง package): ทุกหน้าจอ × ไทย/ลาว × มืด/สว่าง × มือถือ/จอใหญ่, ตัวกรองและฟอร์ม, ติดตั้ง/ออฟไลน์, และเว็บจริงหลัง push |
 | `data/latest/`, `data/history/` | ค่าล่าสุด + ประวัติ ของแต่ละแหล่ง |
 | `data/summary.json` | ไฟล์สรุปเล็ก ๆ ที่หน้าเว็บอ่าน ~100 วัน (สร้างโดย `build-summary.js`) |
 | `data/long.json` | จุดรายสัปดาห์สำหรับกราฟช่วง 1 ปี / ทั้งหมด: BOL 7 สกุล (ตั้งแต่ 2021), LBB, ทองโลก (สร้างโดย `build-long.js` · โหลดเฉพาะเมื่อกดช่วงยาว) |
@@ -171,6 +172,13 @@ node scripts/serve.js            # เปิดเว็บ แล้วเข�
 ดูคู่มือ [docs/manual-entry-guide-th.md](docs/manual-entry-guide-th.md) — ทำได้เลยโดยไม่ต้องใช้ GitHub
 
 ### ทดสอบ
+- **ทดสอบหน้าเว็บในเบราว์เซอร์จริง** (ต้องมี Edge หรือ Chrome; Node 22 ขึ้นไป):
+  ```bash
+  node tests/all.js            # ทุกอย่างในเครื่อง ~15 นาที (เติม quick = ตรวจ 18 หน้าจอแทน 144)
+  node tests/screens.js quick  # เฉพาะหน้าจอ: ไทย มืด มือถือ (~1 นาที)
+  node tests/live.js           # เว็บจริงบน GitHub Pages หลัง push 2–3 นาที (รวมจำลองสัญญาณหลุด)
+  ```
+  ตรวจ: ไม่มีการเลื่อนซ้าย-ขวา, ไม่มีอะไรล้นจอ, ไม่มีคำว่า undefined / NaN / `{ตัวแปร}` ที่ไม่ถูกแทนค่า, กราฟถูกวาดครบ, ไม่มี error ใน console, ติดตั้งเป็นแอปได้, ออฟไลน์เปิดได้พร้อมป้าย · รูปหน้าจอเก็บใน `tests/shots/` (ไม่ commit) · ฟอร์มบันทึกราคาถูกเปิดและกรอก แต่**ไม่กดบันทึก** และคำขอไป Google ถูกบล็อกระหว่างทดสอบ จึงไม่มีแถวปลอมเข้า Sheet
 - **แหล่งข้อมูลพัง:** `GOLD_THAI_URL=https://invalid.example node scripts/fetch-all.js` (ใช้ Git Bash)
   → เฉพาะทองไทยเป็น FAIL + ป้ายข้อมูลเก่า แหล่งอื่นยังปกติ
   ตัวแปรที่ใช้ได้: `BOL_URL`, `GOLD_WORLD_URL`, `GOLD_WORLD_BACKUP_URL`, `GOLD_THAI_URL`, `FX_MARKET_URL`, `BOL_BACKFILL_URL`, `GOLD_LBB_URL`, `LBB_BACKFILL_URL`, `BCEL_URL`, `BCEL_DEPOSIT_URL`, `LAO_GOLD_CSV_URL`

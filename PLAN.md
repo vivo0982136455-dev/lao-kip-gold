@@ -170,7 +170,8 @@ Trading Economics / Investing.com (terms forbid scraping).
   decision date + link, then the owner's own prices, then "no open data on real sale prices".
 - Own prices (#22): entered on the site, saved into the owner's form, read back from the sheet to confirm.
 - Acceptance: all 18 screens x Thai / Lao x dark / light x 380 / 1440 px without sideways scroll, "undefined" or
-  unfilled {placeholders} (checked with a script in a real browser).
+  unfilled {placeholders} (`node tests/screens.js`), and every year x kind of rubber x seller/buyer choice, every
+  road class and both entry forms opened and filled in but never saved (`node tests/states.js`).
 - Not wanted (owner, 2026-10-01): messages to Lark - Lark is the company's work app.
 
 ### Phase 8 — Install as an app (2026-10-01, owner agreed)
@@ -182,9 +183,12 @@ Trading Economics / Investing.com (terms forbid scraping).
   A saved copy of a data file carries the header X-Offline-Copy → the top bar says "offline".
 - An app left open reads the data again when it comes back to the front after 10 minutes, and every minute while
   it is offline; it redraws only when something changed and never while a form is open.
-- Acceptance (run in a real Edge, headless): registered, manifest without errors, installable, first visit saves
-  every loaded file, offline pages open with the label, label goes away when the connection is back, a slow
-  network shows the saved copy within ~5 s.
+- Acceptance (run in a real Edge, headless: `node tests/install.js`, `node tests/offline-label.js`, and
+  `node tests/live.js` after a push): registered, manifest without errors, installable, first visit saves every
+  loaded file, offline pages open with the label, label goes away when the connection is back, a slow network
+  shows the saved copy within ~5 s.
+- `index.html` preloads every module (`scripts/update-preload.js`), because the worker asks the server about every
+  file on each cold start: one round trip for all modules instead of one per import level.
 
 ### Phase 6 — Cost of living & savings page (added 2026-09-30, owner request)
 - Page `#/living`: monthly inflation (all + categories, ranked), everyday prices by province vs national average (+ fuel estimate),
@@ -223,3 +227,4 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Verify every endpoint's real response before writing the parser; do not assume field names.
 - Keep each file small and commented in simple English so the owner can follow.
 - After each phase: summarise in Thai what was built, how to test it, and what is still unverified.
+- Before a push that changes pages: `node tests/all.js` must pass; after the push: `node tests/live.js`.

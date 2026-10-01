@@ -4,3 +4,6 @@ Thumbs.db
 *.log
 .env
 .claude/
+
+# pictures taken by the browser tests
+tests/shots/
