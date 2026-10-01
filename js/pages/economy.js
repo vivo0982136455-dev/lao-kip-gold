@@ -1,8 +1,10 @@
 // Page: Lao economy, for investors (8 tabs). Owner request 2026-09-30: "think like an investor".
 //   overview · GDP & structure · government plan 2026–2030 · foreign investment · public debt · inflation & kip · rubber · land
 // Yearly World Bank + IMF numbers come with the app (data/economy.json). The investor numbers (data/invest.json),
-// the hand-checked plan targets and report facts (data/invest-static.json) and the Thai rubber prices
-// (data/thai-prices.json) load only when this page is opened. Past data only - never investment advice.
+// the hand-checked plan targets and report facts (data/invest-static.json), the Thai rubber prices
+// (data/thai-prices.json), the world rubber numbers (data/rubber-world.json), the official land price decisions
+// (data/land.json) and the owner's own prices (data/own-prices.json) load only when their tab is opened.
+// Past data only - never investment advice.
 
 import { el, emptyState } from "../ui.js";
 import { mountCharts } from "../charts.js";
@@ -13,7 +15,8 @@ import { planTab } from "./eco-plan.js";
 import { fdiTab } from "./eco-fdi.js";
 import { debtTab } from "./eco-debt.js";
 import { inflationTab } from "./eco-inflation.js";
-import { rubberTab, landTab } from "./eco-rubber.js";
+import { rubberTab } from "./eco-rubber.js";
+import { landTab } from "./eco-land.js";
 
 const TABS = [
   ["overview", overviewTab],

@@ -14,13 +14,14 @@ export function el(tag, className, text) {
 // ---------- Stale check ----------
 // How old (in hours) a source's newest data may be before we show "stale data".
 // Generous on purpose: BOL and gold markets do not publish on weekends/holidays.
-const MAX_AGE_HOURS = { bol: 5 * 24, "gold-world": 3 * 24, "silver-world": 3 * 24, "silver-lao-manual": 4 * 24, "gold-thai": 3 * 24, "fx-market": 2 * 24, "fuel-thai": 4 * 24, "gold-lbb": 4 * 24, bcel: 4 * 24, "bcel-deposit": 4 * 24,"gold-lao-manual": 4 * 24 };
+const MAX_AGE_HOURS = { bol: 5 * 24, "gold-world": 3 * 24, "silver-world": 3 * 24, "silver-lao-manual": 4 * 24, "gold-thai": 3 * 24, "fx-market": 2 * 24, "fuel-thai": 4 * 24, "gold-lbb": 4 * 24, bcel: 4 * 24, "bcel-deposit": 4 * 24, "gold-lao-manual": 4 * 24, "rubber-lao-manual": 45 * 24 }; // own rubber price: entered when the owner sells
 
-// Returns "ok" | "stale" | "error" | "not_configured"
+// Returns "ok" | "stale" | "error" | "not_configured" | "empty" (a manual source that waits for its first entry)
 export function sourceStatus(sourceId, summary) {
   const src = summary.sources[sourceId];
   if (!src) return "stale";
   if (src.configured === false) return "not_configured";
+  if (src.empty) return "empty";
   if (src.stale) return "error";
   if (!src.latest_source_date) return "stale";
   const ageHours = (Date.now() - toMs(src.latest_source_date)) / 3600000;
@@ -40,7 +41,7 @@ export function staleBadge(t) {
 
 // Status pill used on the Settings page
 export function statusBadge(status, t) {
-  const map = { ok: ["badge-ok", "✓ " + t.status_ok], stale: ["badge-warn", "⚠ " + t.status_stale], error: ["badge-bad", "✕ " + t.status_error], not_configured: ["badge-muted", "○ " + t.status_not_configured] };
+  const map = { ok: ["badge-ok", "✓ " + t.status_ok], stale: ["badge-warn", "⚠ " + t.status_stale], error: ["badge-bad", "✕ " + t.status_error], not_configured: ["badge-muted", "○ " + t.status_not_configured], empty: ["badge-muted", "○ " + t.status_empty] };
   const [cls, text] = map[status] || map.stale;
   return el("span", "badge " + cls, text);
 }

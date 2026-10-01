@@ -52,6 +52,11 @@
       "source_url": "https://thaipublica.org/2024/05/pundop132/",
       "published": "2024-05-10"
     },
+    "forest_trends": {
+      "source_name": "Forest Trends: Rubber Plantation Value Chains in Laos, Table 1 (NAFRI 2018 data)",
+      "source_url": "https://www.forest-trends.org/wp-content/uploads/2020/07/Rubber-Plantation-Value-Chains-in-Laos.pdf",
+      "published": "2020-07"
+    },
     "land_law": {
       "source_name": "Land Law 2019, Article 110 (unofficial English translation)",
       "source_url": "https://laolandinfo.org/wp-content/uploads/2021/05/Land-Law-2019_Eng-Unofficial-Translation.pdf",
@@ -101,6 +106,17 @@
   "rubber": {
     "_about": "Prices of rubber INSIDE Laos that could be found online (all channels re-checked 2026-10-01: official sites, news, social media, international datasets). No daily or provincial series is published. official_yearly = item 204 'ຢາງພາລາ (ລາຄານ້ຳຢາງດິບ)' of the ministry's table, kip per tonne, national average (its 5 values sit under the 2019-2023 columns). reports = single numbers quoted in news; 'period' is what the number refers to.",
     "official_yearly": { "source": "moic_dit", "unit": "LAK per tonne", "values": [[2019, 4685846], [2020, 5247222], [2021, 5986972], [2022, 8069430], [2023, 11303261]] },
+    "provinces": {
+      "_about": "Rubber area by province, hectares: [province, planted, tapped]. The newest table by province that is published (page 18 of the report; NAFRI 2018, unpublished data). Houaphan and Xiengkhouang have no 2018 figure. The source prints the tapped area of Xaisomboun as '53,95'; 5,395 is what makes the printed total (121,394) add up. The planted areas add up to 257,887, the printed total is 258,446.",
+      "source": "forest_trends",
+      "year": 2018,
+      "total": [258446, 121394],
+      "rows": [
+        ["Louangnamtha", 35493, 22000], ["Oudomxai", 29190, 688], ["Champasack", 28824, 26378], ["Phongsaly", 22173, 1751], ["Bokeo", 19150, 9114],
+        ["Louangphabang", 18191, 7245], ["Savannakhet", 18181, 10000], ["Attapeu", 17000, 8000], ["Bolikhamxai", 14000, 9000], ["Xaignabouly", 13718, 1251],
+        ["Vientiane", 12984, 6705], ["Xaisomboun", 7707, 5395], ["Khammouan", 7480, 4936], ["Sekong", 6466, 3000], ["Salavan", 6000, 5000], ["Vientiane Capital", 1330, 931]
+      ]
+    },
     "reports": [
       { "period": "2025", "province": "Bokeo", "low": 10000, "high": 22000, "text": "inv_rub_report_range", "source": "lyr_bokeo" },
       { "period": "2025", "province": "Oudomxai", "value": 22000, "text": "inv_rub_report_factory", "source": "oudomxay_gov" },
@@ -114,9 +130,28 @@
     "official_extra": [
       { "province": "Vientiane Capital", "decided": "2024-02-26", "source": "thaipublica_land", "pdf": "https://thaipublica.org/wp-content/uploads/2024/05/%E0%B8%A3%E0%B8%B2%E0%B8%84%E0%B8%B2%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B8%99%E0%B8%84%E0%B8%A3%E0%B8%AB%E0%B8%A5%E0%B8%A7%E0%B8%87%E0%B9%80%E0%B8%A7%E0%B8%B5%E0%B8%A2%E0%B8%87%E0%B8%88%E0%B8%B1%E0%B8%99%E0%B8%97%E0%B8%99%E0%B9%8C.pdf", "note": "inv_land_thai_translation" }
     ],
+    "vientiane": {
+      "_about": "Vientiane Capital, Decision 142 of 26 Feb 2024: official assessed land prices, LAK per square metre, by road class. Summary made from the 976 price lines of the Thai translation published by ThaiPublica (computed 2026-10-01): per district [lowest, middle (median of the price lines), highest]. 'villages' = number of villages named in the district's heading. The full table by village is in the linked PDF.",
+      "decided": "2024-02-26",
+      "source": "thaipublica_land",
+      "pdf": "https://thaipublica.org/wp-content/uploads/2024/05/%E0%B8%A3%E0%B8%B2%E0%B8%84%E0%B8%B2%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B8%99%E0%B8%84%E0%B8%A3%E0%B8%AB%E0%B8%A5%E0%B8%A7%E0%B8%87%E0%B9%80%E0%B8%A7%E0%B8%B5%E0%B8%A2%E0%B8%87%E0%B8%88%E0%B8%B1%E0%B8%99%E0%B8%97%E0%B8%99%E0%B9%8C.pdf",
+      "classes": ["main", "connecting", "branch", "track"],
+      "districts": [
+        { "key": "Chanthabouly", "villages": 30, "main": [1000000, 6350000, 6800000], "connecting": [400000, 4300000, 5100000], "branch": [180000, 1500000, 3400000], "track": [80000, 1500000, 1700000] },
+        { "key": "Sikhottabong", "villages": 60, "main": [150000, 3000000, 6000000], "connecting": [150000, 700000, 4500000], "branch": [20000, 150000, 3000000], "track": [10000, 50000, 1500000] },
+        { "key": "Xaysetha", "villages": 48, "main": [1000000, 3250000, 6500000], "connecting": [80000, 1500000, 4800000], "branch": [30000, 600000, 3200000], "track": [10000, 150000, 1600000] },
+        { "key": "Sisattanak", "villages": 37, "main": [2000000, 3000000, 6500000], "connecting": [300000, 1300000, 4800000], "branch": [100000, 600000, 3200000], "track": [50000, 250000, 1600000] },
+        { "key": "Naxaithong", "villages": 54, "main": [90000, 275000, 1000000], "connecting": [25000, 50000, 150000], "branch": [8000, 20000, 30000], "track": [5000, 7500, 12000] },
+        { "key": "Xaythany", "villages": 104, "main": [32000, 600000, 3000000], "connecting": [15000, 50000, 1000000], "branch": [5000, 18000, 300000], "track": [3000, 10000, 60000] },
+        { "key": "Hadxaifong", "villages": 60, "main": [250000, 1000000, 2500000], "connecting": [30000, 150000, 1800000], "branch": [15000, 50000, 1200000], "track": [10000, 15000, 600000] },
+        { "key": "Sangthong", "villages": 35, "main": [50000, 80000, 80000], "connecting": [8000, 10000, 60000], "branch": [2000, 5000, 40000], "track": [1000, 2000, 20000] },
+        { "key": "Pakngum", "villages": 53, "main": [32000, 35000, 40000], "connecting": [15000, 15000, 15000], "branch": [10000, 10000, 10000], "track": [4000, 4000, 4000] }
+      ]
+    },
     "listings": [
       { "source_name": "RentsBuy – land for sale in Laos (asking prices, USD per sq m)", "source_url": "https://rentsbuy.com/land-for-rent-or-for-sale-in-laos/" },
-      { "source_name": "VS Real Estate Laos – land (asking prices, central Vientiane)", "source_url": "https://vsrealestatelaos.com/listings/land/" }
+      { "source_name": "RentsBuy – Luang Prabang listings (asking prices)", "source_url": "https://rentsbuy.com/city/luang-prabang/", "province": "Louangphabang" },
+      { "source_name": "VS Real Estate Laos – land (asking prices, central Vientiane)", "source_url": "https://vsrealestatelaos.com/listings/land/", "province": "Vientiane Capital" }
     ]
   }
 }

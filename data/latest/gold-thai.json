@@ -5,40 +5,40 @@
   "license": "Unofficial community API: https://api.chnwt.dev/thai-gold-api",
   "kind": "market",
   "stale": false,
-  "last_success_at": "2026-10-01T04:20:42.429Z",
+  "last_success_at": "2026-10-01T09:12:07.431Z",
   "last_error": null,
   "records": [
     {
       "source": "gold-thai",
       "metric": "bar_buy",
-      "value": 66250,
+      "value": 66150,
       "unit": "THB per baht-weight",
-      "fetched_at": "2026-10-01T04:20:42.101Z",
-      "source_date": "2026-10-01T04:13:00.000Z"
+      "fetched_at": "2026-10-01T09:12:07.218Z",
+      "source_date": "2026-10-01T08:54:00.000Z"
     },
     {
       "source": "gold-thai",
       "metric": "bar_sell",
-      "value": 66450,
+      "value": 66350,
       "unit": "THB per baht-weight",
-      "fetched_at": "2026-10-01T04:20:42.101Z",
-      "source_date": "2026-10-01T04:13:00.000Z"
+      "fetched_at": "2026-10-01T09:12:07.218Z",
+      "source_date": "2026-10-01T08:54:00.000Z"
     },
     {
       "source": "gold-thai",
       "metric": "ornament_buy",
-      "value": 64930.28,
+      "value": 64824.16,
       "unit": "THB per baht-weight",
-      "fetched_at": "2026-10-01T04:20:42.101Z",
-      "source_date": "2026-10-01T04:13:00.000Z"
+      "fetched_at": "2026-10-01T09:12:07.218Z",
+      "source_date": "2026-10-01T08:54:00.000Z"
     },
     {
       "source": "gold-thai",
       "metric": "ornament_sell",
-      "value": 67250,
+      "value": 67150,
       "unit": "THB per baht-weight",
-      "fetched_at": "2026-10-01T04:20:42.101Z",
-      "source_date": "2026-10-01T04:13:00.000Z"
+      "fetched_at": "2026-10-01T09:12:07.218Z",
+      "source_date": "2026-10-01T08:54:00.000Z"
     }
   ]
 }

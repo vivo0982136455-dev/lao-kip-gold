@@ -43,6 +43,14 @@ async function run() {
       console.log(`[SKIP] ${META.source}: no silver questions in the form yet`);
       return { source: META.source, ok: true, message: "not configured" };
     }
+    // Questions exist but nothing has been entered yet: waiting for the first price is not an error
+    const rows = await loadSheet(url);
+    const any = rows.slice(1).some((r) => String(r[cols.silver_sell] || "").trim() !== "" || String(r[cols.silver_buy] || "").trim() !== "");
+    if (!any) {
+      writeStatus({ configured: true, empty: true });
+      console.log(`[OK]   ${META.source}: no silver price entered yet`);
+      return { source: META.source, ok: true, message: "no entries yet" };
+    }
   } catch {
     /* download problem: runSource below records the error */
   }
@@ -51,7 +59,7 @@ async function run() {
       if (value < MIN_PRICE || value > MAX_PRICE) throw new Error(`looks wrong: ${value}`);
     };
     const { records, latest, skipped } = await readShopPrices(url, { source: META.source, unit: "LAK per kg (shop)", prices: PRICES, check });
-    if (!records.length) throw new Error(skipped ? `No valid prices (${skipped} skipped)` : "No silver prices entered yet");
+    if (!records.length) throw new Error(`No valid prices (${skipped} skipped)`);
     replaceHistory(META.source, records);
     return latest;
   });

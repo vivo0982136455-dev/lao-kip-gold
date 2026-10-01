@@ -15,6 +15,53 @@ const monthsAgo = (m) => {
   return (Number(now.slice(0, 4)) - Number(m.slice(0, 4))) * 12 + Number(now.slice(5, 7)) - Number(m.slice(5, 7));
 };
 
+// The 18 provinces (names as in "provinces" of i18n/*.json). Order asked for by the owner: Vientiane Capital and
+// Luang Prabang first (his focus), then the others from north to south.
+export const PROVINCES = [
+  "Vientiane Capital", "Louangphabang", "Phongsaly", "Louangnamtha", "Bokeo", "Oudomxai", "Houaphan", "Xaignabouly", "Xiengkhouang",
+  "Vientiane", "Xaisomboun", "Bolikhamxai", "Khammouan", "Savannakhet", "Salavan", "Sekong", "Champasack", "Attapeu",
+];
+export const FOCUS_PROVINCES = ["Vientiane Capital", "Louangphabang"];
+
+// Country name: our translation, else the English name that came with the data, else the code
+export const countryName = (t, names, iso) => (t.countries && t.countries[iso]) || (names && names[iso]) || iso;
+
+// Choices inside one tab (sub-views, year, kind of rubber ...): a row of buttons; the choice is remembered on
+// this device. items: [[id, text]]. Returns { current, bar }.
+const picked = new Map();
+export function choice(e, key, items, fallback) {
+  if (!picked.has(key)) {
+    let saved = null;
+    try {
+      saved = localStorage.getItem("eco_" + key);
+    } catch {
+      /* private mode */
+    }
+    picked.set(key, saved);
+  }
+  const ids = items.map(([id]) => String(id));
+  const current = ids.includes(String(picked.get(key))) ? String(picked.get(key)) : String(fallback !== undefined ? fallback : ids[0]);
+  const bar = el("div", "choice");
+  bar.setAttribute("role", "group");
+  for (const [id, text] of items) {
+    const b = el("button", "", text);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(String(id) === current));
+    b.addEventListener("click", () => {
+      if (String(id) === current) return;
+      picked.set(key, String(id));
+      try {
+        localStorage.setItem("eco_" + key, String(id));
+      } catch {
+        /* private mode */
+      }
+      e.rerender();
+    });
+    bar.append(b);
+  }
+  return { current, bar };
+}
+
 // Yearly indicator from economy.json or invest.json
 export function indicator(e, id) {
   return (e.economy && e.economy.indicators && e.economy.indicators[id]) || (e.invest && e.invest.indicators && e.invest.indicators[id]) || null;
@@ -36,6 +83,8 @@ export function usdText(millions, t) {
   return `${millions.toLocaleString("en-US", { maximumFractionDigits: 1 })} ${t.unit_usd_m}`;
 }
 export const pctText = (v, d = 1) => `${v.toFixed(d)}%`;
+// 688 -> "688", 35493 -> "35,493" (counts, hectares, square metres, kip prices: never decimals)
+export const whole = (v) => Math.round(v).toLocaleString("en-US");
 
 // "Latest or old" label for one number.
 //   period: { year } | { month: "2026-08" } | { date: "2026-02-26" } ; stale = our last download failed (old copy kept)
@@ -106,9 +155,10 @@ export function factsCard(t, title, facts, note, kind = "estimated") {
   return c;
 }
 
-// Table with a bar per row. rows: [{ label, sub, value, text, share }]; bar length = value / max (from 0)
+// Table with a bar per row. rows: [{ label, sub, value, text, share }]; bar length = value / max (from 0).
+// value: null = a row without a bar (e.g. a total)
 export function barTable(headers, rows) {
-  const max = Math.max(...rows.map((r) => r.value), 0) || 1;
+  const max = Math.max(...rows.map((r) => r.value || 0), 0) || 1;
   const tbl = el("table");
   const head = el("tr");
   for (const h of headers) head.append(el("th", "", h));
@@ -123,9 +173,12 @@ export function barTable(headers, rows) {
     const wrap = el("div", "bar-cell");
     wrap.append(el("span", "", r.text));
     const track = el("div", "bar-track");
-    const fill = el("div", "bar-fill");
-    fill.style.width = `${Math.max(0, (r.value / max) * 100)}%`;
-    track.append(fill);
+    if (r.value === null) track.classList.add("no-bar");
+    else {
+      const fill = el("div", "bar-fill");
+      fill.style.width = `${Math.max(0, (r.value / max) * 100)}%`;
+      track.append(fill);
+    }
     wrap.append(track);
     cell.append(wrap);
     tr.append(name, cell, el("td", "", r.share === undefined ? "" : r.share));

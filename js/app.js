@@ -6,6 +6,8 @@ import { icon } from "./icons.js";
 import { el, RANGES } from "./ui.js";
 import { destroyCharts, setLongData, needsLong } from "./charts.js";
 import { formatDate, toMs } from "./format.js";
+import { refreshLazy } from "./lazy.js";
+import { startPwa, onInstallChange } from "./pwa.js";
 import * as overview from "./pages/overview.js";
 import * as rates from "./pages/rates.js";
 import * as gold from "./pages/gold.js";
@@ -42,6 +44,7 @@ const state = {
   hints: null,
   long: null, // data/long.json, loaded only when a 1-year / all range is chosen
   loadError: null,
+  offline: false, // the numbers on screen are the copy saved on this device (no or slow connection)
   lastPath: null, // page shown last time (fade only when the page really changes)
 };
 
@@ -61,11 +64,14 @@ function save(key, value) {
   }
 }
 
-async function getJson(url) {
+// onCopy(true) = sw.js answered with the copy saved on this device, not with the network's file
+async function getJson(url, onCopy) {
   const res = await fetch(url, { cache: "no-cache" });
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+  if (onCopy) onCopy(res.headers.get("X-Offline-Copy") === "1");
   return res.json();
 }
+const getSummary = () => getJson("data/summary.json", (copy) => (state.offline = copy));
 
 // ---------- Theme ----------
 function applyTheme() {
@@ -153,10 +159,16 @@ function renderTopbar(route) {
   document.title = `${t[route.title]} · ${t.site_title}`;
   const updated = document.getElementById("topbar-updated");
   updated.textContent = "";
+  updated.removeAttribute("title");
   if (state.summary) {
     const times = Object.values(state.summary.sources).map((s) => s.last_success_at).filter(Boolean);
     const newest = times.sort((a, b) => toMs(a) - toMs(b)).pop();
     if (newest) updated.textContent = `${t.updated_label} ${formatDate(newest, t)}`;
+    // No (or a very slow) connection: say that these are the numbers saved on the device
+    if (state.offline) {
+      updated.prepend(el("span", "offline-chip", t.offline_label));
+      updated.title = t.offline_title;
+    }
   }
 }
 
@@ -246,6 +258,65 @@ async function ensureLong() {
   }
 }
 
+// ---------- Fresh numbers without a reload ----------
+// An installed app stays open in the background for hours. When it comes back to the front after a while (and
+// every minute while it only has the saved copy), the data files are read again; the page is redrawn only when
+// something really changed, and never while a form is being filled in.
+const REFRESH_AFTER_MS = 10 * 60 * 1000;
+const RETRY_OFFLINE_MS = 60 * 1000;
+let loadedAt = Date.now();
+let refreshing = false;
+let retryTimer = null;
+const formOpen = () => !!document.querySelector(".up-panel");
+
+function retryWhileOffline() {
+  clearTimeout(retryTimer);
+  if (state.offline || !state.summary) retryTimer = setTimeout(refreshData, RETRY_OFFLINE_MS);
+}
+
+async function refreshData() {
+  if (refreshing || !state.t) return;
+  if (formOpen() || document.visibilityState !== "visible") return retryWhileOffline();
+  refreshing = true;
+  const before = JSON.stringify([state.summary, state.economy, state.hints, state.offline]);
+  try {
+    const [summary, eco, hints, lazy] = await Promise.allSettled([
+      getSummary(),
+      getJson("data/economy.json"),
+      getJson("data/forecast/hints.json"),
+      refreshLazy(),
+    ]);
+    if (summary.status === "fulfilled") {
+      state.summary = summary.value;
+      state.loadError = null;
+      loadedAt = Date.now();
+    }
+    if (eco.status === "fulfilled") state.economy = eco.value;
+    if (hints.status === "fulfilled") state.hints = hints.value;
+    const changed = before !== JSON.stringify([state.summary, state.economy, state.hints, state.offline]) || lazy.value === true;
+    if (state.long && changed) {
+      try {
+        state.long = await getJson("data/long.json");
+        setLongData(state.long);
+      } catch {
+        /* keep the long history we have */
+      }
+    }
+    if (changed && !formOpen()) render();
+  } finally {
+    refreshing = false;
+    retryWhileOffline();
+  }
+}
+const refreshIfOld = () => {
+  if (document.visibilityState === "visible" && Date.now() - loadedAt > REFRESH_AFTER_MS) refreshData();
+};
+document.addEventListener("visibilitychange", refreshIfOld);
+window.addEventListener("focus", refreshIfOld);
+window.addEventListener("online", () => {
+  if (state.offline || !state.summary) refreshData();
+});
+
 // ---------- Start ----------
 async function start() {
   state.lang = load("lang", "th") === "lo" ? "lo" : "th";
@@ -257,7 +328,7 @@ async function start() {
   // Load texts and all data at the same time (faster). Economy / forecast are optional.
   const [texts, summary, eco, hints] = await Promise.allSettled([
     getJson(`i18n/${state.lang}.json`),
-    getJson("data/summary.json"),
+    getSummary(),
     getJson("data/economy.json"),
     getJson("data/forecast/hints.json"),
   ]);
@@ -271,9 +342,11 @@ async function start() {
   state.economy = eco.status === "fulfilled" ? eco.value : null;
   state.hints = hints.status === "fulfilled" ? hints.value : null;
   await ensureLong();
+  loadedAt = Date.now();
 
   openMenu(false);
   render();
+  retryWhileOffline();
 }
 
 menuBtn.addEventListener("click", () => openMenu(!sidebar.classList.contains("open")));
@@ -290,5 +363,10 @@ window.addEventListener("hashchange", () => {
   window.scrollTo(0, 0);
   render();
 });
+// Install as an app + offline copy (js/pwa.js). The Settings page shows the install state: redraw it when that changes.
+onInstallChange(() => {
+  if (state.t && currentRoute().path === "settings" && !formOpen()) render();
+});
+startPwa();
 
 start();

@@ -14,6 +14,7 @@ const SOURCES = [
   require("./fetch-bcel-deposit"),
   require("./fetch-lao-gold-manual"),
   require("./fetch-silver-manual"),
+  require("./fetch-own-prices"),
 ];
 
 async function main() {

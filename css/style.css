@@ -171,6 +171,12 @@ button:focus-visible, a:focus-visible, summary:focus-visible, select:focus-visib
 }
 .topbar h1 { font-size: 1.1rem; flex: 1 1 auto; min-width: 0; }
 .topbar-updated { font-size: 0.75rem; color: var(--muted); text-align: right; }
+/* "offline": the numbers are the copy saved on this device (sw.js). On its own line above the time, so the
+   page title keeps its room on a phone. */
+.offline-chip {
+  display: block; width: max-content; margin: 0 0 2px auto; padding: 0 7px; border-radius: 999px; font-weight: 600;
+  white-space: nowrap; line-height: 1.45; background: var(--warn-bg); color: var(--warn-text);
+}
 .icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; }
 
 .view { width: 100%; max-width: 1280px; margin: 0 auto; padding: 16px; outline: none; flex: 1 0 auto; }
@@ -214,6 +220,7 @@ select {
 [data-kind="market"] { --kind-color: var(--kind-market); }
 [data-kind="estimated"] { --kind-color: var(--kind-estimated); }
 [data-kind="shop"] { --kind-color: var(--kind-shop); }
+[data-kind="own"] { --kind-color: var(--kind-shop); } /* typed in by the owner about his own sales (same violet as shop prices) */
 [data-kind="bank"] { --kind-color: var(--kind-bank); }
 
 .card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; }
@@ -386,6 +393,7 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ---------- Gold page: save a shop price from a picture ---------- */
 .upload-card { margin-bottom: 12px; }
+.install-card { margin-top: 12px; } /* Settings: the card under the two-column grid */
 .up-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .up-panel { display: grid; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--grid); }
 .up-progress { height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
@@ -394,6 +402,7 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .up-preview { max-width: 100%; max-height: 300px; object-fit: contain; border-radius: var(--radius-sm); border: 1px solid var(--border); justify-self: center; }
 .up-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .up-field { display: grid; gap: 4px; font-size: var(--fs-sm); color: var(--text-2); min-width: 0; }
+.up-field select { min-height: 44px; width: 100%; min-width: 0; font-size: 0.95rem; font-weight: 600; }
 .up-field input {
   font: inherit; font-size: 1.05rem; font-weight: 600; font-variant-numeric: tabular-nums; min-height: 44px; padding: 6px 10px; width: 100%; min-width: 0;
   border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); color-scheme: inherit;
@@ -466,6 +475,21 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 }
 .tabbar button[aria-selected="true"] { background: var(--text); border-color: var(--text); color: var(--page); font-weight: 600; }
 .tabpanel { display: grid; gap: 12px; }
+/* Choices inside a tab (view, year, form of rubber, road class): pills that wrap; the main one scrolls sideways */
+.choice { display: flex; flex-wrap: wrap; gap: 6px; }
+.choice button { border-radius: 999px; padding: 4px 12px; min-height: 34px; font-size: 0.8rem; background: var(--surface-2); color: var(--text-2); white-space: normal; text-align: left; }
+.choice button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
+.choice-main { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.choice-main::-webkit-scrollbar { display: none; }
+.choice-main button { flex: none; white-space: nowrap; min-height: 38px; font-size: 0.84rem; }
+.choices { display: grid; gap: 8px; margin: 8px 0 4px; }
+.choice-row { display: grid; gap: 4px; }
+.choice-label { font-size: 0.72rem; color: var(--muted); }
+.card > .choice { margin: 8px 0 4px; }
+/* The last row of these tables is a total */
+.total-last tbody tr:last-child td { font-weight: 650; border-top: 2px solid var(--border-strong); }
+.bar-track.no-bar { background: transparent; }
+.focus-name { font-weight: 650; }
 .tabpanel > .section-title { margin: 12px 0 0; }
 .tabpanel > .facts-card { margin-bottom: 0; }
 .tab-intro { font-size: 0.84rem; }

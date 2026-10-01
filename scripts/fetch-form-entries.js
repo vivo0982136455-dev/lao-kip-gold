@@ -17,6 +17,13 @@ const OUT_FILE = path.join(DATA_DIR, "manual-form.json");
 // role -> test on the normalised title. Checked in this order; the first match wins.
 const ROLES = [
   ["note", (t) => t.includes("หมายเหตุ")],
+  // the owner's own prices: rubber (ยาง) and land (ที่ดิน)
+  ["rubber_price", (t) => t.includes("ยาง") && t.includes("ราคา")],
+  ["rubber_type", (t) => t.includes("ยาง") && t.includes("ชนิด")],
+  ["rubber_place", (t) => t.includes("ยาง") && t.includes("สถานที่")],
+  ["land_place", (t) => t.includes("ที่ดิน") && t.includes("สถานที่")],
+  ["land_total", (t) => t.includes("ที่ดิน") && t.includes("ราคา")],
+  ["land_area", (t) => t.includes("ที่ดิน") && t.includes("เนื้อที่")],
   ["silver_sell", (t) => (t.includes("เงิน") || /silver/i.test(t)) && t.includes("ขาย")],
   ["silver_buy", (t) => (t.includes("เงิน") || /silver/i.test(t)) && t.includes("ซื้อ")],
   ["bar_sell", (t) => t.includes("แท่ง") && t.includes("ขาย")],

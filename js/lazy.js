@@ -20,3 +20,25 @@ export function lazyJson(path, rerender) {
   }
   return entry;
 }
+
+// Read every file that was loaded before once more (the app came back to the front after a while).
+// The old data stays in place until the new data has arrived, so nothing flickers. Returns true when a file changed.
+export async function refreshLazy() {
+  const results = await Promise.all(
+    [...cache].map(async ([path, entry]) => {
+      if (entry.state === "loading") return false;
+      try {
+        const res = await fetch(path, { cache: "no-cache" });
+        if (!res.ok) return false;
+        const data = await res.json();
+        const same = entry.state === "ok" && JSON.stringify(entry.data) === JSON.stringify(data);
+        entry.state = "ok";
+        entry.data = data;
+        return !same;
+      } catch {
+        return false; // keep what we have
+      }
+    })
+  );
+  return results.some(Boolean);
+}

@@ -5,10 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lao Kip &amp; Gold</title>
   <meta name="theme-color" content="#0f1115">
+  <!-- Install as an app (phone home screen / computer): name + icons in the manifest, offline copy by sw.js -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="กีบ &amp; ทอง">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%228%22 fill=%22%23e0b43c%22/%3E%3Ctext x=%2216%22 y=%2223%22 font-size=%2220%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-weight=%22700%22 fill=%22%230f1115%22%3E%E2%82%AD%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Lao:wght@400;600&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+  <!-- crossorigin on the outside files: only then may sw.js keep a copy of them for use without a connection -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Lao:wght@400;600&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet" crossorigin="anonymous">
   <link rel="stylesheet" href="css/style.css">
   <!-- Chart.js from CDN. "defer" = does not block the page; the numbers show first.
        Some networks block cdnjs → load the same file from jsDelivr instead, then tell app.js to redraw. -->
@@ -16,11 +24,45 @@
     function loadChartBackup() {
       var s = document.createElement("script");
       s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js";
+      s.crossOrigin = "anonymous";
       s.onload = function () { window.dispatchEvent(new Event("chartjs-ready")); };
       document.head.appendChild(s);
     }
   </script>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js" onerror="loadChartBackup()"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js" crossorigin="anonymous" onerror="loadChartBackup()"></script>
+  <!-- modulepreload:start - every module of the app is asked for at once. Without these lines the browser finds the modules
+       one level at a time (app.js -> pages -> their helpers), one network round trip per level.
+       Made by scripts/update-preload.js - run it after adding or removing a file in js/. -->
+  <link rel="modulepreload" href="js/app.js">
+  <link rel="modulepreload" href="js/charts.js">
+  <link rel="modulepreload" href="js/format.js">
+  <link rel="modulepreload" href="js/icons.js">
+  <link rel="modulepreload" href="js/lazy.js">
+  <link rel="modulepreload" href="js/pages/economy.js">
+  <link rel="modulepreload" href="js/pages/forecast.js">
+  <link rel="modulepreload" href="js/pages/gold.js">
+  <link rel="modulepreload" href="js/pages/living.js">
+  <link rel="modulepreload" href="js/pages/overview.js">
+  <link rel="modulepreload" href="js/pages/rates.js">
+  <link rel="modulepreload" href="js/pages/settings.js">
+  <link rel="modulepreload" href="js/pwa.js">
+  <link rel="modulepreload" href="js/ui.js">
+  <link rel="modulepreload" href="js/pages/eco-debt.js">
+  <link rel="modulepreload" href="js/pages/eco-fdi.js">
+  <link rel="modulepreload" href="js/pages/eco-gdp.js">
+  <link rel="modulepreload" href="js/pages/eco-inflation.js">
+  <link rel="modulepreload" href="js/pages/eco-land.js">
+  <link rel="modulepreload" href="js/pages/eco-overview.js">
+  <link rel="modulepreload" href="js/pages/eco-plan.js">
+  <link rel="modulepreload" href="js/pages/eco-rubber.js">
+  <link rel="modulepreload" href="js/pages/gold-upload.js">
+  <link rel="modulepreload" href="js/pages/living-parts.js">
+  <link rel="modulepreload" href="js/manual-entry.js">
+  <link rel="modulepreload" href="js/ocr.js">
+  <link rel="modulepreload" href="js/pages/eco-common.js">
+  <link rel="modulepreload" href="js/pages/eco-rubber-world.js">
+  <link rel="modulepreload" href="js/pages/own-entry.js">
+  <!-- modulepreload:end -->
   <script type="module" src="js/app.js"></script>
 </head>
 <body>

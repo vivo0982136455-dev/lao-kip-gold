@@ -2,7 +2,9 @@
 // (the owner's form answers), downloaded once per run, and find their columns by header words.
 //
 // Sheet columns (form question order): A timestamp | B date | C jewellery sell | D jewellery buy | E note |
-//   then questions added later at the END: gold bar sell / buy, silver sell / buy (found by header words).
+//   then questions added later at the END: gold bar sell / buy, silver sell / buy, the owner's own rubber price
+//   (price, kind, place) and land prices (place, total price, area) - all found by header words.
+//   Words that decide a column: แท่ง = gold bar, เงิน = silver, ยาง = rubber, ที่ดิน = land. Never use them in other titles.
 // Rules:
 //   - several answers on one day: for EACH price, the last non-empty answer of that day wins
 //     (an answer with only a silver price does not erase that day's gold price)
@@ -34,6 +36,12 @@ function findColumns(header) {
     bar_buy: find((t) => t.includes("แท่ง") && t.includes("ซื้อ") && !isSilver(t)),
     silver_sell: find((t) => isSilver(t) && t.includes("ขาย")),
     silver_buy: find((t) => isSilver(t) && t.includes("ซื้อ")),
+    rubber_price: find((t) => t.includes("ยาง") && t.includes("ราคา")),
+    rubber_type: find((t) => t.includes("ยาง") && t.includes("ชนิด")),
+    rubber_place: find((t) => t.includes("ยาง") && t.includes("สถานที่")),
+    land_place: find((t) => t.includes("ที่ดิน") && t.includes("สถานที่")),
+    land_total: find((t) => t.includes("ที่ดิน") && t.includes("ราคา")),
+    land_area: find((t) => t.includes("ที่ดิน") && t.includes("เนื้อที่")),
   };
 }
 

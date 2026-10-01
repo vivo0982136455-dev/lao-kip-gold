@@ -7,7 +7,15 @@
     "buy": "1666086970",
     "note": "342470071",
     "bar_sell": "1831663786",
-    "bar_buy": "1940006520"
+    "bar_buy": "1940006520",
+    "silver_sell": "1658622636",
+    "silver_buy": "938471485",
+    "rubber_price": "2120553196",
+    "rubber_type": "523913168",
+    "rubber_place": "2123886643",
+    "land_place": "1286704886",
+    "land_total": "75264067",
+    "land_area": "134622642"
   },
   "questions": [
     {
@@ -45,6 +53,54 @@
       "type": 0,
       "entry": "1940006520",
       "role": "bar_buy"
+    },
+    {
+      "title": "เงิน PML ราคาขาย (กีบ ต่อ 1 กิโล)",
+      "type": 0,
+      "entry": "1658622636",
+      "role": "silver_sell"
+    },
+    {
+      "title": "เงิน PML ราคารับซื้อ (กีบ ต่อ 1 กิโล)",
+      "type": 0,
+      "entry": "938471485",
+      "role": "silver_buy"
+    },
+    {
+      "title": "ยาง ราคา (กีบ ต่อ 1 กิโล)",
+      "type": 0,
+      "entry": "2120553196",
+      "role": "rubber_price"
+    },
+    {
+      "title": "ยาง ชนิด",
+      "type": 0,
+      "entry": "523913168",
+      "role": "rubber_type"
+    },
+    {
+      "title": "ยาง สถานที่",
+      "type": 0,
+      "entry": "2123886643",
+      "role": "rubber_place"
+    },
+    {
+      "title": "ที่ดิน สถานที่",
+      "type": 0,
+      "entry": "1286704886",
+      "role": "land_place"
+    },
+    {
+      "title": "ที่ดิน ราคารวม (กีบ)",
+      "type": 0,
+      "entry": "75264067",
+      "role": "land_total"
+    },
+    {
+      "title": "ที่ดิน เนื้อที่ (ตารางเมตร)",
+      "type": 0,
+      "entry": "134622642",
+      "role": "land_area"
     }
   ],
   "direct_submit_ok": true

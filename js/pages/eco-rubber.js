@@ -1,20 +1,23 @@
-// Economy tabs 7 + 8 (owner owns a rubber farm; land is expensive):
-//   Rubber - world price (IMF, RSS3, monthly since 2000), Thai market prices (Ministry of Commerce: cup lump, latex,
-//            unsmoked sheet), each also in kip, and the average of every year. For Laos itself there is no daily or
-//            provincial price online; what exists is shown as it is: the ministry's yearly national average
-//            (2019-2023), the yearly price of Lao rubber at the Chinese border (China's customs, UN Comtrade) and
-//            single prices quoted in news.
-//   Land   - official ASSESSED prices per province (decisions in the Lao Official Gazette, data/land.json: which
-//            province has one, its date, the link) - not market prices. No open data of real sale prices exists:
-//            say so, and point to the numbers on this site that move land values.
+// Economy tab 7: rubber (the owner owns a rubber farm). Five views, chosen with the buttons at the top:
+//   market - world price (IMF, RSS3, monthly since 2000), Thai market prices (Ministry of Commerce: cup lump, latex,
+//            unsmoked sheet), each also in kip, and the average of every year
+//   lao    - Laos itself: rubber area by province (NAFRI 2018, the newest table by province), production by year
+//            (FAO), the ministry's yearly national price and the price at the Chinese border, who buys Lao rubber,
+//            single prices quoted in news. No daily or provincial price is published anywhere (re-checked 2026-10-01).
+//   asean  - the 10 ASEAN countries + China: trade by form of rubber, production, producer prices   (eco-rubber-world.js)
+//   world  - world prices by month, the 10 biggest sellers and buyers, the biggest producers          (eco-rubber-world.js)
+//   mine   - the price the owner's buyer really paid: entry form + history                           (own-entry.js)
+// data/thai-prices.json, data/rubber-world.json and data/own-prices.json load only when this tab is opened.
 
 import { el, card, cardHead, pctPill, table, sourceLink } from "../ui.js";
-import { chartCard } from "../charts.js";
+import { chartCard, dayRange, valuesFor } from "../charts.js";
 import { formatNumber, formatDate } from "../format.js";
 import { lazyJson } from "../lazy.js";
 import {
-  lastOf, pct, indicator, valueIn, freshness, sourcesFoot, invTile, ready, fill, monthText, monthShort, staticSource,
+  lastOf, pct, indicator, freshness, sourcesFoot, invTile, barTable, ready, fill, monthText, monthShort, staticSource, choice, whole, PROVINCES,
 } from "./eco-common.js";
+import { aseanView, worldView, laoBuyersCard, laoProductionChart } from "./eco-rubber-world.js";
+import { rubberEntryCard, rubberEntriesCard, rubberByProvince, RUBBER_TYPES } from "./own-entry.js";
 
 const LB_PER_KG = 2.20462;
 const perKg = (centsPerLb) => (centsPerLb * LB_PER_KG) / 100; // US cents per pound -> USD per kg
@@ -103,17 +106,14 @@ function laoRubberCard(e, rates) {
   return card1;
 }
 
-export function rubberTab(panel, e) {
-  const { t, summary } = e;
-  panel.append(el("p", "muted tab-intro", t.inv_rub_intro));
-  if (!ready(panel, e)) return;
-  const thaiFile = lazyJson("data/thai-prices.json", e.rerender);
-  const thai = thaiFile.state === "ok" ? thaiFile.data : null;
-  const world = e.invest.monthly.rubber_usd;
-  const usdMonthly = e.economy.monthly && e.economy.monthly.bol_usd_mid;
+// ---------- View 1: market prices (world + Thailand) ----------
+function marketView(panel, r) {
+  const { t, summary, thai } = r;
+  const world = r.invest.monthly.rubber_usd;
+  const usdMonthly = r.economy.monthly && r.economy.monthly.bol_usd_mid;
   const thbLak = summary.metrics["fx-market.THB_LAK"];
 
-  // ---------- Key numbers ----------
+  // Key numbers
   const stats = el("div", "stats");
   if (world && world.values.length > 12) {
     const now = lastOf(world.values);
@@ -139,21 +139,21 @@ export function rubberTab(panel, e) {
     }
   }
   // Lao rubber at the Chinese border (the only automatic number that is about Lao rubber itself; yearly)
-  const china = e.invest.parts && e.invest.parts.rubber_china;
+  const china = r.invest.parts && r.invest.parts.rubber_china;
   if (china && china.years && china.years.length > 1) {
     const now = lastOf(china.years);
     const before = china.years[china.years.length - 2];
-    const rate = ratesByYear(e).USD.get(now[0]);
+    const rate = ratesByYear(r).USD.get(now[0]);
     const sub = rate ? `≈ ${formatNumber(now[1] * rate, "LAK")} ${t.inv_rub_lak_kg}` : t.inv_rub_china_short;
     const tile = invTile(t, t.inv_rub_china, { num: now[1].toFixed(2), unit: t.inv_rub_usd_kg }, sub, freshness(t, { year: now[0], stale: china.stale }), "official");
     tile.querySelector(".stat-sub").append(" ", pctPill(pct(before[1], now[1]), { decimals: 1 }));
     stats.append(tile);
   }
   panel.append(stats);
-  if (thaiFile.state === "loading") panel.append(el("p", "muted", t.loading));
+  if (r.thaiState === "loading") panel.append(el("p", "muted", t.loading));
 
   const grid = el("div", "grid grid-2");
-  // ---------- World price, monthly ----------
+  // World price, monthly
   if (world && world.values.length) {
     const recent = world.values.filter(([m]) => m >= "2015-01");
     grid.append(
@@ -169,7 +169,7 @@ export function rubberTab(panel, e) {
       })
     );
   }
-  // ---------- Thai market prices, monthly ----------
+  // Thai market prices, monthly
   if (thai) {
     const series = THAI.map(([id, key, color]) => [thai.items && thai.items[id], key, color]).filter(([it]) => it && it.monthly && it.monthly.length);
     if (series.length) {
@@ -193,8 +193,8 @@ export function rubberTab(panel, e) {
   }
   panel.append(grid);
 
-  // ---------- Price of each year ----------
-  const rates = ratesByYear(e);
+  // Price of each year
+  const rates = ratesByYear(r);
   const wy = world ? yearly(world.values) : new Map();
   const cup = thai && thai.items && thai.items.rubber_cuplump && thai.items.rubber_cuplump.monthly ? yearly(thai.items.rubber_cuplump.monthly.map(([m, v]) => [m, v])) : new Map();
   const years = [...wy.keys()].filter((y) => y >= 2010).sort((a, b) => b - a);
@@ -207,13 +207,7 @@ export function rubberTab(panel, e) {
       const c = cup.get(y);
       const thbRate = rates.THB.get(y);
       const label = w.months < 12 ? `${y}*` : String(y);
-      return [
-        label,
-        usdKg.toFixed(2),
-        usdRate ? formatNumber(usdKg * usdRate, "LAK") : "—",
-        c ? c.avg.toFixed(2) : "—",
-        c && thbRate ? formatNumber(c.avg * thbRate, "LAK") : "—",
-      ];
+      return [label, usdKg.toFixed(2), usdRate ? formatNumber(usdKg * usdRate, "LAK") : "—", c ? c.avg.toFixed(2) : "—", c && thbRate ? formatNumber(c.avg * thbRate, "LAK") : "—"];
     });
     const c = card("market");
     c.append(cardHead(t.inv_rub_years_title, "market", world.stale, t));
@@ -223,15 +217,11 @@ export function rubberTab(panel, e) {
     c.append(el("p", "note", fill(t.inv_rub_years_note, { month: monthText(lastMonth, t) })));
     const fresh = el("div", "card-foot");
     fresh.append(freshness(t, { month: lastMonth, stale: world.stale }));
-    c.append(fresh, sourcesFoot(t, [e.invest.sources.imf_pcps, thai && thai.source, e.economy.sources.bol, e.economy.sources.worldbank].filter(Boolean)));
+    c.append(fresh, sourcesFoot(t, [r.invest.sources.imf_pcps, thai && thai.source, r.economy.sources.bol, r.economy.sources.worldbank].filter(Boolean)));
     panel.append(c);
   }
 
-  // ---------- Prices of Laos itself (yearly) ----------
-  const lao = laoRubberCard(e, rates);
-  if (lao) panel.append(lao);
-
-  // ---------- What the numbers mean for a farmer in Laos ----------
+  // What the numbers mean for a farmer in Laos
   const n = card("estimated");
   n.append(cardHead(t.inv_rub_notes_title, null, false, t));
   const ul = el("ul", "watch-list");
@@ -240,115 +230,113 @@ export function rubberTab(panel, e) {
   panel.append(n);
 }
 
-// Official assessed land prices: one row per province = newest decision, its date and the link to the document.
-// The documents are scans in Lao, so the prices inside cannot be read by a script; the weekly job only watches for
-// new decisions. A decision older than the legal re-valuation period (3 years) is marked.
-function officialLandCard(e, file) {
-  const { t } = e;
-  const land = e.stat.land;
+// ---------- View 2: Laos, province by province ----------
+function provincesCard(r) {
+  const { t } = r;
+  const p = r.stat.rubber && r.stat.rubber.provinces;
+  if (!p) return null;
+  const mine = rubberByProvince(r.own);
+  const byName = new Map(p.rows.map(([name, planted, tapped]) => [name, { planted, tapped }]));
+  const mineLine = (name) => {
+    const e = mine.get(name);
+    return e ? fill(t.rw_mine_line, { price: whole(e.price), type: t["own_type_" + e.type] || e.type_text, date: formatDate(e.date, t) }) : null;
+  };
+  // biggest planted area first; provinces without a figure at the end (the owner asked to see every province)
+  const names = [...PROVINCES].sort((a, b) => (byName.has(b) ? byName.get(b).planted : -1) - (byName.has(a) ? byName.get(a).planted : -1));
+  const rows = names.map((name) => {
+    const v = byName.get(name);
+    return {
+      label: t.provinces[name] || name,
+      sub: mineLine(name),
+      value: v ? v.planted : null,
+      text: v ? whole(v.planted) : "—",
+      share: v ? whole(v.tapped) : "—",
+    };
+  });
+  rows.push({ label: t.rw_total_laos, sub: null, value: null, text: whole(p.total[0]), share: whole(p.total[1]) });
   const c = card("official");
-  const data = file.state === "ok" ? file.data : null;
-  c.append(cardHead(t.inv_land_official_title, "official", !!(data && data.stale), t));
-  const ul = el("ul", "watch-list");
-  for (const k of ["inv_land_official_1", "inv_land_official_2", "inv_land_official_3"]) ul.append(el("li", "", fill(t[k], { years: land.revaluation_years })));
-  c.append(ul);
-  if (!data) {
-    c.append(el("p", "muted", file.state === "error" ? t.inv_load_error : t.loading));
-    return c;
-  }
-
-  const limit = new Date();
-  limit.setFullYear(limit.getFullYear() - land.revaluation_years);
-  const tooOld = (day) => new Date(day + "T00:00:00Z") < limit;
-  // always with the year: the rows span many years
-  const dayText = (day) => `${Number(day.slice(8, 10))} ${t.months[Number(day.slice(5, 7)) - 1]} ${day.slice(0, 4)}`;
-  const list = Object.entries(data.provinces).map(([name, p]) => ({ name, decision: p.decisions[0] || null, note: null }));
-  // decisions that are not in the Gazette list (Vientiane Capital): from the hand-checked file
-  for (const x of land.official_extra || []) {
-    const row = list.find((r) => r.name === x.province);
-    if (row && !row.decision) {
-      row.decision = { decided: x.decided, pdf: x.pdf, url: x.pdf };
-      row.note = t[x.note];
-    }
-  }
-  const label = (r) => t.provinces[r.name] || r.name;
-  list.sort((a, b) => {
-    if (a.decision && b.decision) return a.decision.decided < b.decision.decided ? 1 : -1; // newest first
-    if (a.decision || b.decision) return a.decision ? -1 : 1;
-    return label(a).localeCompare(label(b));
-  });
-  const have = list.filter((r) => r.decision).length;
-  c.append(el("p", "note", fill(t.inv_land_official_count, { have, total: list.length })));
-
-  const rows = list.map((r) => {
-    const name = el("span", "", label(r));
-    if (!r.decision) return [name, el("span", "muted", t.inv_land_none), "—"];
-    const when = el("span", "", dayText(r.decision.decided));
-    if (tooOld(r.decision.decided)) when.append(" ", el("span", "fresh-old", fill(t.inv_land_older, { years: land.revaluation_years })));
-    if (r.note) when.append(el("span", "sub-line", r.note));
-    const a = el("a", "", t.inv_land_open_doc);
-    a.href = r.decision.pdf || r.decision.url;
-    a.target = "_blank";
-    a.rel = "noopener";
-    return [name, when, a];
-  });
-  const tb = table([t.inv_land_col_province, t.inv_land_col_decided, t.inv_land_col_doc], rows);
-  tb.classList.add("wrap-first", "land-table");
+  c.append(cardHead(fill(t.rw_lao_prov_title, { year: p.year }), "official", false, t));
+  const tb = barTable([t.inv_land_col_province, t.rw_col_planted, t.rw_col_tapped], rows);
+  tb.classList.add("total-last");
   c.append(tb);
-
+  c.append(el("p", "note", t.rw_lao_prov_note));
   const fresh = el("div", "card-foot");
-  fresh.append(freshness(t, { checked: data.checked_at.slice(0, 10), stale: data.stale }));
-  c.append(fresh, sourcesFoot(t, [data.source, staticSource(e, "thaipublica_land"), staticSource(e, land.revaluation_source)]));
+  fresh.append(freshness(t, { year: p.year, checked: r.stat.checked }));
+  c.append(fresh, sourcesFoot(t, [staticSource(r, p.source)]));
   return c;
 }
 
-export function landTab(panel, e) {
-  const { t } = e;
-  panel.append(el("p", "muted tab-intro", t.inv_land_intro));
-  if (!ready(panel, e, ["stat"])) return;
-  const land = e.stat.land;
-  panel.append(officialLandCard(e, lazyJson("data/land.json", e.rerender)));
-
-  const c = card("estimated");
-  c.append(cardHead(t.inv_land_title, null, false, t));
-  const ul = el("ul", "watch-list");
-  for (const k of ["inv_land_1", "inv_land_2", "inv_land_3"]) ul.append(el("li", "", t[k]));
-  c.append(ul);
-  c.append(el("p", "note", t.inv_land_listings));
-  const links = el("ul", "watch-list");
-  for (const src of land.listings) {
-    const li = el("li");
-    const a = el("a", "", src.source_name);
-    a.href = src.source_url;
-    a.target = "_blank";
-    a.rel = "noopener";
-    li.append(a);
-    links.append(li);
-  }
-  c.append(links);
-  const fresh = el("div", "card-foot");
-  fresh.append(freshness(t, { checked: e.stat.checked }));
-  c.append(fresh);
-  panel.append(c);
-
-  // Numbers on this site that move land values
-  const w = card("official");
-  w.append(cardHead(t.inv_land_watch_title, null, false, t));
-  const wl = el("ul", "watch-list");
-  for (const k of ["inv_land_watch_1", "inv_land_watch_2", "inv_land_watch_3", "inv_land_watch_4"]) wl.append(el("li", "", t[k]));
-  w.append(wl);
-  const row = el("div", "watch-links");
-  for (const [to, label] of [["gdp", "inv_tab_gdp"], ["inflation", "inv_tab_inflation"], ["fdi", "inv_tab_fdi"], ["debt", "inv_tab_debt"]]) {
-    const b = el("button", "btn", t[label]);
-    b.type = "button";
-    b.addEventListener("click", () => e.go(to));
-    row.append(b);
-  }
-  const a = el("a", "btn", t.page_living);
-  a.href = "#/living";
-  row.append(a);
-  w.append(row);
-  panel.append(w);
+function laoView(panel, r) {
+  const prov = provincesCard(r);
+  if (prov) panel.append(prov);
+  const grid = el("div", "grid grid-2");
+  if (r.world) {
+    const chart = laoProductionChart(r);
+    if (chart) grid.append(chart);
+    const buyers = laoBuyersCard(r);
+    if (buyers) grid.append(buyers);
+  } else if (r.worldState === "loading") grid.append(el("p", "muted", r.t.loading));
+  if (grid.childNodes.length) panel.append(grid);
+  const lao = laoRubberCard(r, ratesByYear(r));
+  if (lao) panel.append(lao);
 }
 
-export { formatDate, valueIn };
+// ---------- View 5: the owner's own selling prices ----------
+function mineView(panel, r) {
+  const { t, summary, thai, own } = r;
+  panel.append(rubberEntryCard(r, thai));
+
+  // His prices and the Thai market price of the same day, in kip (last 60 days: the Thai file keeps daily values that long)
+  const entries = own && own.rubber ? own.rubber.entries : [];
+  const days = dayRange(60);
+  const types = [...new Set(entries.map((e) => e.type))].filter((id) => RUBBER_TYPES[id]);
+  const inRange = entries.filter((e) => e.date >= days[0]);
+  if (inRange.length >= 2) {
+    const series = types.map((id, i) => ({
+      label: `${t.own_mine} · ${t["own_type_" + id]}`,
+      kind: "shop",
+      color: i === 0 ? null : "--cat-" + (i + 1),
+      values: valuesFor([...entries].reverse().filter((e) => e.type === id).map((e) => [e.date, e.price]), days),
+    }));
+    const cup = thai && thai.items && thai.items.rubber_cuplump;
+    const rate = summary.metrics["fx-market.THB_LAK"];
+    if (cup && cup.days && rate) {
+      const rates = new Map(rate.daily);
+      series.push({ label: t.own_thai_cuplump_lak, kind: "market", values: valuesFor(cup.days.filter(([d]) => rates.has(d)).map(([d, v]) => [d, Math.round(v * rates.get(d))]), days) });
+    }
+    panel.append(chartCard({ title: t.own_chart_title, subtitle: t.own_chart_sub, labels: days.map((d) => formatDate(d, t)), series, unit: "LAK per kg", t }));
+  }
+  panel.append(rubberEntriesCard(r, own, thai));
+  if (r.ownState === "loading") panel.append(el("p", "muted", t.loading));
+}
+
+const VIEWS = { market: marketView, lao: laoView, asean: aseanView, world: worldView, mine: mineView };
+
+export function rubberTab(panel, e) {
+  const { t } = e;
+  panel.append(el("p", "muted tab-intro", t.inv_rub_intro));
+  if (!ready(panel, e)) return;
+  const thaiFile = lazyJson("data/thai-prices.json", e.rerender);
+  const worldFile = lazyJson("data/rubber-world.json", e.rerender);
+  const ownFile = lazyJson("data/own-prices.json", e.rerender);
+  const r = {
+    ...e,
+    thai: thaiFile.state === "ok" ? thaiFile.data : null,
+    thaiState: thaiFile.state,
+    world: worldFile.state === "ok" ? worldFile.data : null,
+    worldState: worldFile.state,
+    own: ownFile.state === "ok" ? ownFile.data : null,
+    ownState: ownFile.state,
+  };
+  const view = choice(e, "rubber_view", Object.keys(VIEWS).map((id) => [id, t["rw_view_" + id]]), "market");
+  view.bar.classList.add("choice-main");
+  view.bar.setAttribute("aria-label", t.rw_views_label);
+  panel.append(view.bar);
+
+  // The ASEAN and world views need data/rubber-world.json
+  if ((view.current === "asean" || view.current === "world") && !r.world) {
+    panel.append(el("p", "muted", r.worldState === "error" ? t.inv_load_error : t.loading));
+    return;
+  }
+  VIEWS[view.current](panel, r);
+}

@@ -1,0 +1,13 @@
+{
+  "source": "rubber-lao-manual",
+  "source_name": "Rubber price the owner was paid (owner's form)",
+  "source_url": null,
+  "license": "Prices entered by the owner",
+  "kind": "shop",
+  "stale": false,
+  "last_success_at": null,
+  "last_error": null,
+  "records": [],
+  "configured": true,
+  "empty": true
+}

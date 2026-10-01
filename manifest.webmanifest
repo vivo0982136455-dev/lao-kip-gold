@@ -1,0 +1,24 @@
+{
+  "name": "ค่าเงินกีบ & ราคาทอง (Lao Kip & Gold)",
+  "short_name": "กีบ & ทอง",
+  "description": "ค่าเงินกีบ ราคาทองคำ ค่าครองชีพ และเศรษฐกิจลาว — ทุกตัวเลขมีแหล่งที่มาและเวลา",
+  "lang": "th",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "categories": ["finance"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "อัตราแลกเปลี่ยน", "url": "./#/rates", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "ทองคำ & เงิน", "url": "./#/gold", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "ค่าครองชีพ & การออม", "url": "./#/living", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "เศรษฐกิจลาว", "url": "./#/economy", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

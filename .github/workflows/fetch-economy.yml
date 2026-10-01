@@ -1,5 +1,6 @@
 # Lao economy data (World Bank, IMF yearly + monthly CPI / gold), investor data (debt by creditor, FDI by country,
-# rubber), WFP prices of everyday goods, Thai food + rubber prices and the official land price decisions per province.
+# rubber), WFP prices of everyday goods, Thai food + rubber prices, the official land price decisions per province
+# and the world rubber numbers (who sells, who buys, who grows it, world prices).
 # Weekly: IMF and WFP publish on different days each month, weekly keeps us at most ~7 days behind.
 name: Fetch economy data
 
@@ -18,7 +19,7 @@ concurrency:
 jobs:
   economy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -51,6 +52,14 @@ jobs:
         if: always()
         timeout-minutes: 5
         run: node scripts/fetch-land-decisions.js
+
+      # World rubber: sellers and buyers by country (UN Comtrade, free preview: one year per call), growers
+      # (FAOSTAT bulk files, downloaded only when FAO has a new edition), monthly world prices (World Bank Pink Sheet).
+      # Each part keeps last week's numbers when its source fails.
+      - name: Fetch world rubber trade, production and prices
+        if: always()
+        timeout-minutes: 10
+        run: node scripts/fetch-rubber-world.js
 
       - name: Commit changes
         if: always()

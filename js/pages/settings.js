@@ -2,6 +2,7 @@
 
 import { el, card, cardHead, kindChip, statusBadge, sourceStatus, sourceLink, sectionTitle } from "../ui.js";
 import { formatDate, toMs } from "../format.js";
+import { installState, askInstall } from "../pwa.js";
 
 function settingRow(label, options, current, onPick) {
   const row = el("div", "setting-row");
@@ -55,6 +56,34 @@ function statusRows(summary, economy, hints, t) {
   return rows;
 }
 
+// Install as an app: one tap where the browser offers it (Chrome / Edge), the steps for the browser's own menu otherwise
+function installCard(ctx) {
+  const { t } = ctx;
+  const state = installState();
+  const c = card(null, "install-card");
+  c.append(cardHead(t.pwa_title, null, false, t));
+  if (state === "app" || state === "installed") {
+    c.append(el("p", "up-save-status ok", state === "app" ? t.pwa_running : t.pwa_installed));
+    c.append(el("p", "note", t.pwa_offline_note));
+    return c;
+  }
+  c.append(el("p", "note", t.pwa_intro));
+  if (state === "ready") {
+    const actions = el("div", "up-actions");
+    const b = el("button", "btn-primary", "📲 " + t.pwa_install);
+    b.type = "button";
+    b.addEventListener("click", () => askInstall());
+    actions.append(b);
+    c.append(actions);
+  }
+  c.append(el("h4", "up-subtitle", state === "ready" ? t.pwa_manual_or : t.pwa_manual_title));
+  const steps = el("ul", "watch-list");
+  for (const k of ["pwa_step_android", "pwa_step_iphone", "pwa_step_pc"]) steps.append(el("li", "", t[k]));
+  c.append(steps);
+  c.append(el("p", "note", t.pwa_offline_note));
+  return c;
+}
+
 export function render(view, ctx) {
   const { t, summary, economy, hints } = ctx;
   const grid = el("div", "grid grid-2");
@@ -73,6 +102,7 @@ export function render(view, ctx) {
   upd.append(el("p", "note", t.last_update_note));
   grid.append(prefs, upd);
   view.append(grid);
+  view.append(installCard(ctx));
 
   view.append(sectionTitle(t.source_status_title));
   const c = card(null);

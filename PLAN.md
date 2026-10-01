@@ -66,6 +66,9 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 19 | Official land price decisions per province (ASSESSED prices for land tax, not market prices): which province has one, its date, link to the scanned PDF | Lao Official Gazette `https://laoofficialgazette.gov.la/index.php?r=site/listlegistioncp&agencies_id={34..51}&old=0` (HTML table, 10 rows per page, `&Document_page=N`); Vientiane Capital's table: ThaiPublica Thai translation (static link) | weekly | ✅ Verified 2026-10-01 (11 provinces; prices inside the scans cannot be read by a script) |
 | 20 | Lao rubber at the Chinese border, yearly: China's imports of HS 4001 from Laos, value / weight | UN Comtrade free preview `https://comtradeapi.un.org/public/v1/preview/C/A/HS?reporterCode=156&partnerCode=418&cmdCode=4001&flowCode=M&period={YEAR}` (no key, ONE period per request) | weekly (inside `fetch-invest.js`) | ✅ Verified 2026-10-01 |
 | 21 | Hand-checked Lao rubber prices: official national yearly average 2019–2023 (MOIC Department of Internal Trade PDF, item 204, kip per tonne) + three prices quoted in news (Bokeo, Oudomxay) | `data/invest-static.json` → `rubber` (links + dates) | by hand | ✅ Read 2026-10-01 |
+| 22 | The owner's OWN prices: rubber price he was paid (LAK per kg, kind, province) and land prices he sees (total, area, province) | The same Google Form/Sheet as #5 (6 optional questions, found by the words ยาง / ที่ดิน in their titles); entered on the site (Economy > Rubber > "my prices", Economy > Land) | every data run (`fetch-own-prices.js`) | ✅ Questions verified in the real form 2026-10-01. Label OWN ("บันทึกเอง"); the site and the data file are public → no names / phone numbers / exact addresses. |
+| 23 | World natural rubber: every country's exports + imports (HS 4001 and the forms 400110 latex, 400121 smoked sheets, 400122 block rubber, 400129 other = raw cup lump / unsmoked sheet), last 3 years; production, tapped area, producer price by country; world prices TSR20 + RSS3 monthly | UN Comtrade free preview (`.../preview/C/A/HS?period=Y&partnerCode=0&flowCode=X\|M&cmdCode=...`, no reporterCode = all reporters, ONE period per call, ≤ 500 rows) · FAOSTAT bulk zips listed in `https://bulks-faostat.fao.org/production/datasets_E.json` (QCL, PP; the API itself now answers 401) · World Bank Pink Sheet xlsx (link read from the commodity-markets page) | weekly (`fetch-rubber-world.js`) | ✅ Verified 2026-10-01. A country that has not reported a year is estimated from its partners' reports ("≈", can be too low). |
+| 24 | Hand-checked tables: rubber area by Lao province (planted / tapped, 2018; Forest Trends 2020, Table 1, NAFRI data) · Vientiane Capital official assessed land prices summarised per district and road class (Decision 142 of 26 Feb 2024, ThaiPublica Thai translation, 481 villages) | `data/invest-static.json` → `rubber.provinces`, `land.vientiane` | by hand | ✅ Read 2026-10-01 (province rows sum to 257,887 ha, the printed total is 258,446) |
 
 Checked and rejected (2026-10-01, Lao rubber and land prices): Facebook / TikTok / WhatsApp (no free read API, and forbidden
 by [CONSTRAINT]); Selina Wamucii "Natural Rubber Price in Lao" (a January 2023 export unit value under a current-month title);
@@ -148,9 +151,40 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Added what does exist: official yearly Lao rubber price 2019-2023 (ministry PDF, hand-checked), yearly price of
   Lao rubber at the Chinese border (UN Comtrade, automatic), three prices quoted in news; official ASSESSED land
   prices per province = decision date + link from the Lao Official Gazette (automatic, weekly).
-- Still open (owner's choice): a form for the price the owner really gets for his rubber / sees for land, like
-  the gold shop form; daily Thai border-market prices (Rubber Authority of Thailand: Nong Khai, Chiang Rai) and
-  Chinese rubber futures as extra reference lines.
+- Still open (owner's choice): daily Thai border-market prices (Rubber Authority of Thailand: Nong Khai,
+  Chiang Rai), Chinese rubber futures and Malaysian LGM prices as extra reference lines; monthly price of Lao
+  rubber at the Vietnamese border (Viet Nam Customs table 5N - not verified yet).
+
+### Phase 7c — Rubber by province / ASEAN / world, land for every province, own prices (2026-10-01, owner request)
+- Owner: "rubber: each province in Laos, then the 10 ASEAN countries + China, ending with the world; top 10
+  countries that sell and buy, with prices; cup lump / latex / sheet" and "land: every province, Vientiane and
+  Luang Prabang first".
+- Rubber tab = 5 views (buttons, remembered): market prices · Laos by province · ASEAN + China · world + top 10 ·
+  my own prices. Sources #22-#24. What does NOT exist is said on the page: prices by Lao province; complete trade
+  numbers for the newest years (late reporters are shown as "≈" from their partners' reports, and the year shown
+  first is the newest one in which the six big ASEAN / China traders have all reported).
+- Kinds of rubber: Thai daily prices exist for exactly cup lump / fresh latex / unsmoked sheet; in trade data cup
+  lump has no code of its own (it is inside 400129 "other forms"; block rubber 400122 is made from it).
+- Land tab (new file): the two focus provinces first (Vientiane Capital: official assessed prices per district
+  and road class; Luang Prabang: no official table online → said honestly), then every province with its
+  decision date + link, then the owner's own prices, then "no open data on real sale prices".
+- Own prices (#22): entered on the site, saved into the owner's form, read back from the sheet to confirm.
+- Acceptance: all 18 screens x Thai / Lao x dark / light x 380 / 1440 px without sideways scroll, "undefined" or
+  unfilled {placeholders} (checked with a script in a real browser).
+- Not wanted (owner, 2026-10-01): messages to Lark - Lark is the company's work app.
+
+### Phase 8 — Install as an app (2026-10-01, owner agreed)
+- `manifest.webmanifest` (name, colours, icons 192 / 512 / maskable 512, 4 shortcuts) + `icons/` drawn by
+  `scripts/make-icons.js` (no image tool) + `sw.js` + `js/pwa.js` + an install card on the Settings page.
+- Service worker rules: files of this site = NETWORK FIRST (a number must never be older than it has to be); the
+  saved copy only when the network fails, gives a 5xx, or needs more than 4 s (then saved copies straight away for
+  30 s). Fonts + chart library = saved copy first. Google Form / Sheet and the OCR files are never touched.
+  A saved copy of a data file carries the header X-Offline-Copy → the top bar says "offline".
+- An app left open reads the data again when it comes back to the front after 10 minutes, and every minute while
+  it is offline; it redraws only when something changed and never while a form is open.
+- Acceptance (run in a real Edge, headless): registered, manifest without errors, installable, first visit saves
+  every loaded file, offline pages open with the label, label goes away when the connection is back, a slow
+  network shows the saved copy within ~5 s.
 
 ### Phase 6 — Cost of living & savings page (added 2026-09-30, owner request)
 - Page `#/living`: monthly inflation (all + categories, ranked), everyday prices by province vs national average (+ fuel estimate),
@@ -173,6 +207,8 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Fonts: Noto Sans Thai + Noto Sans Lao (Google Fonts) with system fallbacks.
 - Number format: thousands separators; LAK without decimals; USD/THB with 2 decimals.
 - Footer disclaimer (TH/LO): data is for information only, not financial advice; estimates may be wrong.
+- Installed app / offline (2026-10-01): when the numbers on screen are the copy saved on the device, the top bar
+  shows an "offline" label next to the time of the data. Never show saved numbers without that label.
 - Charts (2026-10-01, owner request): the values of a touched point are shown in a read-out ABOVE the plot
   (latest values when nothing is touched), never in a box on top of the lines. Every "show as table" twin
   names what the numbers are and their unit in its header. Lines are smooth but honest (monotone curve,

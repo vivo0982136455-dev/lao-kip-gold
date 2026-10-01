@@ -8,5 +8,6 @@
   "last_success_at": null,
   "last_error": null,
   "records": [],
-  "configured": false
+  "configured": true,
+  "empty": true
 }
