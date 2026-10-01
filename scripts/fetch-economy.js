@@ -1,6 +1,7 @@
 // Sources #6, #7, #8: Lao economy - yearly numbers + MONTHLY inflation and gold (all automatic).
 //   #6 World Bank API (actual yearly data)          - free, no key
-//   #7 IMF DataMapper API (yearly, with forecasts)   - free, no key
+//   #7 IMF World Economic Outlook (yearly, with forecasts) - free, no key. First the IMF SDMX service
+//      (dataset IMF.RES,WEO), then the DataMapper API: DataMapper answers HTTP 403 to GitHub's servers (2026-10-01)
 //   #8 IMF SDMX API (monthly): Lao CPI (all items + 12 categories), CPI index, world gold price
 //      (replaced the Google-Sheet CPI entry on 2026-09-30 - nothing to type in any more)
 // Also builds monthly BOL mid rates (USD, THB) from data/history/bol.json for the "value kept" comparison.
@@ -9,6 +10,9 @@
 // Real responses (checked 2026-09-29 / 2026-09-30):
 //   World Bank: [ {page, lastupdated:"2026-07-13"}, [ { "date": "2025", "value": 18302970218.59 }, ... ] ]
 //   IMF DataMapper: { "values": { "NGDP_RPCH": { "LAO": { "2024": 4.3, ... "2031": 3 }, ...all countries } } }
+//   IMF SDMX WEO (2026-10-01): GET .../IMF.RES,WEO/LAO.NGDP_RPCH.A -> same shape as the monthly series below, with
+//                      TIME_PERIOD ids "1980" ... "2031" and values like "4.771627"; NGDPD is in US dollars (not bn);
+//                      the world total is country "G001"
 //   IMF SDMX (JSON): { structure: { dimensions: { series: [..., {id:"COICOP_1999", values:[{id:"CP01", name:"Food ..."}]}],
 //                      observation: [{ id:"TIME_PERIOD", values:[{id:"2026-M08"}, ...] }] } },
 //                      dataSets: [ { series: { "0:0:3:0:0": { observations: { "0": ["7.7", ...] } } } } ] }
@@ -30,7 +34,7 @@ const SOURCES = {
     license: "CC BY 4.0 - The World Bank",
   },
   imf: {
-    source_name: "IMF World Economic Outlook (DataMapper)",
+    source_name: "IMF World Economic Outlook",
     source_url: "https://www.imf.org/external/datamapper/profile/LAO",
     license: "IMF - free to use with attribution",
   },
@@ -89,7 +93,29 @@ async function fromWorldBank(def) {
   return { values, source_updated: data[0].lastupdated || null };
 }
 
-async function fromImf(def) {
+const WEO_AREA = { WEOWORLD: "G001" }; // DataMapper name -> SDMX country code (G001 = world)
+const WEO_SCALE = { NGDPD: 1e-9 }; // SDMX gives US dollars; the unit here is USD bn (as DataMapper gives it)
+
+// IMF World Economic Outlook from the SDMX service (the road that works from GitHub's servers)
+async function fromImfWeo(def) {
+  const area = def.area || "LAO";
+  const key = `IMF.RES,WEO/${WEO_AREA[area] || area}.${def.code}.A`;
+  const data = await fetchJson(`${IMF_SDMX}${key}?startPeriod=${FIRST_YEAR}`);
+  const dims = data.structure && data.structure.dimensions;
+  const set = data.dataSets && data.dataSets[0];
+  const series = set && set.series && Object.values(set.series)[0];
+  if (!dims || !series || !series.observations) throw new Error(`Unexpected IMF SDMX response for ${key}`);
+  const time = dims.observation[0].values;
+  const values = Object.entries(series.observations)
+    .map(([i, obs]) => [Number(time[Number(i)].id), obs[0]])
+    .filter(([year, v]) => Number.isInteger(year) && year >= FIRST_YEAR && v !== null && v !== "")
+    .map(([year, v]) => [year, round(parseAnyNumber(v, def.code) * (WEO_SCALE[def.code] || 1) * (def.scale || 1))])
+    .sort((a, b) => a[0] - b[0]);
+  return { values, source_updated: null };
+}
+
+// The same numbers from the DataMapper API (second road; rounded by the IMF to 1-3 decimals)
+async function fromImfDataMapper(def) {
   const area = def.area || "LAO";
   const data = await fetchJson(`https://www.imf.org/external/datamapper/api/v1/${def.code}/${area}`);
   const lao = data.values && data.values[def.code] && data.values[def.code][area];
@@ -98,6 +124,20 @@ async function fromImf(def) {
     .filter(([year, v]) => Number(year) >= FIRST_YEAR && v !== null)
     .map(([year, v]) => [Number(year), round(parseAnyNumber(v, def.code) * (def.scale || 1))]);
   return { values, source_updated: null };
+}
+
+async function fromImf(def) {
+  try {
+    const out = await fromImfWeo(def);
+    if (out.values.length) return out;
+    throw new Error("no values");
+  } catch (first) {
+    try {
+      return await fromImfDataMapper(def);
+    } catch (second) {
+      throw new Error(`${first.message} | then: ${second.message}`);
+    }
+  }
 }
 
 // IMF SDMX -> list of { code, name, values: [["2026-08", 7.7], ...] } (one per series, e.g. per CPI category)

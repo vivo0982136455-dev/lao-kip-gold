@@ -33,7 +33,7 @@ const TIMEOUT_MS = 90000; // IDS and DIP answers are slow (5-15 s, sometimes mor
 
 const SOURCES = {
   worldbank: { source_name: "World Bank Open Data", source_url: "https://data.worldbank.org/country/lao-pdr", license: "CC BY 4.0 - The World Bank" },
-  imf: { source_name: "IMF World Economic Outlook (DataMapper)", source_url: "https://www.imf.org/external/datamapper/profile/LAO", license: "IMF - free to use with attribution" },
+  imf: { source_name: "IMF World Economic Outlook", source_url: "https://www.imf.org/external/datamapper/profile/LAO", license: "IMF - free to use with attribution" },
   wb_ids: { source_name: "World Bank International Debt Statistics (IDS)", source_url: "https://www.worldbank.org/en/programs/debt-statistics/ids", license: "CC BY 4.0 - The World Bank" },
   imf_dip: { source_name: "IMF Direct Investment Positions by Counterpart Economy (formerly CDIS)", source_url: "https://data.imf.org/en/datasets/IMF.STA:DIP", license: "IMF - free to use with attribution" },
   imf_pcps: { source_name: "IMF Primary Commodity Prices (rubber, RSS3)", source_url: "https://data.imf.org/en/datasets/IMF.RES:PCPS", license: "IMF - free to use with attribution" },
