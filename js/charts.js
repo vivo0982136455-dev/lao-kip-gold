@@ -247,12 +247,15 @@ document.addEventListener("pointerdown", (event) => {
   }
 });
 
-// A turned phone / resized window changes how the read-out wraps: measure its rows again
+// A turned phone / resized window changes how the read-out wraps: measure its rows again.
+// The same when the web fonts arrive after the first draw (their letters are a little wider or narrower).
+const relockAll = () => activeCharts.forEach((chart) => chart.$relock && chart.$relock());
 let resizeTimer = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => activeCharts.forEach((chart) => chart.$relock && chart.$relock()), 200);
+  resizeTimer = setTimeout(relockAll, 200);
 });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(relockAll);
 
 function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, animate }) {
   const surface = cssVar("--surface");
