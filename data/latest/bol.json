@@ -5,120 +5,120 @@
   "license": "CC BY 4.0 - data mirror by AllRatesToday, https://allratestoday.com",
   "kind": "official",
   "stale": false,
-  "last_success_at": "2026-09-30T20:09:05.017Z",
+  "last_success_at": "2026-10-01T21:18:59.966Z",
   "last_error": null,
   "records": [
     {
       "source": "bol",
       "metric": "USD_LAK_buy",
-      "value": 22347,
+      "value": 22354,
       "unit": "LAK per USD",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "USD_LAK_sell",
-      "value": 22570,
+      "value": 22577,
       "unit": "LAK per USD",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "THB_LAK_buy",
       "value": 674.7,
       "unit": "LAK per THB",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "THB_LAK_sell",
       "value": 685,
       "unit": "LAK per THB",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "CNY_LAK_buy",
       "value": 3317,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "CNY_LAK_sell",
       "value": 3342,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "GBP_LAK_buy",
-      "value": 29370,
+      "value": 29468,
       "unit": "LAK per GBP",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "GBP_LAK_sell",
-      "value": 29957,
+      "value": 30057,
       "unit": "LAK per GBP",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "EUR_LAK_buy",
-      "value": 25417,
+      "value": 25411,
       "unit": "LAK per EUR",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "EUR_LAK_sell",
-      "value": 25674,
+      "value": 25668,
       "unit": "LAK per EUR",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "JPY_LAK_buy",
-      "value": 144.07,
+      "value": 142.83,
       "unit": "LAK per JPY",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "JPY_LAK_sell",
-      "value": 146.95,
+      "value": 145.69,
       "unit": "LAK per JPY",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "KRW_LAK_buy",
-      "value": 15.98,
+      "value": 15.95,
       "unit": "LAK per KRW",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     },
     {
       "source": "bol",
       "metric": "KRW_LAK_sell",
-      "value": 16.28,
+      "value": 16.25,
       "unit": "LAK per KRW",
-      "fetched_at": "2026-09-30T20:09:04.647Z",
-      "source_date": "2026-09-30"
+      "fetched_at": "2026-10-01T21:18:59.603Z",
+      "source_date": "2026-10-01"
     }
   ]
 }

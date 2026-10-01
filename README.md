@@ -91,7 +91,7 @@
 | `fetch-bol.js` | อัตรา BOL: USD, THB, CNY, GBP, EUR, JPY, KRW → LAK | **ทางการ** | วันละครั้ง (วันทำการ) |
 | `fetch-gold-world.js` | ทองโลก XAU/USD (goldprice.dev, สำรอง gold-api.com) | ตลาด | เกือบเรียลไทม์ |
 | `fetch-silver-world.js` | เงินโลก XAG/USD (gold-api.com) → แสดงเป็นกีบต่อกิโลด้วย | ตลาด | เกือบเรียลไทม์ |
-| `fetch-gold-thai.js` | ทองสมาคมค้าทองคำไทย 96.5% | ตลาด | หลายครั้งต่อวัน |
+| `fetch-gold-thai.js` | ทองสมาคมค้าทองคำไทย 96.5% (ทองแท่ง + ทองรูปพรรณ ซื้อ/ขาย) — อ่านจากบริการราคาของเว็บสมาคมเอง · สำรอง: API ชุมชนตัวเดิม | ตลาด | หลายครั้งต่อวัน |
 | `fetch-fx-market.js` | USD/LAK, USD/THB, THB/LAK ราคากลางตลาด | ตลาด | **วันละครั้ง** |
 | `fetch-gold-lbb.js` | **ราคาทองลาวจริง** Lao Bullion Bank ซื้อ/ขาย (กีบต่อกรัม → แสดงต่อ 15 ก. ด้วย) | **ธนาคาร** | LBB ปรับวันละ 2–7 ครั้ง (วันทำการ) |
 | `fetch-bcel.js` | อัตรา BCEL ซื้อ/ขาย USD, THB, CNY (ราคาธนบัตร) | **ธนาคาร** | วันละ 1+ รอบ (วันทำการ) |
@@ -119,7 +119,8 @@
 - **LBB:** ใช้ลิงก์ข้อมูลที่เว็บ LBB ใช้เอง (ไม่ได้ประกาศเป็น API) อาจเปลี่ยนได้ · เวลาในข้อมูล LBB เป็น**เวลาเวียงจันทน์**แม้จะติดป้ายว่า UTC (สคริปต์แปลงให้แล้ว) · 1 บาทลาว = 15 กรัม
 - **BCEL:** ไม่มีเวลาประกาศ มีแต่ "รอบ" → เก็บวันละ 1 ค่า รอบใหม่ของวันเดียวกันแทนที่รอบเก่า
 - **LDB (ราคาพูวง):** มีลิงก์ข้อมูลแต่ต้องใช้รหัสผ่าน (401) → ไม่ใช้ · Facebook → ไม่ใช้ (ตามกฎใน PLAN.md)
-- API ทองไทยและ goldprice.dev **ไม่ใช่แหล่งทางการ** อาจหยุดทำงานได้ — ระบบจะเก็บค่าเดิมไว้และติดป้าย "ข้อมูลเก่า"
+- **ทองไทย:** 1 ต.ค. 2026 ช่วงค่ำ สมาคมค้าทองคำเปลี่ยนเว็บใหม่ ทำให้ API ชุมชน (`api.chnwt.dev`) ที่คัดลอกเว็บเก่าตอบ HTTP 500 → ตั้งแต่ 2 ต.ค. อ่านจากบริการราคาที่เว็บใหม่ของสมาคมใช้เอง `https://www.goldtraders.or.th/api/GoldPrices/Latest?readjson=false` (JSON: `bL_BuyPrice` / `bL_SellPrice` = ทองแท่ง, `oM965_BuyPrice` / `oM965_SellPrice` = ทองรูปพรรณ, `asTime` = เวลาไทยไม่มีโซน) ก่อน แล้วค่อยลอง API ชุมชนเป็นตัวสำรอง · ตรวจแล้วว่าตัวเลขและเวลาตรงกับคำตอบสุดท้ายของแหล่งเดิมทุกตัว · ข้อตกลงของเว็บสมาคม: ใช้ส่วนตัว ไม่ใช่เชิงพาณิชย์ — เว็บนี้เป็นแบบนั้น ถามรอบละ 1 ครั้ง และระบุสมาคมเป็นแหล่งที่มา · ไม่ใช่ API ที่ประกาศเป็นทางการ อาจเปลี่ยนได้
+- goldprice.dev **ไม่ใช่แหล่งทางการ** อาจหยุดทำงานได้ — ระบบจะเก็บค่าเดิมไว้และติดป้าย "ข้อมูลเก่า"
 - ข้อมูล BOL มาจาก mirror ของ AllRatesToday (CC BY 4.0) บางวันอาจช้ากว่าเว็บ BOL 1 วัน
 - Chart.js โหลดจาก cdnjs ก่อน ถ้าเครือข่ายบล็อก (เช่น เน็ตบริษัท) จะโหลดสำรองจาก jsDelivr ให้อัตโนมัติ
 - IMF API ส่งข้อมูลทุกประเทศมา (~120 KB ต่อตัวชี้วัด) ระบบเลือกเฉพาะลาว (LAO) · IMF SDMX ต้องส่ง header `Accept: application/json` ไม่งั้นได้ XML
@@ -204,9 +205,9 @@ node scripts/serve.js            # เปิดเว็บ แล้วเข�
   node tests/live.js           # เว็บจริงบน GitHub Pages หลัง push 2–3 นาที (รวมจำลองสัญญาณหลุด)
   ```
   ตรวจ: ไม่มีการเลื่อนซ้าย-ขวา, ไม่มีอะไรล้นจอ, ไม่มีคำว่า undefined / NaN / `{ตัวแปร}` ที่ไม่ถูกแทนค่า, กราฟถูกวาดครบ, ไม่มี error ใน console, ติดตั้งเป็นแอปได้, ออฟไลน์เปิดได้พร้อมป้าย · รูปหน้าจอเก็บใน `tests/shots/` (ไม่ commit) · ฟอร์มบันทึกราคาถูกเปิดและกรอก แต่**ไม่กดบันทึก** และคำขอไป Google ถูกบล็อกระหว่างทดสอบ จึงไม่มีแถวปลอมเข้า Sheet
-- **แหล่งข้อมูลพัง:** `GOLD_THAI_URL=https://invalid.example node scripts/fetch-all.js` (ใช้ Git Bash)
+- **แหล่งข้อมูลพัง:** `GOLD_THAI_URL=https://invalid.example GOLD_THAI_BACKUP_URL=https://invalid.example node scripts/fetch-all.js` (ใช้ Git Bash)
   → เฉพาะทองไทยเป็น FAIL + ป้ายข้อมูลเก่า แหล่งอื่นยังปกติ
-  ตัวแปรที่ใช้ได้: `BOL_URL`, `GOLD_WORLD_URL`, `GOLD_WORLD_BACKUP_URL`, `GOLD_THAI_URL`, `FX_MARKET_URL`, `BOL_BACKFILL_URL`, `GOLD_LBB_URL`, `LBB_BACKFILL_URL`, `BCEL_URL`, `BCEL_DEPOSIT_URL`, `LAO_GOLD_CSV_URL`, `RAOT_URL`, `LGM_URL`, `SHFE_URL`
+  ตัวแปรที่ใช้ได้: `BOL_URL`, `GOLD_WORLD_URL`, `GOLD_WORLD_BACKUP_URL`, `GOLD_THAI_URL`, `GOLD_THAI_BACKUP_URL`, `FX_MARKET_URL`, `BOL_BACKFILL_URL`, `GOLD_LBB_URL`, `LBB_BACKFILL_URL`, `BCEL_URL`, `BCEL_DEPOSIT_URL`, `LAO_GOLD_CSV_URL`, `RAOT_URL`, `LGM_URL`, `SHFE_URL`
 - **ทดสอบโดยไม่แตะข้อมูลจริง:** `DATA_DIR=<โฟลเดอร์ทดสอบ>` เปลี่ยนที่เก็บข้อมูล · `SITE_ROOT=<โฟลเดอร์>` ให้ `serve.js` เปิดเว็บจากโฟลเดอร์อื่น
 - **จำลองเวลา (สัญญาณค่ากีบ):** `NOW=2026-09-29T08:00:00+07:00 node scripts/update-forecast.js`
 

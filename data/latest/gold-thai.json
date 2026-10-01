@@ -2,14 +2,11 @@
   "source": "gold-thai",
   "source_name": "Gold Traders Association of Thailand (96.5%)",
   "source_url": "https://www.goldtraders.or.th",
-  "license": "Unofficial community API: https://api.chnwt.dev/thai-gold-api",
+  "license": "Gold Traders Association - personal, non-commercial use, with attribution",
   "kind": "market",
-  "stale": true,
+  "stale": false,
   "last_success_at": "2026-10-01T11:03:29.702Z",
-  "last_error": {
-    "message": "Download failed (https://api.chnwt.dev/thai-gold-api/latest): The operation was aborted due to timeout",
-    "at": "2026-10-01T17:26:16.149Z"
-  },
+  "last_error": null,
   "records": [
     {
       "source": "gold-thai",
