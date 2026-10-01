@@ -26,6 +26,36 @@
       "source_name": "Lao Statistics Bureau",
       "source_url": "https://www.lsb.gov.la",
       "published": null
+    },
+    "moic_dit": {
+      "source_name": "Lao Ministry of Industry and Commerce, Department of Internal Trade: national average prices of goods 2011–2023",
+      "source_url": "https://www.dit.moic.gov.la/uploads/statistic/statistic_20241010095656.pdf",
+      "published": "2024-10-10"
+    },
+    "led_bokeo": {
+      "source_name": "Lao Economic Daily: rubber price 15,000 kip per kg (Bokeo)",
+      "source_url": "https://laoedaily.com.la/?p=142280",
+      "published": "2025-06-26"
+    },
+    "oudomxay_gov": {
+      "source_name": "Oudomxay Provincial Office: visit to the Zhongwu rubber factory",
+      "source_url": "https://www.oudomxay.gov.la/news/phet-phomphiphak-visit-zhongwu-rubber-factory-oudomxay",
+      "published": "2026-06-26"
+    },
+    "lyr_bokeo": {
+      "source_name": "Lao Youth Radio: why rubber prices swing and are pushed down (Bokeo)",
+      "source_url": "https://laoyouth-radio.com/flash-news/2026/05/05/5041/echoes-from-rubber-farmers-why-are-prices-fluctuating-and-being-pressured/",
+      "published": "2026-05-05"
+    },
+    "thaipublica_land": {
+      "source_name": "ThaiPublica: Vientiane Capital assessed land prices, Decision 142 of 26 Feb 2024 (in Thai)",
+      "source_url": "https://thaipublica.org/2024/05/pundop132/",
+      "published": "2024-05-10"
+    },
+    "land_law": {
+      "source_name": "Land Law 2019, Article 110 (unofficial English translation)",
+      "source_url": "https://laolandinfo.org/wp-content/uploads/2021/05/Land-Law-2019_Eng-Unofficial-Translation.pdf",
+      "published": "2019-06-21"
     }
   },
   "plan": {
@@ -68,11 +98,25 @@
     "reserves_sep2025": { "usd_bn": 2.8, "months": 3, "source": "wb_lem" },
     "inflation_why": { "oct2025": 4, "avg2024": 23.3, "source": "wb_lem" }
   },
+  "rubber": {
+    "_about": "Prices of rubber INSIDE Laos that could be found online (all channels re-checked 2026-10-01: official sites, news, social media, international datasets). No daily or provincial series is published. official_yearly = item 204 'ຢາງພາລາ (ລາຄານ້ຳຢາງດິບ)' of the ministry's table, kip per tonne, national average (its 5 values sit under the 2019-2023 columns). reports = single numbers quoted in news; 'period' is what the number refers to.",
+    "official_yearly": { "source": "moic_dit", "unit": "LAK per tonne", "values": [[2019, 4685846], [2020, 5247222], [2021, 5986972], [2022, 8069430], [2023, 11303261]] },
+    "reports": [
+      { "period": "2025", "province": "Bokeo", "low": 10000, "high": 22000, "text": "inv_rub_report_range", "source": "lyr_bokeo" },
+      { "period": "2025", "province": "Oudomxai", "value": 22000, "text": "inv_rub_report_factory", "source": "oudomxay_gov" },
+      { "period": "2025-06-26", "province": "Bokeo", "value": 15000, "text": "inv_rub_report_avg", "source": "led_bokeo" }
+    ]
+  },
   "land": {
-    "_about": "No open, official land-price data for Laos was found (checked 2026-10-01). Listing sites show ASKING prices only.",
+    "_about": "Official ASSESSED land prices exist per province (base for land tax and fees, not market prices): data/land.json lists the decisions found in the Lao Official Gazette. Vientiane Capital's decision is not in the Gazette list; a Thai translation of its table was published by ThaiPublica (official_extra). No open data of real sale prices was found (re-checked 2026-10-01); listing sites show ASKING prices only, mostly Vientiane Capital.",
+    "revaluation_years": 3,
+    "revaluation_source": "land_law",
+    "official_extra": [
+      { "province": "Vientiane Capital", "decided": "2024-02-26", "source": "thaipublica_land", "pdf": "https://thaipublica.org/wp-content/uploads/2024/05/%E0%B8%A3%E0%B8%B2%E0%B8%84%E0%B8%B2%E0%B8%97%E0%B8%B5%E0%B9%88%E0%B8%94%E0%B8%B4%E0%B8%99%E0%B8%99%E0%B8%84%E0%B8%A3%E0%B8%AB%E0%B8%A5%E0%B8%A7%E0%B8%87%E0%B9%80%E0%B8%A7%E0%B8%B5%E0%B8%A2%E0%B8%87%E0%B8%88%E0%B8%B1%E0%B8%99%E0%B8%97%E0%B8%99%E0%B9%8C.pdf", "note": "inv_land_thai_translation" }
+    ],
     "listings": [
-      { "source_name": "FazWaz Laos – land for sale, Vientiane (asking prices)", "source_url": "https://www.fazwaz.la/en/land-for-sale/laos/vientiane" },
-      { "source_name": "Lao Properties – listings (asking prices)", "source_url": "https://laoproperties.com" }
+      { "source_name": "RentsBuy – land for sale in Laos (asking prices, USD per sq m)", "source_url": "https://rentsbuy.com/land-for-rent-or-for-sale-in-laos/" },
+      { "source_name": "VS Real Estate Laos – land (asking prices, central Vientiane)", "source_url": "https://vsrealestatelaos.com/listings/land/" }
     ]
   }
 }

@@ -481,6 +481,9 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .status-none { color: var(--flat); background: var(--flat-bg); }
 .facts li .status { flex: none; margin-top: 0; }
 .plan-table td { vertical-align: top; }
+/* Land tab: province | date of the newest decision (+ "older than 3 years") | link. The middle column may wrap. */
+.land-table td:nth-child(2), .land-table th:nth-child(2) { white-space: normal; overflow-wrap: anywhere; }
+.land-table td:nth-child(2) .fresh-old { white-space: nowrap; }
 .plan-table td .sub-line { display: block; color: var(--muted); font-size: 0.7rem; margin-top: 2px; }
 .plan-actual .fresh { margin-top: 0; }
 .plan-table td:nth-child(2) { min-width: 4.6em; }

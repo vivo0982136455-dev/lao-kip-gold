@@ -1,5 +1,5 @@
 # Lao economy data (World Bank, IMF yearly + monthly CPI / gold), investor data (debt by creditor, FDI by country,
-# rubber), WFP prices of everyday goods and Thai food + rubber prices.
+# rubber), WFP prices of everyday goods, Thai food + rubber prices and the official land price decisions per province.
 # Weekly: IMF and WFP publish on different days each month, weekly keeps us at most ~7 days behind.
 name: Fetch economy data
 
@@ -45,6 +45,12 @@ jobs:
         if: always()
         timeout-minutes: 15
         run: node scripts/fetch-thai-prices.js
+
+      # Which provinces have published an official land price decision (Lao Official Gazette); ~45 small pages
+      - name: Check official land price decisions (Lao Official Gazette)
+        if: always()
+        timeout-minutes: 5
+        run: node scripts/fetch-land-decisions.js
 
       - name: Commit changes
         if: always()

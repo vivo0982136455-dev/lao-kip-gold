@@ -63,6 +63,14 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 16 | Thai retail food prices, Bangkok (9 items matching the WFP Lao items) + Thai rubber (cup lump 100%, fresh latex, unsmoked sheet), daily min/max | Thai Ministry of Commerce open data `https://dataapi.moc.go.th/gis-product-prices?product_id=..&from_date=..&to_date=..` (plural path; the documented singular one answers 404) | weekly | ✅ Verified 2026-09-30. Very slow (10 days ≈ 15 s, 14 months ≈ time-out) and sometimes HTTP 500 → 3-week windows, one item at a time, second try at the end. No sugar in the retail list. |
 | 17 | Investor data: World Bank indicators (GDP structure, trade, external debt, reserves), IMF (GDP per person, budget balance), World Bank IDS (government external debt by creditor + repayment schedule to 2032), IMF DIP (direct investment positions in Laos by investor country, mirror data), IMF PCPS rubber (RSS3 monthly) | `api.worldbank.org/v2/sources/6/...` (IDS), `api.imf.org/external/sdmx/2.1/data/IMF.STA,DIP/LAO..INWD_D_NETLA_FALL_ALL..A`, `IMF.RES,PCPS/G001.PRUBB.USD.M` | weekly | ✅ Verified 2026-10-01. DIP misses countries that do not report (e.g. Viet Nam) — said on the page. |
 | 18 | Hand-checked facts: NSEDP 2026–2030 targets (KPL, 26 Feb + 24 Mar 2026), World Bank Lao Economic Monitor (Dec 2025), IMF 2025 Article IV (Feb 2026) | `data/invest-static.json` (links + publish dates + `checked`) | when a new plan/report appears | Update by hand; never invent numbers |
+| 19 | Official land price decisions per province (ASSESSED prices for land tax, not market prices): which province has one, its date, link to the scanned PDF | Lao Official Gazette `https://laoofficialgazette.gov.la/index.php?r=site/listlegistioncp&agencies_id={34..51}&old=0` (HTML table, 10 rows per page, `&Document_page=N`); Vientiane Capital's table: ThaiPublica Thai translation (static link) | weekly | ✅ Verified 2026-10-01 (11 provinces; prices inside the scans cannot be read by a script) |
+| 20 | Lao rubber at the Chinese border, yearly: China's imports of HS 4001 from Laos, value / weight | UN Comtrade free preview `https://comtradeapi.un.org/public/v1/preview/C/A/HS?reporterCode=156&partnerCode=418&cmdCode=4001&flowCode=M&period={YEAR}` (no key, ONE period per request) | weekly (inside `fetch-invest.js`) | ✅ Verified 2026-10-01 |
+| 21 | Hand-checked Lao rubber prices: official national yearly average 2019–2023 (MOIC Department of Internal Trade PDF, item 204, kip per tonne) + three prices quoted in news (Bokeo, Oudomxay) | `data/invest-static.json` → `rubber` (links + dates) | by hand | ✅ Read 2026-10-01 |
+
+Checked and rejected (2026-10-01, Lao rubber and land prices): Facebook / TikTok / WhatsApp (no free read API, and forbidden
+by [CONSTRAINT]); Selina Wamucii "Natural Rubber Price in Lao" (a January 2023 export unit value under a current-month title);
+MOIC Laotradestat (login); chnrubber.org Lao purchase prices (yuan, irregular, server refuses connections); listing sites
+RentsBuy / FazWaz-AsiaVillas / Yula / 4321property (terms forbid automated access, asking prices only, mostly stale).
 
 Checked and rejected (2026-09-30): LDB `kpv_gold` (Phouvong prices, API returns 401 = needs login → not allowed);
 talupa / goldrate24 / goldpricez / bullion-rates / livepriceofgold (only world spot × FX, nothing new);
@@ -132,6 +140,17 @@ Trading Economics / Investing.com (terms forbid scraping).
   inflation & kip, rubber (world + Thai prices in kip, yearly averages), land (no open data → said honestly, only listing links).
 - Rules: every number shows its source link, its year/month and a latest / old / failed label; report sentences carry the report's link + date;
   Lao provincial rubber prices and land prices are NOT published online (checked 2026-10-01) → not invented. Past data + forecasts only, never advice.
+
+### Phase 7b — Lao rubber and land prices re-checked (2026-10-01, owner request "check again first")
+- Every public channel was searched again (official sites, news, Facebook/TikTok/messaging, international
+  datasets, listing sites). Result: no daily or provincial Lao rubber price and no real land sale prices exist as
+  open data; Facebook/TikTok cannot be read by a script for free and are forbidden by [CONSTRAINT].
+- Added what does exist: official yearly Lao rubber price 2019-2023 (ministry PDF, hand-checked), yearly price of
+  Lao rubber at the Chinese border (UN Comtrade, automatic), three prices quoted in news; official ASSESSED land
+  prices per province = decision date + link from the Lao Official Gazette (automatic, weekly).
+- Still open (owner's choice): a form for the price the owner really gets for his rubber / sees for land, like
+  the gold shop form; daily Thai border-market prices (Rubber Authority of Thailand: Nong Khai, Chiang Rai) and
+  Chinese rubber futures as extra reference lines.
 
 ### Phase 6 — Cost of living & savings page (added 2026-09-30, owner request)
 - Page `#/living`: monthly inflation (all + categories, ranked), everyday prices by province vs national average (+ fuel estimate),

@@ -6,6 +6,7 @@
 //   - IMF Direct Investment Positions (DIP, ex-CDIS): who holds direct investment in Laos, by country
 //     (Laos does not report it: the numbers come from what the investor countries report = "mirror" data)
 //   - IMF Primary Commodity Prices: world rubber price, monthly (RSS3, US cents per pound)
+//   - UN Comtrade: natural rubber that China imported from Laos, per year (value / weight = price at the Chinese border)
 // Writes data/invest.json (loaded only on the economy page). Run weekly: node scripts/fetch-invest.js
 //
 // Real responses (checked 2026-10-01):
@@ -15,6 +16,11 @@
 //        Future years (YR2025..YR2032) of DT.AMT / DT.INT = payments due on the debt that exists today.
 //   DIP: GET https://api.imf.org/external/sdmx/2.1/data/IMF.STA,DIP/LAO..INWD_D_NETLA_FALL_ALL..A (Accept: application/json)
 //        series per counterpart (CHN, THA, ...; plus regions and G001 = World), values in US dollars.
+//   Comtrade (free "preview" endpoint, no key, ONE period per request - more gives HTTP 400):
+//        GET https://comtradeapi.un.org/public/v1/preview/C/A/HS?reporterCode=156&period=2025&partnerCode=418&cmdCode=4001&flowCode=M
+//        { "count": 1, "error": "", "data": [ { "refYear": 2025, "netWgt": 423910705, "cifvalue": 686578294, "primaryValue": 686578294, ... } ] }
+//        reporter 156 = China, partner 418 = Lao PDR, 4001 = natural rubber, M = imports; weight in kg, value in US dollars.
+//        A year that is not published yet answers { "count": 0, "data": [] }.
 // One failing part keeps its old numbers (marked stale); the other parts still update.
 
 const path = require("path");
@@ -31,6 +37,7 @@ const SOURCES = {
   wb_ids: { source_name: "World Bank International Debt Statistics (IDS)", source_url: "https://www.worldbank.org/en/programs/debt-statistics/ids", license: "CC BY 4.0 - The World Bank" },
   imf_dip: { source_name: "IMF Direct Investment Positions by Counterpart Economy (formerly CDIS)", source_url: "https://data.imf.org/en/datasets/IMF.STA:DIP", license: "IMF - free to use with attribution" },
   imf_pcps: { source_name: "IMF Primary Commodity Prices (rubber, RSS3)", source_url: "https://data.imf.org/en/datasets/IMF.RES:PCPS", license: "IMF - free to use with attribution" },
+  comtrade: { source_name: "UN Comtrade: China's imports of natural rubber (HS 4001) from Lao PDR", source_url: "https://comtradeplus.un.org/", license: "UN Comtrade - free public data, with attribution" },
 };
 
 // Yearly indicators ("unit" is the meaning after "scale")
@@ -146,6 +153,35 @@ async function fdiPositions() {
   return { unit: "USD m", year, total: toM(world.values.get(year)), list, totals };
 }
 
+// Lao rubber at the Chinese border: [[year, USD per kg, tonnes, USD millions], ...] from China's customs records.
+// Years that are closed for good (3+ years ago) are kept from last time: one request per year is all Comtrade allows.
+const COMTRADE = "https://comtradeapi.un.org/public/v1/preview/C/A/HS?reporterCode=156&partnerCode=418&cmdCode=4001&flowCode=M";
+const RUBBER_CHINA_FIRST_YEAR = 2015;
+async function rubberChina(oldYears = []) {
+  const thisYear = new Date().getUTCFullYear();
+  const have = new Map(oldYears.map((row) => [row[0], row]));
+  const years = [];
+  for (let y = RUBBER_CHINA_FIRST_YEAR; y <= thisYear; y++) {
+    if (have.has(y) && y < thisYear - 2) {
+      years.push(have.get(y));
+      continue;
+    }
+    const data = await fetchJson(`${COMTRADE}&period=${y}`, {}, TIMEOUT_MS);
+    await new Promise((r) => setTimeout(r, 1500)); // the free endpoint is rate limited
+    if (data.error) throw new Error(`Comtrade ${y}: ${data.error}`);
+    const row = (data.data || [])[0];
+    if (!row) continue; // not published yet
+    const kg = Number(row.netWgt);
+    const usd = Number(row.cifvalue || row.primaryValue);
+    if (!(kg > 0) || !(usd > 0)) throw new Error(`Comtrade ${y}: no weight or value`);
+    const perKg = usd / kg;
+    if (perKg < 0.3 || perKg > 8) throw new Error(`Comtrade ${y}: ${perKg.toFixed(2)} USD per kg looks wrong`);
+    years.push([y, round(perKg), Math.round(kg / 1000), toM(usd)]);
+  }
+  if (years.length < 3) throw new Error("fewer than 3 years returned");
+  return { unit: "USD per kg", years };
+}
+
 // helpers: keep old numbers when a part fails
 function okEntry(old, fields, now) {
   const { updated_at, stale, last_error, ...oldData } = old || {};
@@ -213,6 +249,18 @@ async function main() {
     out.parts.fdi_positions = failEntry(parts.fdi_positions, { source: "imf_dip", list: [] }, err, now);
   }
 
+  // Lao rubber at the Chinese border, yearly (UN Comtrade)
+  total++;
+  try {
+    out.parts.rubber_china = okEntry(parts.rubber_china, { source: "comtrade", ...(await rubberChina(parts.rubber_china && parts.rubber_china.years)) }, now);
+    const y = out.parts.rubber_china.years;
+    console.log(`[OK]   rubber_china: ${y.length} years (to ${y[y.length - 1][0]}: ${y[y.length - 1][1]} USD/kg, ${y[y.length - 1][2]} t)`);
+  } catch (err) {
+    failed++;
+    console.error(`[FAIL] rubber_china: ${err.message}`);
+    out.parts.rubber_china = failEntry(parts.rubber_china, { source: "comtrade", unit: "USD per kg", years: [] }, err, now);
+  }
+
   // World rubber price, monthly (IMF PCPS)
   total++;
   const oldRubber = old.monthly && old.monthly.rubber_usd;
@@ -238,4 +286,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { main };
+module.exports = { main, rubberChina };
