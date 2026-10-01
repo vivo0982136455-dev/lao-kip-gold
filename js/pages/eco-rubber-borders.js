@@ -135,7 +135,7 @@ function whoBuysCard(r) {
   c.append(cardHead(t.rb_who_title, "official", !!(b.buyers.stale || (b.vietnam && b.vietnam.stale)), t));
   c.append(el("p", "note", t.rb_who_intro));
   const tb = table([t.year, t.rb_col_cn_kt, t.rb_col_cn_price, t.rb_col_vn_kt, t.rb_col_vn_price], rows);
-  tb.classList.add("wrap-all", "scroll-y");
+  tb.classList.add("wrap-all", "scroll-y", "tall");
   c.append(tb);
   if (usedCustoms) c.append(el("p", "note", t.rb_vn_customs_note));
 

@@ -300,6 +300,7 @@ th, td { padding: 7px 6px; text-align: right; border-top: 1px solid var(--grid);
 th { font-weight: 600; color: var(--muted); font-size: 0.72rem; letter-spacing: 0.02em; border-top: 0; border-bottom: 1px solid var(--grid); }
 /* Long tables: fixed height with the header row staying visible */
 .table-wrap.scroll-y { max-height: 420px; overflow-y: auto; }
+.table-wrap.scroll-y.tall { max-height: 620px; } /* a table of a dozen years is shown whole, without a second scroll bar */
 @media (min-width: 421px) { .table-wrap.scroll-y { padding-right: 8px; } } /* room next to the scroll bar (a phone needs the full width for 5 columns, and its scroll bar hides itself) */
 .table-wrap.scroll-y thead { position: sticky; top: 0; z-index: 1; }
 .table-wrap.scroll-y thead th { background: var(--surface); white-space: normal; vertical-align: bottom; } /* long series names wrap instead of widening the table */

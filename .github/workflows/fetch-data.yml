@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "*/30 * * * *"   # every 30 minutes (UTC)
   workflow_dispatch:         # "Run workflow" button for manual runs
+  push:                      # also when a script changes: a new or repaired source is tried on GitHub's
+    branches: [main]         # servers at once (a source can work on a PC and still be refused there)
+    paths:
+      - ".github/workflows/fetch-data.yml"
+      - "scripts/**"
 
 permissions:
   contents: write            # needed to commit the data files
