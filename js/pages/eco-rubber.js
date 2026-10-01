@@ -284,8 +284,15 @@ function laoView(panel, r) {
 
 // ---------- View: ASEAN + China - first the newest price in every country, then trade and production ----------
 function aseanPlusView(panel, r) {
-  const prices = countryPricesCard(r);
-  if (prices) panel.append(prices);
+  // The price table is built from three files. While one is still on its way it is not shown half-filled (rows
+  // would appear and prices would jump); a file that FAILED is left out and the page says so.
+  const files = [r.bordersState, r.dailyState, r.worldState];
+  if (files.includes("loading")) panel.append(el("p", "muted", r.t.loading));
+  else {
+    const prices = countryPricesCard(r);
+    if (prices) panel.append(prices);
+    if (r.bordersState === "error" || r.dailyState === "error") panel.append(el("p", "muted", r.t.inv_load_error));
+  }
   if (r.world) aseanView(panel, r);
   else panel.append(el("p", "muted", r.worldState === "error" ? r.t.inv_load_error : r.t.loading));
 }

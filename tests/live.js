@@ -80,6 +80,11 @@ const CHECK = `
     await open({ eco_tab: "rubber", eco_rubber_view: "buyers", eco_rubber_border_kind: "cuplump" }, "economy", "buyers");
     const buyers = await page.eval(`return { tiles: document.querySelectorAll("#view .stat").length, charts: document.querySelectorAll("#view canvas").length, failed: document.getElementById("view").innerText.includes("⚠") };`);
     check("live: rubber 'who buys' view - buyers, border months and the two Thai border markets", buyers.tiles >= 7 && buyers.charts === 2 && !buyers.failed, JSON.stringify(buyers));
+    // the price of every country: complete only when all its files arrived (Laos 2, Thailand 3, Malaysia 2, Viet Nam,
+    // Indonesia, Cambodia, Myanmar, Philippines, China 2, world 2 = 16 rows)
+    await open({ eco_tab: "rubber", eco_rubber_view: "asean" }, "economy", "prices");
+    const priceRows = await page.eval(`const tb = document.querySelector("#view .card table"); return tb ? tb.querySelectorAll("tbody tr").length : 0;`);
+    check("live: rubber price of every country - Laos, ASEAN, China, world", priceRows >= 14, priceRows + " rows");
     // one menu button on phones: the "more" tab of the bottom bar (no second button in the top bar)
     const menu = await page.eval(`return { top: !!document.getElementById("menu-btn"), more: !!document.getElementById("more-btn") };`);
     check("live: one menu button (bottom bar), none in the top bar", !menu.top && menu.more, JSON.stringify(menu));

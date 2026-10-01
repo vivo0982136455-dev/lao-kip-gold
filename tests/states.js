@@ -100,6 +100,15 @@ const CHECK = `
       }
     }
 
+    // ---------- 2b'. the price of every country: all 16 rows (it must not be shown half-filled) ----------
+    for (const lang of ["th", "lo"]) {
+      await open(lang, { eco_tab: "rubber", eco_rubber_view: "asean" });
+      const r = await page.eval(CHECK);
+      const rows = await page.eval(`const tb = document.querySelector("#view .card table"); return tb ? [...tb.querySelectorAll("tbody tr")].map((tr) => tr.cells[0].firstChild.firstChild.textContent) : [];`);
+      if (rows.length < 14) r.badText.push(`price table: only ${rows.length} rows`);
+      report(`${lang} country prices`, r, lang === "th" ? `${rows.length} rows: ${[...new Set(rows)].join(" ")}` : "");
+    }
+
     // ---------- 2c. policy tab: every "see the effect" button opens the tab it names ----------
     const stat = JSON.parse(fs.readFileSync(path.join(ROOT, "data/invest-static.json"), "utf8"));
     for (const lang of ["th", "lo"]) {

@@ -309,7 +309,7 @@ export function buyersView(panel, r) {
   if (grid.childNodes.length) panel.append(grid);
   const thai = thaiBorderCard(r);
   if (thai) panel.append(...thai);
-  else if (r.dailyState === "loading") panel.append(el("p", "muted", t.loading));
+  else panel.append(el("p", "muted", r.dailyState === "loading" ? t.loading : t.inv_load_error));
 }
 
 // ---------- ASEAN view: the newest price in every country ----------
