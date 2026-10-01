@@ -4,9 +4,12 @@
   "source_url": "https://www.goldtraders.or.th",
   "license": "Unofficial community API: https://api.chnwt.dev/thai-gold-api",
   "kind": "market",
-  "stale": false,
+  "stale": true,
   "last_success_at": "2026-10-01T11:03:29.702Z",
-  "last_error": null,
+  "last_error": {
+    "message": "Download failed (https://api.chnwt.dev/thai-gold-api/latest): The operation was aborted due to timeout",
+    "at": "2026-10-01T17:26:16.149Z"
+  },
   "records": [
     {
       "source": "gold-thai",
