@@ -18,7 +18,7 @@ const AGENT = "lao-kip-gold-dashboard (personal, non-commercial)";
 const MAX_CERT_BYTES = 20000;
 const MAX_PAGE_BYTES = 5e6;
 
-// GET with the given trusted certificates; resolves with the text, rejects with the network / certificate error
+// GET with the given trusted certificates; resolves with the bytes, rejects with the network / certificate error
 function get(url, ca, headers, timeoutMs) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { ca, headers: { "User-Agent": AGENT, ...headers }, timeout: timeoutMs }, (res) => {
@@ -34,7 +34,7 @@ function get(url, ca, headers, timeoutMs) {
         if (size > MAX_PAGE_BYTES) req.destroy(new Error(`more than ${MAX_PAGE_BYTES} bytes from ${url}`));
         else chunks.push(c);
       });
-      res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      res.on("end", () => resolve(Buffer.concat(chunks)));
       res.on("error", reject);
     });
     req.on("timeout", () => req.destroy(new Error(`no answer in ${timeoutMs / 1000} s from ${url}`)));
@@ -106,18 +106,23 @@ function downloadCertificate(url, timeoutMs) {
   });
 }
 
-// Download an https page as text; when the only problem is the missing intermediate certificate, fetch it and try again.
-// Returns { text, repaired } - repaired: the address of the certificate that had to be added, or null.
-async function fetchTextAia(url, headers = {}, timeoutMs = 20000) {
+// Download an https address; when the only problem is the missing intermediate certificate, fetch it and try again.
+// Returns { buffer, repaired } - repaired: the address of the certificate that had to be added, or null.
+async function fetchBufferAia(url, headers = {}, timeoutMs = 20000) {
   const roots = tls.rootCertificates; // the roots that ship with Node: the same on every computer
   try {
-    return { text: await get(url, roots, headers, timeoutMs), repaired: null };
+    return { buffer: await get(url, roots, headers, timeoutMs), repaired: null };
   } catch (err) {
     if (err.code !== "UNABLE_TO_VERIFY_LEAF_SIGNATURE") throw err;
   }
   const from = await issuerAddress(new URL(url).hostname, timeoutMs);
   const pem = await downloadCertificate(from, timeoutMs);
-  return { text: await get(url, [...roots, pem], headers, timeoutMs), repaired: from };
+  return { buffer: await get(url, [...roots, pem], headers, timeoutMs), repaired: from };
+}
+// The same for a page of text: { text, repaired }
+async function fetchTextAia(url, headers = {}, timeoutMs = 20000) {
+  const { buffer, repaired } = await fetchBufferAia(url, headers, timeoutMs);
+  return { text: buffer.toString("utf8"), repaired };
 }
 
-module.exports = { fetchTextAia };
+module.exports = { fetchTextAia, fetchBufferAia };

@@ -1,4 +1,5 @@
-# Collect data every 30 minutes and save it into the repo.
+# Collect data every 30 minutes and save it into the repo (exchange rates, gold, silver, fuel in Thailand, daily
+# rubber prices, and - at most every 6 hours - the official fuel prices in Laos).
 # Note: GitHub may start scheduled runs late (sometimes 10-30+ minutes) when busy.
 name: Fetch data
 
@@ -30,7 +31,11 @@ jobs:
         with:
           node-version: 20
 
+      # FETCH_EVENT: a run started by a push asks every source, also the ones that are normally asked only
+      # every few hours (daily rubber prices, Lao fuel prices) - that run exists to try the changed scripts
       - name: Fetch all sources
+        env:
+          FETCH_EVENT: ${{ github.event_name }}
         run: node scripts/fetch-all.js
 
       - name: Check data files

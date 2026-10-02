@@ -193,6 +193,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible, select:focus-visib
 .lead { color: var(--text-2); font-size: 0.9rem; margin-bottom: 12px; }
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
 .filters label { font-size: 0.82rem; color: var(--text-2); }
+.stack > .filters { margin-bottom: 0; } /* inside a column the gap of the stack is the space above the chart */
 select {
   font: inherit; font-size: 0.88rem; min-height: 36px; padding: 4px 10px; border-radius: 8px;
   border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text);
@@ -544,6 +545,9 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .policy-affects { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 2px 0 10px; font-size: 0.74rem; }
 .policy-affects-label { color: var(--muted); }
 .tag { padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border-strong); color: var(--text-2); white-space: nowrap; }
+/* a sentence that comes from a file which updates itself (not typed in by hand) */
+.tag-auto { font-size: 0.68rem; padding: 0 7px; border-color: var(--kind-official); }
+.policy-read { margin-bottom: 14px; }
 .policy-card { display: flex; flex-direction: column; }
 .policy-card .watch-links { margin-top: auto; padding-top: 12px; }
 .policy-list li { line-height: 1.5; overflow-wrap: anywhere; }
@@ -552,6 +556,14 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .cal-when { font-weight: 650; font-variant-numeric: tabular-nums; }
 .cal-what { overflow-wrap: anywhere; }
 .calendar-list li.past { color: var(--muted); }
+
+/* Official fuel prices (cost-of-living page) and the wages tab */
+.fuel-notice { margin: 0 0 8px; overflow-wrap: anywhere; }
+.fuel-notice a { color: inherit; font-weight: 600; }
+.fuel-provinces { margin: 10px 0 2px; }
+.source-list { margin: 6px 0 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 0.74rem; color: var(--muted); overflow-wrap: anywhere; }
+.wage-table td .sub-line { overflow-wrap: anywhere; }
+.wage-table th:last-child { white-space: nowrap; }
 
 /* Loading placeholder (instead of an empty page) */
 .skeleton { display: grid; gap: 12px; }

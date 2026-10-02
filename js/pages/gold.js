@@ -111,9 +111,12 @@ export function render(view, ctx) {
   // Save a shop price from its picture (Phouvong gold / PML silver)
   view.append(uploadCard(ctx));
 
-  const filters = el("div", "filters");
-  filters.append(rangeButtons(ctx.range, t, ctx.setRange));
-  view.append(filters);
+  // The range buttons control the charts only: one row directly above each group of charts (same state)
+  const rangeRow = () => {
+    const filters = el("div", "filters");
+    filters.append(rangeButtons(ctx.range, t, ctx.setRange));
+    return filters;
+  };
 
   // Row 1: real Lao price (LBB) | our estimate.  Row 2: Phouvong (optional) | Thai + world stacked.
   const grid = el("div", "grid grid-2");
@@ -180,6 +183,7 @@ export function render(view, ctx) {
 
   // Charts
   view.append(sectionTitle(t.charts_title));
+  view.append(rangeRow());
   const hasAdj = !!summary.metrics["calc.lao_gold_adj_sell"];
   const charts = el("div", "grid grid-2");
   charts.append(
@@ -229,6 +233,7 @@ export function render(view, ctx) {
   );
   const silverCharts = el("div", "stack");
   silverCharts.append(
+    rangeRow(),
     dailyChartCard({
       title: t.chart_silver_lak,
       summary,

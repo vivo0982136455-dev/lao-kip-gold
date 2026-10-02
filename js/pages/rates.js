@@ -47,7 +47,8 @@ let selected = loadCurrency();
 export function render(view, ctx) {
   const { t, summary } = ctx;
 
-  // Filters (one row above everything they control)
+  // Filters: currency + range. They sit directly above the chart they control (owner's rule), not at the top
+  // of the page; a row of the table above can also be clicked to choose the currency.
   const filters = el("div", "filters");
   const label = el("label", "", t.currency);
   label.htmlFor = "cur-select";
@@ -70,7 +71,6 @@ export function render(view, ctx) {
   };
   select.addEventListener("change", () => choose(select.value));
   filters.append(label, select, rangeButtons(ctx.range, t, ctx.setRange));
-  view.append(filters);
 
   // Table of all 7 currencies (BOL official)
   const tableCard = card("official");
@@ -130,6 +130,7 @@ export function render(view, ctx) {
 
   // Chart for the selected currency
   view.append(sectionTitle(`${t.history_of} ${selected} → LAK`));
+  view.append(filters);
   // longId: the weekly history in data/long.json used for the 1-year / all ranges
   const seriesDefs = [{ daily: midDailyOf(summary, "bol", selected), longId: `calc.bol_${selected}_LAK_mid`, label: t.series_bol_mid, kind: "official" }];
   if (BCEL_CURRENCIES.includes(selected)) seriesDefs.push({ daily: midDailyOf(summary, "bcel", selected), label: t.series_bcel_mid, kind: "bank" });

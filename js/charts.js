@@ -257,7 +257,7 @@ window.addEventListener("resize", () => {
 });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(relockAll);
 
-function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, animate }) {
+function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, animate, snap }) {
   const surface = cssVar("--surface");
   const datasets = series.map((s, i) => {
     // s.color (e.g. "--cat-2") is for charts whose lines are all the SAME kind (inflation categories, savings)
@@ -267,7 +267,9 @@ function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, anim
     const lastIndex = s.values.reduce((acc, v, k) => (has(v) ? k : acc), -1);
     // A line with only a few real points far apart (prices typed in by hand) shows every point, so nobody reads
     // the stretch between two points as data. A dense line is drawn clean: one dot, at its latest value.
-    const sparse = count <= 3 || count / (lastIndex - firstIndex + 1) < 0.5;
+    // s.gap (a number of labels): a line of dated points on a day-by-day axis. Its points are joined without dots;
+    // where two points lie further apart than this, the join is drawn dotted ("nothing known in between").
+    const sparse = !s.gap && (count <= 3 || count / (lastIndex - firstIndex + 1) < 0.5);
     return {
       label: s.label,
       data: s.values,
@@ -291,6 +293,7 @@ function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, anim
       cubicInterpolationMode: "monotone",
       // A rate that is SET (a policy rate): flat until the day it is changed, then a step - never a slope
       stepped: s.stepped ? "after" : false,
+      segment: s.gap ? { borderDash: (ctx) => (ctx.p1DataIndex - ctx.p0DataIndex > s.gap ? [2, 5] : undefined) } : undefined,
       pointRadius: (ctx) => (ctx.dataIndex === lastIndex ? 4 : sparse ? 3 : 0),
       pointHoverRadius: 5,
       pointBorderColor: surface, // 2px ring in the surface colour
@@ -307,7 +310,8 @@ function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, anim
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
-      interaction: { mode: "index", intersect: false },
+      // snap: the axis has many labels without a value (one per day): a touch goes to the nearest real point
+      interaction: snap ? { mode: "nearest", axis: "x", intersect: false } : { mode: "index", intersect: false },
       layout: { padding: { top: 6 } },
       plugins: {
         reveal: { play: animate },
@@ -444,14 +448,15 @@ function dataTable({ labels, series, unit, unitLabel, t, firstColTitle, title })
 }
 
 // A chart card. options: { title, subtitle, labels, tickLabels, series, unit, unitLabel, t, firstColTitle, periodText }
-//   series: [{ label, values, kind, color, dashed, shown, soft, stepped }]
+//   series: [{ label, values, kind, color, dashed, shown, soft, stepped, gap }]
 //     shown = what the read-out and the table show, when it differs from the drawn values (see shownOf)
 //     soft  = forecast / target / not yet paid: quieter numbers in the table
 //   unitLabel: the unit in words; left out = from the unit code (format.js unitText)
 //   periodText (e.g. "30 วัน"): shows the change of the FIRST line over the period as a ▲/▼ pill.
 //   noSince: leave out the "% since the first point" of the read-out (a line that starts near zero gives +35,000%)
+//   snap: one label per day but values only on some days (see drawChart); series then carry gap: <days>
 // Call mountCharts(container) after the card is in the page.
-export function chartCard({ title, subtitle, labels, tickLabels, series, unit, unitLabel, t, firstColTitle, extraClass = "", periodText, noSince = false }) {
+export function chartCard({ title, subtitle, labels, tickLabels, series, unit, unitLabel, t, firstColTitle, extraClass = "", periodText, noSince = false, snap = false }) {
   const c = card(null, "chart-card " + extraClass);
   const head = el("div", "chart-head");
   head.append(el("h3", "", title));
@@ -477,7 +482,7 @@ export function chartCard({ title, subtitle, labels, tickLabels, series, unit, u
     c._draw = () => {
       readout.lock();
       const animate = motionOk() && firstTime(`${title}|${labels.length}|${labels[0]}`);
-      const chart = drawChart(canvas, { labels, tickLabels, series, unit, t, onActive: readout.show, animate });
+      const chart = drawChart(canvas, { labels, tickLabels, series, unit, t, onActive: readout.show, animate, snap });
       chart.$relock = readout.lock;
       activeCharts.push(chart);
       if (series.length > 1) {

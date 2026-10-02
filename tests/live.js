@@ -60,6 +60,7 @@ const CHECK = `
       ["gold", {}, "gold"],
       ["living", {}, "living"],
       ["population", { eco_tab: "population" }, "economy"],
+      ["wages", { eco_tab: "wages" }, "economy"],
       ["policy", { eco_tab: "policy" }, "economy"],
       ["rubber market", { eco_tab: "rubber", eco_rubber_view: "market" }, "economy"],
       ["rubber who buys", { eco_tab: "rubber", eco_rubber_view: "buyers" }, "economy"],
@@ -76,6 +77,18 @@ const CHECK = `
     await open({ eco_tab: "policy" }, "economy", "policyrate");
     const lever = await page.eval(`const tile = document.querySelector("#view .stats .stat"); return tile ? { value: tile.querySelector(".stat-value").textContent, label: tile.querySelector(".fresh").textContent, charts: document.querySelectorAll("#view canvas").length } : null;`);
     check("live: policy tab - policy rate from the central bank's page, with its chart", !!lever && /^\d+(\.\d+)?%$/.test(lever.value) && !lever.label.includes("⚠") && lever.charts === 1, JSON.stringify(lever));
+    // ... and the numbers that update themselves: the bank's reserves, the fuel price of the newest notice (4 labels),
+    // none of them a failed copy, and the card that says what is read by hand
+    const auto = await page.eval(`return { labels: document.querySelectorAll("#view .tag-auto").length, read: !!document.querySelector("#view .policy-read"), failed: document.querySelectorAll("#view .fresh-stale").length };`);
+    check("live: policy tab - reserves and fuel price update themselves, nothing failed", auto.labels >= 4 && auto.read && auto.failed === 0, JSON.stringify(auto));
+    // cost of living: the official Lao fuel prices, read on GitHub's servers from the ministry's notices
+    await open({}, "living", "fuel");
+    const fuel = await page.eval(`const c = [...document.querySelectorAll("#view .card")].find((x) => x.querySelector(".fuel-notice")); return c ? { rows: c.querySelectorAll(".row").length, provinces: c.querySelectorAll(".fuel-provinces tbody tr").length, failed: c.querySelectorAll(".fresh-stale").length, from: c.querySelector(".fuel-notice").textContent.slice(0, 60) } : null;`);
+    check("live: cost of living - official Lao fuel prices and every province", !!fuel && fuel.rows >= 2 && fuel.provinces >= 15 && fuel.failed === 0, JSON.stringify(fuel));
+    // wages: all 17 countries with a dollar amount for every country that has a minimum wage
+    await open({ eco_tab: "wages" }, "economy", "wagerows");
+    const wage = await page.eval(`const rows = [...document.querySelectorAll("#view .wage-table tbody tr")]; return { rows: rows.length, dollars: rows.filter((tr) => /[0-9]/.test(tr.cells[1].textContent)).length, charts: document.querySelectorAll("#view canvas").length, failed: document.querySelectorAll("#view .fresh-stale").length };`);
+    check("live: wages tab - 17 countries, dollars for 16, the ILO chart", wage.rows === 17 && wage.dollars >= 15 && wage.charts === 1 && wage.failed === 0, JSON.stringify(wage));
     // the "who buys" view has its two data files (buyers per year, daily border markets)
     await open({ eco_tab: "rubber", eco_rubber_view: "buyers", eco_rubber_border_kind: "cuplump" }, "economy", "buyers");
     const buyers = await page.eval(`return { tiles: document.querySelectorAll("#view .stat").length, charts: document.querySelectorAll("#view canvas").length, failed: document.getElementById("view").innerText.includes("⚠") };`);

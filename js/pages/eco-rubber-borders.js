@@ -283,6 +283,13 @@ function thaiBorderCard(r) {
       t,
     });
   }
+  if (chart) {
+    // the same buttons once more, right above the chart (the first row sits above the tiles, a screen higher on a phone)
+    const again = choice(r, "rubber_border_kind", KINDS.filter((k) => d.kinds[k] && d.kinds[k].days.length).map((k) => [k, t["rb_kind_" + k]]), "cuplump").bar;
+    again.setAttribute("aria-label", t.rw_form_label);
+    const sub = chart.querySelector(".chart-sub");
+    if (sub) sub.after(again);
+  }
   const ul = el("ul", "watch-list");
   for (const k of ["rb_thai_note_1", "rb_thai_note_2"]) ul.append(el("li", "", t[k]));
   const last = lastOf(kind.days);

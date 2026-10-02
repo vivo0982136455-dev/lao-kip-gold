@@ -111,7 +111,7 @@ export function debtTab(panel, e) {
   const imfBelow = debt && target ? debt.values.find(([y, v]) => y >= THIS_YEAR && v <= target.target) : null;
   const blocks = [
     ["inv_debt_why", [["inv_debt_why_1", F.debt_peak], ["inv_debt_why_2", F.debt_edl], ["inv_debt_why_3", F.debt_china_half], ["inv_debt_why_4", { source: "wb_lem" }]]],
-    ["inv_debt_effects", [["inv_debt_effect_1", F.debt_crowd_out], ["inv_debt_effect_2", F.reserves_sep2025], ["inv_debt_effect_3", F.debt_deferred]]],
+    ["inv_debt_effects", [["inv_debt_effect_1", F.debt_crowd_out], ["inv_debt_effect_2", F.reserves_wb], ["inv_debt_effect_3", F.debt_deferred]]],
     ["inv_debt_plan", [["inv_debt_plan_1", F.debt_decree], ["inv_debt_plan_2", target ? { target: target.target, source: "kpl_plan" } : null], ["inv_debt_plan_3", F.debt_bond], ["inv_debt_plan_4", F.debt_restructure]]],
     ["inv_debt_can", [["inv_debt_can_1", F.imf_unsustainable], ["inv_debt_can_2", imfBelow ? { year: imfBelow[0], value: pctText(imfBelow[1]), source: "imf" } : null], ["inv_debt_can_3", F.imf_advice], ["inv_debt_can_4", F.debt_service_avg]]],
   ];
@@ -129,6 +129,7 @@ export function debtTab(panel, e) {
       if (values.date) values.date = monthText(values.date.slice(0, 7), t);
       ul.append(el("li", "", fill(t[key], values)));
       if (f && f.source) used.add(f.source);
+      for (const id of (f && f.sources) || []) used.add(id); // a fact put together from two editions of a report
     }
     c.append(ul);
     const srcs = [...used].map((id) => (id === "imf" ? inv.sources.imf : staticSource(e, id)));

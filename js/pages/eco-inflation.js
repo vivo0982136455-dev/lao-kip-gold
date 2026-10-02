@@ -89,7 +89,8 @@ export function inflationTab(panel, e) {
     const c = card("official");
     c.append(cardHead(t.inv_infl_why_title, null, false, t));
     const ul = el("ul", "watch-list");
-    for (const k of ["inv_infl_why_1", "inv_infl_why_2", "inv_infl_why_3"]) ul.append(el("li", "", fill(t[k], f)));
+    const values = { ...f, peak_month: f.peak_month ? monthText(f.peak_month, t) : "" };
+    for (const k of ["inv_infl_why_1", "inv_infl_why_2", "inv_infl_why_3"]) ul.append(el("li", "", fill(t[k], values)));
     c.append(ul);
     const more = el("p", "note");
     const a = el("a", "", t.inv_infl_more);

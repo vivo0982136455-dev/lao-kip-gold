@@ -1,6 +1,8 @@
 // The states the big matrix does not reach: every year x kind of rubber x seller/buyer choice, every road class of
 // the land table, every kind of rubber of the Thai border markets, every "see the effect" button of the policy tab,
-// and the two entry forms opened and filled in (NOT saved: requests to Google are blocked here).
+// the wages tab (all countries, without exchange rates, after the next rises), the official fuel card and the policy
+// tab with and without the files that update themselves, and the two entry forms opened and filled in (NOT saved:
+// requests to Google are blocked here).
 // Usage: node tests/states.js
 const fs = require("fs");
 const path = require("path");
@@ -123,6 +125,121 @@ const CHECK = `
         if (where !== want) r.badText.push(`button of "${area.id}" led to "${where}", expected "${want}"`);
         report(`${lang} policy ${area.id} -> ${area.tab}`, r, lang === "th" ? where : "");
       }
+    }
+
+    // ---------- 2d. wages tab: all 17 countries, the sources, without exchange rates, and after 1 January 2027 ----------
+    const GOOGLE = ["*docs.google.com*", "*google.com/forms*"];
+    const block = (urls) => page.s("Network.setBlockedURLs", { urls: [...GOOGLE, ...urls] });
+    const wageRows = `return [...document.querySelectorAll("#view .wage-table tbody tr")].map((tr) => tr.innerText.replace(/\\s+/g, " "));`;
+    for (const lang of ["th", "lo"]) {
+      await open(lang, { eco_tab: "wages" });
+      let r = await page.eval(CHECK);
+      let rows = await page.eval(wageRows);
+      const info = await page.eval(`return { tiles: document.querySelectorAll("#view .stats .stat").length, sources: document.querySelectorAll("#view .source-list a").length, charts: document.querySelectorAll("#view canvas").length, thai: document.querySelectorAll("#view table")[1].querySelectorAll("tbody tr").length, one: [...document.querySelectorAll("#view .wage-table tbody tr")].filter((tr) => tr.cells[2].textContent === "1×").length };`);
+      if (rows.length !== stat.wages.countries.length) r.badText.push(`wage table: ${rows.length} rows, expected ${stat.wages.countries.length}`);
+      if (info.sources !== stat.wages.countries.length) r.badText.push(`sources: ${info.sources} links`);
+      if (info.tiles < 5 || info.charts !== 1 || info.thai !== stat.wages.thailand.rows.length || info.one !== 1) r.badText.push("wages tab: " + JSON.stringify(info));
+      // the amounts in dollars fall from the first row to the last one that has a number
+      const usd = (await page.eval(`return [...document.querySelectorAll("#view .wage-table tbody tr")].map((tr) => tr.cells[1].textContent.replace(/[^0-9]/g, ""));`)).filter(Boolean).map(Number);
+      if (usd.length < 14 || usd.some((v, i) => i > 0 && v > usd[i - 1])) r.badText.push("wage table not sorted by dollars: " + usd.join(","));
+      report(`${lang} wages`, r, lang === "th" ? `${rows.length} rows, ${JSON.stringify(info)} | USD per month: ${usd.join(" ")}` : "");
+      // every fold-out part opened (the list of sources, the table under the chart): still nothing outside the screen
+      await page.eval(`for (const d of document.querySelectorAll("#view details")) d.open = true;`);
+      await sleep(250);
+      report(`${lang} wages, fold-outs opened`, await page.eval(CHECK));
+
+      // without data/wages.json: the legal amounts only, and a line that says so
+      await block(["*data/wages.json*"]);
+      await open(lang, { eco_tab: "wages" });
+      r = await page.eval(CHECK);
+      rows = await page.eval(wageRows);
+      const note = await page.eval(`return document.querySelector("#view .tabpanel > p.muted:not(.tab-intro)") ? document.querySelector("#view .tabpanel > p.muted:not(.tab-intro)").textContent : "";`);
+      if (rows.length !== stat.wages.countries.length || !note) r.badText.push(`without rates: ${rows.length} rows, note "${note}"`);
+      report(`${lang} wages without exchange rates`, r, lang === "th" ? note : "");
+      await block([]);
+
+      // 100 days later (January 2027): the rises that are already decided are in force, nothing is announced as "next"
+      const later = await page.s("Page.addScriptToEvaluateOnNewDocument", { source: "(() => { const now = Date.now; Date.now = () => now() + 100 * 86400000; })();" });
+      await open(lang, { eco_tab: "wages" });
+      r = await page.eval(CHECK);
+      rows = await page.eval(wageRows);
+      const khm = stat.wages.countries.find((c) => c.iso === "KHM");
+      const kor = stat.wages.countries.find((c) => c.iso === "KOR");
+      const hasNew = rows.some((x) => x.includes(`${khm.steps[1][1]} USD/`)) && rows.some((x) => x.includes(kor.steps[1][1].toLocaleString("en-US") + " KRW/"));
+      const stillOld = rows.some((x) => x.includes(`${khm.steps[0][1]} USD/`));
+      if (!hasNew || stillOld) r.badText.push(`after 1 Jan 2027: new rates shown ${hasNew}, old Cambodian rate still shown ${stillOld}`);
+      report(`${lang} wages 100 days later`, r, lang === "th" ? `new rates in force: ${hasNew}` : "");
+      await page.s("Page.removeScriptToEvaluateOnNewDocument", { identifier: later.identifier });
+    }
+
+    // ---------- 2e. cost of living: the official fuel card in its three states ----------
+    const fuelFile = JSON.parse(fs.readFileSync(path.join(ROOT, "data/fuel-lao.json"), "utf8"));
+    const fuelCard = `const c = [...document.querySelectorAll("#view .card")].find((x) => x.querySelector(".fuel-notice")); return c ? { rows: c.querySelectorAll(".row").length, provinces: c.querySelectorAll(".fuel-provinces tbody tr").length, link: (c.querySelector(".fuel-notice a") || { href: "" }).href, alert: c.querySelector(".alert") ? c.querySelector(".alert a").href : "", text: c.querySelector(".fuel-notice").textContent.slice(0, 70) } : null;`;
+    for (const lang of ["th", "lo"]) {
+      // as it is today: the price of the newest notice
+      await open(lang, {}, "living");
+      let r = await page.eval(CHECK);
+      let f = await page.eval(fuelCard);
+      const fuels = ["premium", "regular", "diesel"].filter((k) => fuelFile.capital.latest[k]).length;
+      if (!f || f.rows !== fuels || f.provinces !== fuelFile.provinces.rows.length || (fuelFile.capital.latest.from === "notice" && !f.link.startsWith("https://dit.moic.gov.la/"))) r.badText.push("fuel card: " + JSON.stringify(f));
+      report(`${lang} living: official fuel`, r, lang === "th" ? JSON.stringify(f) : "");
+      // the province table and every "show as table" opened: still nothing outside the screen
+      await page.eval(`for (const d of document.querySelectorAll("#view details")) d.open = true;`);
+      await sleep(250);
+      report(`${lang} living, fold-outs opened`, await page.eval(CHECK));
+
+      // a newer notice that could not be read, the price from the fuel company, only two fuels priced
+      const variant = JSON.parse(JSON.stringify(fuelFile));
+      variant.capital.latest = { ...variant.capital.latest, premium: null, from: "lsf", notice: null };
+      variant.capital.waiting = { no: "1999", date: "2026-09-30", url: "https://dit.moic.gov.la/public/uploads/oil/test.pdf", count: 2 };
+      site.override.set("/data/fuel-lao.json", JSON.stringify(variant));
+      await open(lang, {}, "living");
+      r = await page.eval(CHECK);
+      f = await page.eval(fuelCard);
+      if (!f || f.rows !== 2 || !f.alert.endsWith("/test.pdf") || f.link) r.badText.push("fuel card (waiting): " + JSON.stringify(f));
+      report(`${lang} living: fuel, newer notice not read`, r, lang === "th" ? JSON.stringify(f) : "");
+      site.override.clear();
+
+      // the file is not there: the monthly estimate as before
+      await block(["*data/fuel-lao.json*"]);
+      await open(lang, {}, "living");
+      r = await page.eval(CHECK);
+      f = await page.eval(fuelCard);
+      const fuelCards = await page.eval(`return document.querySelectorAll("#view canvas").length;`);
+      if (f) r.badText.push("fuel card shown without its file");
+      report(`${lang} living: fuel without the official file`, r, lang === "th" ? `charts on the page: ${fuelCards}` : "");
+      await block([]);
+    }
+
+    // ---------- 2f. policy tab: the numbers that update themselves, a newer report, and the fall-back ----------
+    const watchFile = JSON.parse(fs.readFileSync(path.join(ROOT, "data/report-watch.json"), "utf8"));
+    const policyInfo = `return { auto: document.querySelectorAll("#view .tag-auto").length, read: !!document.querySelector("#view .policy-read"), alert: document.querySelector("#view .policy-read .alert a") ? document.querySelector("#view .policy-read .alert a").href : "", tiles: [...document.querySelectorAll("#view .stats .stat")].map((x) => x.querySelector(".stat-value").textContent).join(" | ") };`;
+    for (const lang of ["th", "lo"]) {
+      await open(lang, { eco_tab: "policy" });
+      let r = await page.eval(CHECK);
+      let p = await page.eval(policyInfo);
+      if (p.auto < 4 || !p.read || p.alert) r.badText.push("policy: " + JSON.stringify(p));
+      report(`${lang} policy: live numbers`, r, lang === "th" ? JSON.stringify(p) : "");
+
+      // a newer edition of the World Bank report is out: the card says so and links to it
+      const newer = JSON.parse(JSON.stringify(watchFile));
+      newer.lem.latest = { date: "2026-12-10", title: "Lao PDR Economic Monitor : December 2026", url: "https://documents.worldbank.org/curated/en/test" };
+      site.override.set("/data/report-watch.json", JSON.stringify(newer));
+      await open(lang, { eco_tab: "policy" });
+      r = await page.eval(CHECK);
+      p = await page.eval(policyInfo);
+      if (!p.alert.endsWith("/curated/en/test")) r.badText.push("policy (newer report): " + JSON.stringify(p));
+      report(`${lang} policy: newer report`, r, lang === "th" ? p.alert : "");
+      site.override.clear();
+
+      // none of the three files that update themselves: the hand-checked values, no "updates itself" label
+      await block(["*data/bol-policy.json*", "*data/fuel-lao.json*", "*data/report-watch.json*"]);
+      await open(lang, { eco_tab: "policy" });
+      r = await page.eval(CHECK);
+      p = await page.eval(policyInfo);
+      if (p.auto !== 0 || !p.read) r.badText.push("policy (fall-back): " + JSON.stringify(p));
+      report(`${lang} policy: without the live files`, r, lang === "th" ? p.tiles : "");
+      await block([]);
     }
 
     // ---------- 3. the entry forms, opened and filled in (never saved) ----------

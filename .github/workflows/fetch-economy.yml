@@ -1,8 +1,9 @@
 # Lao economy data (World Bank, IMF yearly + monthly CPI / gold), investor data (debt by creditor, FDI by country,
 # rubber), WFP prices of everyday goods, Thai food + rubber prices, the official land price decisions per province,
 # the world rubber numbers (who sells, who buys, who grows it, world prices), who buys Lao rubber at which border
-# price (UN Comtrade, Viet Nam Customs), the population numbers (World Bank, Lao Statistics Bureau / UNFPA) and
-# the central bank's policy rate and reserve requirement (Bank of the Lao PDR).
+# price (UN Comtrade, Viet Nam Customs), the population numbers (World Bank, Lao Statistics Bureau / UNFPA), the
+# central bank's own numbers (Bank of the Lao PDR: policy rate, reserve requirement, reserves, inflation), wages
+# (ILO + exchange rates) and a look whether the World Bank has published a newer Lao Economic Monitor.
 # Weekly: IMF and WFP publish on different days each month, weekly keeps us at most ~7 days behind.
 name: Fetch economy data
 
@@ -23,6 +24,8 @@ on:
       - "scripts/fetch-rubber-borders.js"
       - "scripts/fetch-population.js"
       - "scripts/fetch-bol-policy.js"
+      - "scripts/fetch-wages.js"
+      - "scripts/fetch-report-watch.js"
       - "scripts/lib/**"
 
 permissions:
@@ -90,12 +93,26 @@ jobs:
         timeout-minutes: 10
         run: node scripts/fetch-population.js
 
-      # The central bank's policy rate and reserve requirement, every change with its date (two small pages of
-      # bol.gov.la; the server forgets its intermediate certificate, scripts/lib/aia.js completes the chain)
-      - name: Fetch the central bank's policy rate and reserve requirement
+      # The central bank's policy rate and reserve requirement (every change with its date), its foreign-exchange
+      # reserves by month and this year's inflation: three small pages and one small workbook of bol.gov.la (the
+      # server forgets its intermediate certificate, scripts/lib/aia.js completes the chain)
+      - name: Fetch the central bank's policy rate, reserve requirement, reserves and inflation
         if: always()
         timeout-minutes: 5
         run: node scripts/fetch-bol-policy.js
+
+      # Wages: the ILO's minimum-wage series and average earnings of 17 countries + market exchange rates
+      # (the minimum wages in force today are hand-checked facts in data/invest-static.json)
+      - name: Fetch wages (ILO) and exchange rates
+        if: always()
+        timeout-minutes: 5
+        run: node scripts/fetch-wages.js
+
+      # Is there a newer World Bank "Lao Economic Monitor" than the one the Policy tab quotes? (the tab then says so)
+      - name: Look for a newer World Bank report
+        if: always()
+        timeout-minutes: 3
+        run: node scripts/fetch-report-watch.js
 
       - name: Commit changes
         if: always()

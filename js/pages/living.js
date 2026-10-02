@@ -1,7 +1,8 @@
 // Page: Cost of living & savings.
 //   0) What you should know - short facts computed from the data (living-parts.js)
 //   1) Key numbers        - latest inflation, fastest-rising category, BCEL 12-month deposit, real interest
-//   2) Fuel               - Laos vs Thailand in kip, tomorrow's Thai price, trend vs world oil (living-parts.js)
+//   2) Fuel               - official pump prices in Laos (the ministry's notices) vs Thailand in kip, tomorrow's
+//                           Thai price, the Lao prices over time, trend vs world oil (living-parts.js)
 //   3) Inflation          - Laos vs Thailand, all items + main categories (IMF), and every category ranked
 //   4) Everyday prices    - WFP market prices by province vs the national average
 //   5) Monthly budget     - the same basket in Laos and Bangkok, editable (living-parts.js)
@@ -12,6 +13,7 @@
 import { el, card, cardHead, sectionTitle, statTile, table, emptyState, pctPill } from "../ui.js";
 import { formatNumber, formatPct } from "../format.js";
 import { chartCard, mountCharts } from "../charts.js";
+import { lazyJson } from "../lazy.js";
 import { monthText, monthShort, addMonths, lastOf, pct, nameTable, loadThai, factsBox, fuelSection, inflationCompare, budgetSection } from "./living-parts.js";
 
 const PERIODS = [1, 3, 5]; // years shown in charts / used for the savings comparison
@@ -68,6 +70,13 @@ function placeNameOf(t) {
   return mk ? t.provinces[mk.province] || mk.province : t.living_national_avg;
 }
 
+// One row with the period buttons. The period controls charts in four sections, so the row is repeated directly
+// above each of those charts (every copy shows the same state).
+function periodRow(t, rerender) {
+  const filters = el("div", "filters");
+  filters.append(periodButtons(t, rerender));
+  return filters;
+}
 function periodButtons(t, rerender) {
   const group = el("div", "segmented");
   group.setAttribute("role", "group");
@@ -306,7 +315,7 @@ function pricesSection(ctx, view) {
 
   const grid = el("div", "grid grid-2");
   const right = el("div", "stack");
-  right.append(chart);
+  right.append(periodRow(t, ctx.rerender), chart);
   grid.append(tableCard, right);
   view.append(grid);
 }
@@ -344,6 +353,7 @@ function savingsSection(ctx, view) {
   ];
   const real = (a, m) => (a.nominal(m) * cpi.get(start)) / cpi.get(m); // in kip of the START month
 
+  view.append(periodRow(t, ctx.rerender));
   const grid = el("div", "grid grid-2");
   grid.append(
     chartCard({
@@ -424,18 +434,19 @@ export function render(view, ctx) {
   }
   loadPrices(ctx.rerender);
   loadThai(ctx.rerender);
+  // official Lao fuel prices: used by the fuel section, the facts and the budget (which fall back to the WFP estimate)
+  const fuelFile = lazyJson("data/fuel-lao.json", ctx.rerender);
+  ctx = { ...ctx, fuel: fuelFile.state === "ok" ? fuelFile.data : null, fuelState: fuelFile.state };
 
   view.append(el("p", "lead", t.living_lead));
-  const filters = el("div", "filters");
-  filters.append(periodButtons(t, ctx.rerender));
-  view.append(filters);
   const facts = factsBox(ctx, pricesState === "ok" ? prices : null, market);
   if (facts) view.append(facts);
   view.append(keyNumbers(ctx));
 
-  fuelSection(ctx, pricesState === "ok" ? prices : null, years, view);
+  fuelSection(ctx, pricesState === "ok" ? prices : null, years, view, () => periodRow(t, ctx.rerender));
 
   view.append(sectionTitle(t.living_inflation_title));
+  view.append(periodRow(t, ctx.rerender));
   const infGrid = el("div", "grid grid-2");
   const compare = inflationCompare(ctx, years);
   if (compare) infGrid.append(compare);

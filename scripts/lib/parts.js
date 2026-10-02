@@ -39,4 +39,12 @@ function partsText(head, parts) {
   return text;
 }
 
-module.exports = { okEntry, failEntry, runParts, partsText };
+// Arguments for a fetcher that runs inside the 30-minute job but asks its sources less often ("throttle").
+// A run that was started by a push which changed a script always asks: that run exists to prove the script on
+// GitHub's servers (FETCH_EVENT is set by .github/workflows/fetch-data.yml). A run started by the timer or through
+// "Run workflow" (which an outside timer may call every 30 minutes) keeps to the fetcher's own pace.
+function throttleArgs() {
+  return process.env.FETCH_EVENT === "push" ? [] : ["throttle"];
+}
+
+module.exports = { okEntry, failEntry, runParts, partsText, throttleArgs };

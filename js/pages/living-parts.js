@@ -1,13 +1,15 @@
 // Cost of living page - parts added in version 2 (Oct 2026) + helpers shared with living.js:
 //   factsBox          - "what you should know": short sentences computed from the data (never typed in)
-//   fuelSection       - fuel in Laos vs Thailand (in kip), tomorrow's Thai price, trend vs world oil
+//   fuelSection       - fuel in Laos (official pump prices, data/fuel-lao.json) vs Thailand (in kip), tomorrow's
+//                       Thai price, the official Lao prices over time, trend vs world oil
 //   inflationCompare  - inflation Laos vs Thailand (monthly) + world (IMF yearly)
 //   budgetSection     - monthly budget: the same shopping basket in Laos (WFP) and Bangkok (Thai ministry)
 // Everything shows the past or today's prices; nothing here is a forecast or financial advice.
 
 import { el, card, cardHead, cardFoot, sourceLink, sectionTitle, table, emptyState, pctPill } from "../ui.js";
-import { formatNumber, formatPct, formatDate, todayVientiane } from "../format.js";
+import { formatNumber, formatPct, formatDate, todayVientiane, addDays } from "../format.js";
 import { chartCard } from "../charts.js";
+import { PROVINCES, dayFull, freshness, fill } from "./eco-common.js";
 
 // ---------- Shared helpers ----------
 export const monthText = (m, t) => `${t.months[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`; // "2026-08" -> "ส.ค. 2026"
@@ -61,11 +63,27 @@ export function loadThai(rerender) {
 }
 
 // ---------- Prices of one item ----------
-const FUEL_THAI = { diesel: "diesel", petrol: "gasohol95" }; // Lao WFP item -> Thai fuel metric
+const FUEL_THAI = { diesel: "diesel", petrol: "gasohol91" }; // Lao item -> Thai fuel metric ("petrol" = regular, 91 octane)
+// The three fuels of the Lao notices -> the Thai pump price they are compared with
+const LAO_FUELS = [
+  ["premium", "fuel_premium", "gasohol95"],
+  ["regular", "fuel_regular", "gasohol91"],
+  ["diesel", "fuel_diesel", "diesel"],
+];
+
+// Official pump price in Vientiane Capital (data/fuel-lao.json). "petrol" = regular petrol, the grade most people buy.
+// fuel: the content of the file, or null while it is not there
+export function officialFuel(fuel, id) {
+  const latest = fuel && fuel.capital && fuel.capital.latest;
+  const value = latest ? (id === "diesel" ? latest.diesel : id === "petrol" ? latest.regular : null) : null;
+  return value ? { value, date: latest.date } : null;
+}
 
 // Lao price (LAK per unit) of an item in a market (or the national average): newest month with a value.
-// Fuel: the WFP national estimate is newer than the market survey, so it is used when it is newer.
-export function laoPrice(prices, id, market) {
+// Fuel: the official pump price when it is there; else the WFP national estimate (newer than the market survey).
+export function laoPrice(prices, id, market, fuel) {
+  const off = officialFuel(fuel, id);
+  if (off) return { value: off.value, month: off.date.slice(0, 7), date: off.date, estimate: false, official: true };
   const m = prices && prices.market;
   if (!m || !m.prices || !m.prices[id]) return null;
   const series = m.prices[id][market] || m.prices[id][prices.national_id];
@@ -119,14 +137,14 @@ const budget = {
 };
 
 // Totals of the basket: Lao total, and Lao vs Thai for the items that have BOTH prices
-function basketTotals(prices, summary, market) {
+function basketTotals(prices, summary, market, fuel) {
   let lao = 0;
   let laoComparable = 0;
   let thaiComparable = 0;
   const rows = [];
   for (const [id] of BASKET) {
     const q = (budget.qty[id] || 0) * (HOUSEHOLD_ITEMS.has(id) ? 1 : budget.people);
-    const lp = laoPrice(prices, id, market);
+    const lp = laoPrice(prices, id, market, fuel);
     const tp = thaiPriceLak(summary, id);
     const laoCost = lp ? lp.value * q : null;
     const thaiCost = tp ? tp.value * q : null;
@@ -142,22 +160,22 @@ function basketTotals(prices, summary, market) {
 
 // ---------- 1) Facts ----------
 export function factsBox(ctx, prices, market) {
-  const { t, economy: eco, summary } = ctx;
+  const { t, economy: eco, summary, fuel } = ctx;
   const mon = eco.monthly || {};
   const facts = [];
   const add = (text, pill) => facts.push([text, pill]);
 
   // fuel first: it moves every other price
-  const ld = laoPrice(prices, "diesel", prices ? prices.national_id : null);
+  const ld = laoPrice(prices, "diesel", prices ? prices.national_id : null, fuel);
   const td = thaiPriceLak(summary, "diesel");
-  if (ld && td) add(t.fact_diesel.replace("{la}", formatNumber(ld.value, "LAK")).replace("{laMonth}", monthText(ld.month, t)).replace("{th}", formatNumber(td.value, "LAK")).replace("{thDate}", formatDate(td.date, t)), pctPill(pct(td.value, ld.value), { decimals: 1 }));
+  if (ld && td) add(t.fact_diesel.replace("{la}", formatNumber(ld.value, "LAK")).replace("{laMonth}", ld.official ? formatDate(ld.date, t) : monthText(ld.month, t)).replace("{th}", formatNumber(td.value, "LAK")).replace("{thDate}", formatDate(td.date, t)), pctPill(pct(td.value, ld.value), { decimals: 1 }));
 
   const la = lastOf(mon.cpi_yoy && mon.cpi_yoy.values);
   const th = lastOf(mon.tha_cpi_yoy && mon.tha_cpi_yoy.values);
   if (la && th) add(t.fact_inflation.replace("{la}", formatPct(la[1], 1)).replace("{laMonth}", monthText(la[0], t)).replace("{th}", formatPct(th[1], 1)).replace("{thMonth}", monthText(th[0], t)), null);
 
   if (prices && thai) {
-    const b = basketTotals(prices, summary, market);
+    const b = basketTotals(prices, summary, market, fuel);
     if (b.thaiComparable > 0) add(t.fact_basket, pctPill(pct(b.thaiComparable, b.laoComparable), { decimals: 1 }));
   }
 
@@ -192,12 +210,151 @@ export function factsBox(ctx, prices, market) {
 }
 
 // ---------- 2) Fuel ----------
+const NOTICE_LATE_DAYS = 8; // notices come weekly: a newest notice older than this may already have a successor
+
+// Thai pump price of one fuel in kip, or null
+function thaiFuelLak(summary, metric) {
+  const rate = summary.metrics["fx-market.THB_LAK"];
+  const m = summary.metrics["fuel-thai." + metric];
+  return rate && m ? m.latest.value * rate.latest.value : null;
+}
+
+// The official pump prices in Vientiane Capital (the ministry's notices, data/fuel-lao.json) + the price list of
+// the state fuel company for every province
+function officialFuelCard(ctx) {
+  const { t, summary, fuel } = ctx;
+  const cap = fuel.capital;
+  const now = cap.latest;
+  const c = card("official");
+  c.append(cardHead(t.fuel_off_title, "official", false, t));
+
+  // which notice the prices come from
+  const from = el("p", "note fuel-notice");
+  if (now.from === "notice" && now.notice) {
+    from.append(fill(t.fuel_off_notice, { no: now.notice.no, date: dayFull(now.notice.date, t), from: dayFull(now.date, t) }), " · ");
+    const a = el("a", "", t.fuel_off_open);
+    a.href = now.notice.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    from.append(a);
+  } else from.append(fill(t.fuel_off_company, { date: dayFull(now.date, t) }));
+  c.append(from);
+
+  const before = cap.previous; // [day, premium, regular, diesel]
+  LAO_FUELS.forEach(([id, key, thaiMetric], i) => {
+    if (!now[id]) return; // (in the 2026 crisis only two fuels were priced)
+    const row = el("div", "row");
+    row.append(el("span", "row-label", t[key]));
+    const right = el("div", "row-right");
+    const value = el("div", "value", formatNumber(now[id], "LAK"));
+    value.append(el("span", "unit", `LAK / ${t.units.L}`));
+    right.append(value);
+    if (before && before[i + 1]) {
+      // whole kip: "+280 (+0.65%)"
+      const diff = now[id] - before[i + 1];
+      const change = pct(before[i + 1], now[id]);
+      const line = el("div", "change");
+      line.append(pctPill(change, { text: diff === 0 ? "0" : `${diff > 0 ? "+" : "−"}${Math.abs(diff).toLocaleString("en-US")} (${formatPct(change)})` }), el("span", "vs", fill(t.fuel_off_change, { date: formatDate(before[0], t) })));
+      right.append(line);
+    }
+    const thai = thaiFuelLak(summary, thaiMetric);
+    if (thai) {
+      const line = el("div", "change");
+      line.append(el("span", "vs", t.fuel_vs_thai), pctPill(pct(thai, now[id]), { decimals: 1 }));
+      right.append(line);
+    }
+    row.append(right);
+    c.append(row);
+  });
+
+  // The ministry issues a notice about once a week but puts it on its page with some delay: when the newest
+  // notice on the page is older than that, a newer one may exist that nobody can read here yet
+  const newest = fuel.notices && fuel.notices.latest ? fuel.notices.latest.date : null;
+  const age = newest ? Math.round((Date.parse(todayVientiane() + "T00:00:00Z") - Date.parse(newest + "T00:00:00Z")) / 86400000) : 0;
+  if (age > NOTICE_LATE_DAYS) c.append(el("p", "note", fill(t.fuel_off_maybe_newer, { date: dayFull(newest, t), days: age })));
+
+  // newer notices whose numbers could not be read with certainty: say so, and link to the newest
+  if (cap.waiting) {
+    const warn = el("div", "alert");
+    const text = el("div", "", fill(t.fuel_off_waiting, { count: cap.waiting.count, no: cap.waiting.no, date: dayFull(cap.waiting.date, t) }) + " ");
+    const a = el("a", "", t.fuel_off_waiting_open);
+    a.href = cap.waiting.url;
+    a.target = "_blank";
+    a.rel = "noopener";
+    text.append(a);
+    warn.append(el("span", "", "⚠"), text);
+    c.append(warn);
+  }
+
+  // every province (the state fuel company's list; it can be one or two notices behind)
+  const prov = fuel.provinces;
+  if (prov && prov.rows && prov.rows.length) {
+    const byName = new Map(prov.rows.map((r) => [r[0], r]));
+    const capital = byName.get("Vientiane Capital");
+    const rows = PROVINCES.filter((p) => byName.has(p)).map((p) => {
+      const [, , regular, diesel] = byName.get(p);
+      // transport cost: the same for every fuel, so the first fuel that both rows have is enough
+      const diff = capital ? (regular && capital[2] ? regular - capital[2] : diesel && capital[3] ? diesel - capital[3] : null) : null;
+      return [t.provinces[p] || p, regular ? formatNumber(regular, "LAK") : "—", diesel ? formatNumber(diesel, "LAK") : "—", p === "Vientiane Capital" || diff === null ? "—" : `${diff >= 0 ? "+" : "−"}${formatNumber(Math.abs(diff), "LAK")}`];
+    });
+    const details = el("details", "fuel-provinces");
+    details.append(el("summary", "", fill(t.fuel_prov_summary, { count: rows.length, date: dayFull(prov.date, t) })));
+    details.append(nameTable([t.living_province, t.fuel_regular, t.fuel_diesel, t.fuel_col_vs_capital], rows));
+    details.append(el("p", "note", (prov.date < now.date ? t.fuel_prov_older + " · " : "") + t.fuel_prov_note));
+    c.append(details);
+  }
+
+  c.append(el("p", "note", t.fuel_off_note));
+  const fresh = el("div", "card-foot");
+  fresh.append(freshness(t, { date: now.date, stale: !!(cap.stale || (fuel.notices && fuel.notices.stale)), checked: fuel.checked_at ? fuel.checked_at.slice(0, 10) : undefined }));
+  c.append(fresh);
+  const foot = el("div", "card-foot", `${t.source}: `);
+  [fuel.sources.dit, fuel.sources.lsf].filter(Boolean).forEach((src, i) => {
+    if (i > 0) foot.append(", ");
+    foot.append(sourceLink(src));
+  });
+  c.append(foot);
+  return c;
+}
+
+// The official prices over time: one point per price that is known, on a day-by-day axis
+const FUEL_GAP_DAYS = 45; // points further apart than this are joined with a dotted line
+function officialFuelChart(ctx, years) {
+  const { t, fuel } = ctx;
+  const history = fuel.capital.history || [];
+  if (history.length < 2) return null;
+  const last = history[history.length - 1][0];
+  const wanted = addDays(last, -365 * years);
+  const rows = history.filter((r) => r[0] >= wanted);
+  if (rows.length < 2) return null;
+  const days = [];
+  for (let d = rows[0][0]; d <= last; d = addDays(d, 1)) days.push(d);
+  const byDay = new Map(rows.map((r) => [r[0], r]));
+  const line = (col) => days.map((d) => (byDay.has(d) ? byDay.get(d)[col] : null));
+  const company = rows.filter((r) => r[4] === null).length;
+  return chartCard({
+    title: t.fuel_chart_title,
+    subtitle: `${fill(t.fuel_chart_sub, { points: rows.length, company, gap: FUEL_GAP_DAYS })}`,
+    labels: days.map((d) => dayFull(d, t)),
+    tickLabels: days.map((d) => monthShort(d.slice(0, 7), t)),
+    series: [
+      { label: t.fuel_regular, kind: "official", color: "--cat-1", gap: FUEL_GAP_DAYS, values: line(2) },
+      { label: t.fuel_diesel, kind: "official", color: "--cat-3", gap: FUEL_GAP_DAYS, values: line(3) },
+      { label: t.fuel_premium, kind: "official", color: "--cat-4", gap: FUEL_GAP_DAYS, values: line(1) },
+    ],
+    unit: "LAK",
+    unitLabel: `${t.lak_per} 1 ${t.units.L}`,
+    t,
+    snap: true,
+  });
+}
+
 function laoFuelCard(ctx, prices) {
   const { t, summary } = ctx;
   const c = card("estimated");
   c.append(cardHead(t.fuel_lao_title, "estimated", false, t));
   for (const [id, key] of [["diesel", "fuel_diesel"], ["petrol", "fuel_petrol"]]) {
-    const lp = laoPrice(prices, id, prices.national_id);
+    const lp = laoPrice(prices, id, prices.national_id, null);
     if (!lp) continue;
     const tp = thaiPriceLak(summary, id);
     const row = el("div", "row");
@@ -283,19 +440,31 @@ function fuelTrendChart(ctx, prices, years) {
   });
 }
 
-export function fuelSection(ctx, prices, years, view) {
+// controls: () => Node - the period buttons, placed directly above the chart they control
+export function fuelSection(ctx, prices, years, view, controls) {
   const { t } = ctx;
   view.append(sectionTitle(t.fuel_title));
   if (!prices) {
     view.append(el("p", "muted", t.loading));
     return;
   }
+  if (ctx.fuelState === "loading") {
+    view.append(el("p", "muted", t.loading));
+    return;
+  }
+  const official = ctx.fuel && ctx.fuel.capital && ctx.fuel.capital.latest;
   const grid = el("div", "grid grid-2");
   const left = el("div", "stack");
-  left.append(laoFuelCard(ctx, prices), thaiFuelCard(ctx));
+  // the official notices; when that file is not there, the monthly estimate of the WFP as before
+  left.append(official ? officialFuelCard(ctx) : laoFuelCard(ctx, prices), thaiFuelCard(ctx));
   grid.append(left);
-  const chart = fuelTrendChart(ctx, prices, years);
-  if (chart) grid.append(chart);
+  const charts = [official ? officialFuelChart(ctx, years) : null, fuelTrendChart(ctx, prices, years)].filter(Boolean);
+  if (charts.length) {
+    const right = el("div", "stack");
+    if (controls) right.append(controls());
+    right.append(...charts);
+    grid.append(right);
+  }
   view.append(grid);
 }
 
@@ -333,7 +502,7 @@ export function inflationCompare(ctx, years) {
 
 // ---------- 4) Monthly budget: same basket in Laos and Bangkok ----------
 export function budgetSection(ctx, prices, market, placeName, view) {
-  const { t, summary } = ctx;
+  const { t, summary, fuel } = ctx;
   view.append(sectionTitle(t.budget_title));
   if (!prices || thaiState === "loading" || thaiState === "idle") {
     view.append(el("p", "muted", t.loading));
@@ -450,7 +619,7 @@ export function budgetSection(ctx, prices, market, placeName, view) {
   // kip amounts: whole kip, millions shortened ("1.89 ล้าน")
   const mil = (v) => (v >= 1e6 ? `${(v / 1e6).toFixed(2)} ${t.million}` : Math.round(v).toLocaleString("en-US"));
   function refresh() {
-    const b = basketTotals(prices, summary, market);
+    const b = basketTotals(prices, summary, market, fuel);
     for (const r of b.rows) {
       const cc = cells[r.id];
       cc.lao.textContent = r.laoCost === null ? "—" : mil(r.laoCost);
@@ -486,11 +655,11 @@ export function budgetSection(ctx, prices, market, placeName, view) {
 
     // Where the numbers come from
     const laoMonth = lastOf(prices.market.months);
-    const fuel = laoPrice(prices, "petrol", market);
+    const petrol = laoPrice(prices, "petrol", market, fuel);
     const thaiDate = thai && Object.values(thai.items || {}).map((x) => x.latest && x.latest.date).filter(Boolean).sort().pop();
     notes.textContent = t.budget_note
       .replace("{laoMonth}", laoMonth ? monthText(laoMonth, t) : "—")
-      .replace("{fuelMonth}", fuel ? monthText(fuel.month, t) : "—")
+      .replace("{fuel}", !petrol ? "" : petrol.official ? t.budget_note_fuel_official.replace("{date}", formatDate(petrol.date, t)) : t.budget_note_fuel_wfp.replace("{fuelMonth}", monthText(petrol.month, t)))
       .replace("{thaiDate}", thaiDate ? formatDate(thaiDate, t) : "—")
       .replace("{rate}", rate ? rate.latest.value.toFixed(2) : "—");
   }

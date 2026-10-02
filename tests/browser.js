@@ -23,6 +23,8 @@ const EDGE = BROWSERS.find((p) => p && fs.existsSync(p));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ---------- a static server for the site, which can be switched to "down" or "slow" ----------
+// site.override.set("/data/x.json", text): answer that path with this text instead of the file (a test of a state
+// the real data does not show today); site.override.clear() puts the files back.
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -33,7 +35,7 @@ const TYPES = {
   ".svg": "image/svg+xml",
 };
 function startSite(root, port) {
-  const site = { mode: "ok", delay: 6000, hits: [], full: 0, notModified: 0 };
+  const site = { mode: "ok", delay: 6000, hits: [], full: 0, notModified: 0, override: new Map() };
   const server = http.createServer((req, res) => {
     site.hits.push(req.url);
     if (site.mode === "down") return req.socket.destroy(); // like a lost connection
@@ -42,6 +44,10 @@ function startSite(root, port) {
     const filePath = path.join(root, urlPath);
     const send = () =>
       fs.readFile(filePath, (err, content) => {
+        if (site.override.has(urlPath)) {
+          err = null;
+          content = Buffer.from(site.override.get(urlPath));
+        }
         if (err) {
           res.writeHead(404, { "Content-Type": "text/plain" });
           return res.end("Not found");

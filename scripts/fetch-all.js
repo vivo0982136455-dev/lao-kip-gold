@@ -44,6 +44,14 @@ async function main() {
     console.error(`[FAIL] rubber-daily: ${err.message}`);
   }
 
+  // Official fuel prices in Laos: the ministry's notices + the state fuel company's price list
+  // (its own file; asks its sources at most every 6 hours)
+  try {
+    await require("./fetch-fuel-lao").run();
+  } catch (err) {
+    console.error(`[FAIL] fuel-lao: ${err.message}`);
+  }
+
   // Rebuild the small file the web page reads
   try {
     require("./build-summary").main();

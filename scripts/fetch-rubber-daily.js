@@ -34,7 +34,7 @@
 
 const path = require("path");
 const { DATA_DIR, fetchJson, fetchText, readJson, writeIfChanged } = require("./lib/common");
-const { runParts, partsText } = require("./lib/parts");
+const { runParts, partsText, throttleArgs } = require("./lib/parts");
 
 const OUT_FILE = path.join(DATA_DIR, "rubber-daily.json");
 const TIMEOUT_MS = 20000; // short: a source that hangs must not eat the 10 minutes of the 30-minute job
@@ -268,4 +268,4 @@ async function main(args = process.argv.slice(2)) {
 
 if (require.main === module) main().then((r) => (process.exitCode = r.ok ? 0 : 1));
 
-module.exports = { main, run: () => main(["throttle"]), raotMonth, lgmMonth, shfeDay, monthAverages };
+module.exports = { main, run: () => main(throttleArgs()), raotMonth, lgmMonth, shfeDay, monthAverages };
