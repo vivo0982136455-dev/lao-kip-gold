@@ -2,6 +2,7 @@
   "flat_threshold_pct": 0.02,
   "hints": [
     {"target_date":"2026-09-30","made_at":"2026-09-30T02:12:33.404Z","basis":{"from_day":"2026-09-29","to_day":"2026-09-30","usd_pct":0.0461,"thb_pct":0.0981},"hint":{"usd":"up","thb":"up"},"status":"resolved","actual":{"usd":"up","thb":"down"},"actual_pct":{"usd":0.049,"thb":-0.1469},"correct":{"usd":true,"thb":false},"resolved_at":"2026-09-30T20:09:13.294Z"},
-    {"target_date":"2026-10-01","made_at":"2026-10-01T04:20:55.360Z","basis":{"from_day":"2026-09-30","to_day":"2026-10-01","usd_pct":0.4449,"thb_pct":0.4241},"hint":{"usd":"up","thb":"up"},"status":"resolved","actual":{"usd":"up","thb":"flat"},"actual_pct":{"usd":0.0312,"thb":0},"correct":{"usd":true,"thb":false},"resolved_at":"2026-10-01T21:19:06.197Z"}
+    {"target_date":"2026-10-01","made_at":"2026-10-01T04:20:55.360Z","basis":{"from_day":"2026-09-30","to_day":"2026-10-01","usd_pct":0.4449,"thb_pct":0.4241},"hint":{"usd":"up","thb":"up"},"status":"resolved","actual":{"usd":"up","thb":"flat"},"actual_pct":{"usd":0.0312,"thb":0},"correct":{"usd":true,"thb":false},"resolved_at":"2026-10-01T21:19:06.197Z"},
+    {"target_date":"2026-10-02","made_at":"2026-10-02T01:07:55.570Z","basis":{"from_day":"2026-10-01","to_day":"2026-10-02","usd_pct":-0.1518,"thb_pct":-0.4108},"hint":{"usd":"down","thb":"down"},"status":"pending"}
   ]
 }

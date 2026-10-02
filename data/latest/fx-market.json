@@ -5,32 +5,32 @@
   "license": "Free API - attribution: Rates By Exchange Rate API, https://www.exchangerate-api.com",
   "kind": "market",
   "stale": false,
-  "last_success_at": "2026-10-01T04:20:42.571Z",
+  "last_success_at": "2026-10-02T01:07:08.021Z",
   "last_error": null,
   "records": [
     {
       "source": "fx-market",
       "metric": "USD_LAK",
-      "value": 22375.980925,
+      "value": 22342.016017,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-01T04:20:42.429Z",
-      "source_date": "2026-10-01T00:02:31.000Z"
+      "fetched_at": "2026-10-02T01:07:07.921Z",
+      "source_date": "2026-10-02T00:02:31.000Z"
     },
     {
       "source": "fx-market",
       "metric": "USD_THB",
-      "value": 33.580261,
+      "value": 33.667593,
       "unit": "THB per USD",
-      "fetched_at": "2026-10-01T04:20:42.429Z",
-      "source_date": "2026-10-01T00:02:31.000Z"
+      "fetched_at": "2026-10-02T01:07:07.921Z",
+      "source_date": "2026-10-02T00:02:31.000Z"
     },
     {
       "source": "fx-market",
       "metric": "THB_LAK",
-      "value": 666.3433,
+      "value": 663.606,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-01T04:20:42.429Z",
-      "source_date": "2026-10-01T00:02:31.000Z"
+      "fetched_at": "2026-10-02T01:07:07.921Z",
+      "source_date": "2026-10-02T00:02:31.000Z"
     }
   ]
 }
