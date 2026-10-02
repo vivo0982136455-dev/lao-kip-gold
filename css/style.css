@@ -506,7 +506,8 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .status-met { color: var(--up); background: var(--up-bg); }
 .status-near { color: var(--warn-text); background: var(--warn-bg); }
 .status-far { color: var(--bad-text); background: var(--bad-bg); }
-.status-none { color: var(--flat); background: var(--flat-bg); }
+.status-none, .status-baseline, .status-old, .status-split { color: var(--flat); background: var(--flat-bg); } /* no judgement: neutral */
+.plan-actual .status + .plan-value { margin-top: 8px; } /* the same thing counted a second way, in the same cell */
 .facts li .status { flex: none; margin-top: 0; }
 .plan-table td { vertical-align: top; }
 /* Land tab: province | date of the newest decision (+ "older than 3 years") | link. The middle column may wrap. */

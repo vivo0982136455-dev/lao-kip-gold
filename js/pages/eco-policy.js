@@ -142,7 +142,7 @@ function tiles(e, live, fuel) {
   } else if (restore) add(t.pol_k_diesel, `${restore.diesel}%`, fill(t.pol_k_diesel_sub, { date: dayText(restore.date, t), before: restore.diesel_before }), { checked });
   const wage = findItem(P, "wages", "min");
   if (wage) add(t.pol_k_wage, { num: (wage.lak / 1e6).toFixed(1), unit: t.pol_unit_mkip }, fill(t.pol_k_wage_sub, { old: (wage.old / 1e6).toFixed(1), date: dayText(wage.date, t) }), { checked });
-  const service = findItem(P, "debt", "service");
+  const service = findItem(P, "debt", "service_year"); // one year, in % of GDP (not the 5-year average in dollars)
   if (service) add(t.pol_k_service, `${service.gdp}%`, t.pol_k_service_sub, { year: service.year, checked });
   return stats;
 }

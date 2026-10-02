@@ -109,11 +109,15 @@ export function debtTab(panel, e) {
 
   // ---------- Why · effects · plan · can it work (quoted from the reports) ----------
   const imfBelow = debt && target ? debt.values.find(([y, v]) => y >= THIS_YEAR && v <= target.target) : null;
+  // The same year's debt counted in three ways (Ministry of Finance, World Bank, IMF): shown side by side, with
+  // what each one counts, so that the different numbers on this page can be told apart
+  const sameYear = F.debt_mof && F.debt_peak && F.imf_unsustainable && F.debt_mof.year === F.debt_peak.now_year && F.debt_mof.year === F.imf_unsustainable.year;
+  const counted = sameYear ? { ...F.debt_mof, wb: F.debt_peak.now, imf: F.imf_unsustainable.debt, sources: [F.imf_unsustainable.source] } : null;
   const blocks = [
-    ["inv_debt_why", [["inv_debt_why_1", F.debt_peak], ["inv_debt_why_2", F.debt_edl], ["inv_debt_why_3", F.debt_china_half], ["inv_debt_why_4", { source: "wb_lem" }]]],
+    ["inv_debt_why", [["inv_debt_why_1", F.debt_peak], ["inv_debt_why_defs", counted], ["inv_debt_why_2", F.debt_edl], ["inv_debt_why_3", F.debt_china_half], ["inv_debt_why_4", { source: "wb_lem" }]]],
     ["inv_debt_effects", [["inv_debt_effect_1", F.debt_crowd_out], ["inv_debt_effect_2", F.reserves_wb], ["inv_debt_effect_3", F.debt_deferred]]],
     ["inv_debt_plan", [["inv_debt_plan_1", F.debt_decree], ["inv_debt_plan_2", target ? { target: target.target, source: "kpl_plan" } : null], ["inv_debt_plan_3", F.debt_bond], ["inv_debt_plan_4", F.debt_restructure]]],
-    ["inv_debt_can", [["inv_debt_can_1", F.imf_unsustainable], ["inv_debt_can_2", imfBelow ? { year: imfBelow[0], value: pctText(imfBelow[1]), source: "imf" } : null], ["inv_debt_can_3", F.imf_advice], ["inv_debt_can_4", F.debt_service_avg]]],
+    ["inv_debt_can", [["inv_debt_can_1", F.imf_unsustainable], ["inv_debt_can_2", imfBelow ? { year: imfBelow[0], value: pctText(imfBelow[1]), source: "imf" } : null], ["inv_debt_can_3", F.imf_advice], ["inv_debt_can_4", F.debt_service_avg], ["inv_debt_can_5", F.debt_service_year]]],
   ];
   panel.append(el("h2", "section-title", t.inv_debt_story));
   const g2 = el("div", "grid grid-2");

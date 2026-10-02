@@ -1,8 +1,9 @@
 // The states the big matrix does not reach: every year x kind of rubber x seller/buyer choice, every road class of
 // the land table, every kind of rubber of the Thai border markets, every "see the effect" button of the policy tab,
 // the wages tab (all countries, without exchange rates, after the next rises), the official fuel card and the policy
-// tab with and without the files that update themselves, and the two entry forms opened and filled in (NOT saved:
-// requests to Google are blocked here).
+// tab with and without the files that update themselves, the plan tab (only a number from inside the plan is judged;
+// the fall-back without the hand-read facts), the investment tab with and without UNCTAD's total, and the two entry
+// forms opened and filled in, also with a price the checks must refuse (NOT saved: requests to Google are blocked here).
 // Usage: node tests/states.js
 const fs = require("fs");
 const path = require("path");
@@ -245,6 +246,73 @@ const CHECK = `
       await block([]);
     }
 
+    // ---------- 2g. plan tab: only a number from inside the plan's years is judged (audit 2026-10-02, P0-1) ----------
+    const planRows = `return { rows: [...document.querySelectorAll("#view .plan-table tbody tr")].map((tr) => ({ name: tr.cells[0].firstChild.textContent, value: (tr.querySelector(".plan-value") || { textContent: "" }).textContent, year: Number(((tr.querySelector(".plan-actual .fresh") || { textContent: "" }).textContent.match(/20\\d\\d/) || [0])[0]), status: [...tr.querySelectorAll(".status")].map((s) => s.className.replace("status status-", "")), byForecast: [...tr.querySelectorAll(".plan-actual .status + .sub-line")].some((x) => /IMF/.test(x.textContent)), under: [...tr.cells[0].querySelectorAll(".sub-line")].map((x) => x.textContent).join(" | ") })), summary: [...document.querySelectorAll("#view .card p.note")].map((p) => p.textContent).find((x) => /\\d+ .*: .*\\d/.test(x)) || "" };`;
+    const judged = ["met", "near", "far"];
+    const revenue = stat.policy.areas.find((a) => a.id === "tax").items.find((i) => i.id === "revenue");
+    for (const lang of ["th", "lo"]) {
+      await open(lang, { eco_tab: "plan" });
+      await sleep(500); // the central bank's file (the line under "reserves") arrives after the table
+      let r = await page.eval(CHECK);
+      let p = await page.eval(planRows);
+      const early = p.rows.filter((x) => x.year && x.year < stat.plan.period[0] && !x.byForecast && x.status.some((s) => judged.includes(s)));
+      if (early.length) r.badText.push("judged with a number from before the plan: " + early.map((x) => `${x.name} (${x.year}: ${x.status})`).join(", "));
+      if (p.rows.length !== stat.plan.targets.length) r.badText.push(`plan table: ${p.rows.length} rows`);
+      if (!p.rows.some((x) => x.value === `${revenue.revenue.toFixed(1)}%` && x.year === revenue.year)) r.badText.push(`state revenue is not ${revenue.revenue}% (${revenue.year})`);
+      const counts = (p.summary.match(/\d+/g) || []).map(Number);
+      if (counts.length < 4 || counts[0] !== p.rows.length || counts.slice(1).reduce((a, b) => a + b, 0) !== counts[0]) r.badText.push("summary does not add up: " + p.summary);
+      const two = p.rows.find((x) => x.status.length === 2);
+      if (!two || !/BOL/.test(two.under)) r.badText.push("reserves: two ways of counting with the central bank's newest number expected: " + JSON.stringify(two));
+      report(`${lang} plan: baseline, not a status`, r, lang === "th" ? `${p.summary} | reserves: ${two ? two.status.join(" + ") : "-"}` : "");
+
+      // without the hand-read facts of the World Bank report: the yearly series, which is before the plan -> baseline
+      const bare = JSON.parse(JSON.stringify(stat));
+      delete bare.facts.reserves_wb;
+      bare.policy.areas.find((a) => a.id === "tax").items = bare.policy.areas.find((a) => a.id === "tax").items.filter((i) => i.id !== "revenue");
+      site.override.set("/data/invest-static.json", JSON.stringify(bare));
+      await open(lang, { eco_tab: "plan" });
+      r = await page.eval(CHECK);
+      p = await page.eval(planRows);
+      const wrong = p.rows.filter((x) => x.year && x.year < stat.plan.period[0] && !x.byForecast && x.status.some((s) => judged.includes(s)));
+      if (wrong.length || !p.rows.some((x) => x.status.includes("old"))) r.badText.push("fall-back: " + JSON.stringify(p.rows.map((x) => [x.year, x.status.join("+")])));
+      report(`${lang} plan: without the hand-read facts`, r, lang === "th" ? p.summary : "");
+      await open(lang, { eco_tab: "overview" });
+      report(`${lang} overview: without the hand-read reserves`, await page.eval(CHECK));
+      site.override.clear();
+    }
+
+    // ---------- 2h. who invests: a share is always called a share of the REPORTED amounts (P0-2) ----------
+    const investFile = JSON.parse(fs.readFileSync(path.join(ROOT, "data/invest.json"), "utf8"));
+    const REPORTED = { th: "รายงาน", lo: "ລາຍງານ" };
+    const top2 = investFile.parts.fdi_positions.list.slice(0, 2).reduce((a, x) => a + x[2], 0) / investFile.parts.fdi_positions.total;
+    const share = `${Math.round(top2 * 100)}%`;
+    const fdiInfo = `const tb = [...document.querySelectorAll("#view table")].find((x) => x.querySelectorAll("tbody tr").length === ${investFile.parts.fdi_positions.list.length}); return { head: tb ? tb.querySelector("thead tr").lastElementChild.textContent : "", tiles: document.querySelectorAll("#view .stats .stat").length, unctad: [...document.querySelectorAll("#view .card p.note")].map((p) => p.textContent).find((x) => x.includes("UNCTAD")) || "" };`;
+    for (const lang of ["th", "lo"]) {
+      await open(lang, { eco_tab: "overview" });
+      let r = await page.eval(CHECK);
+      const lines = await page.eval(`return [...document.querySelectorAll("#view li, #view p, #view .stat")].map((x) => x.textContent).filter((x) => x.includes(${JSON.stringify(share)}));`);
+      if (!lines.length || lines.some((x) => !x.includes(REPORTED[lang]))) r.badText.push(`"${share}" without the word for "reported": ${JSON.stringify(lines)}`);
+      report(`${lang} overview: ${share} only as a share of the reported amounts`, r, lang === "th" ? lines[0].slice(0, 150) : "");
+
+      await open(lang, { eco_tab: "fdi" });
+      r = await page.eval(CHECK);
+      let f = await page.eval(fdiInfo);
+      const cover = `${Math.round((investFile.parts.fdi_positions.total / investFile.parts.fdi_total.values.find(([y]) => y === investFile.parts.fdi_positions.year)[1]) * 100)}%`;
+      if (!f.head.includes(REPORTED[lang]) || f.tiles !== 4 || !f.unctad.includes(cover)) r.badText.push(`fdi: ${JSON.stringify(f)} (cover ${cover})`);
+      report(`${lang} fdi: share of the reported amounts, UNCTAD total next to it`, r, lang === "th" ? `column "${f.head}", ${cover} of UNCTAD's total` : "");
+
+      // without UNCTAD's total: no coverage line, no fourth tile, nothing broken
+      const bare = JSON.parse(JSON.stringify(investFile));
+      delete bare.parts.fdi_total;
+      site.override.set("/data/invest.json", JSON.stringify(bare));
+      await open(lang, { eco_tab: "fdi" });
+      r = await page.eval(CHECK);
+      f = await page.eval(fdiInfo);
+      if (!f.head.includes(REPORTED[lang]) || f.tiles !== 3 || f.unctad) r.badText.push(`fdi without UNCTAD: ${JSON.stringify(f)}`);
+      report(`${lang} fdi: without UNCTAD's total`, r);
+      site.override.clear();
+    }
+
     // ---------- 3. the entry forms, opened and filled in (never saved) ----------
     const type = async (selector, text) => {
       await page.eval(`const el = document.querySelector(${JSON.stringify(selector)}); el.focus(); el.value = ${JSON.stringify(text)}; el.dispatchEvent(new Event("input", { bubbles: true })); el.dispatchEvent(new Event("change", { bubbles: true }));`);
@@ -261,6 +329,18 @@ const CHECK = `
       const rub = await page.eval(CHECK);
       const rubInfo = await page.eval(`const p = document.querySelector(".own-rubber"); return { checks: [...p.querySelectorAll(".up-check")].map((x) => x.textContent).join(" / "), analysis: (p.querySelector(".up-analysis") || { innerText: "" }).innerText.replace(/\\s+/g, " ").slice(0, 110), save: p.querySelector(".up-panel .btn-primary").disabled ? "disabled" : "enabled" };`);
       report(`${lang} ${width} rubber form`, rub, JSON.stringify(rubInfo));
+      // a price far from the Thai price of that day is refused on the page already; a phone number and a link in
+      // the place are flagged (the bot takes them out) - audit 2026-10-02, P0-3
+      const formState = `const p = document.querySelector(".own-rubber"); return { bad: [...p.querySelectorAll(".up-check.bad")].map((x) => x.textContent).join(" / "), warn: [...p.querySelectorAll(".up-check.warn")].map((x) => x.textContent).join(" / "), disabled: p.querySelector(".up-panel .btn-primary").disabled };`;
+      await type(".own-rubber .up-grid input[inputmode='numeric']", "150000");
+      const far = await page.eval(formState);
+      await type(".own-rubber .up-grid input[inputmode='numeric']", "18500");
+      await type(".own-rubber .up-grid input[type='text']:not([inputmode])", "020 5555 1234 www.x.com");
+      const junk = await page.eval(formState);
+      const rub2 = await page.eval(CHECK);
+      if (!far.disabled || !/\d/.test(far.bad)) rub2.badText.push("a price of 150,000 was not refused: " + JSON.stringify(far));
+      if (junk.disabled || junk.bad || !junk.warn) rub2.badText.push("phone number and link in the place were not flagged: " + JSON.stringify(junk));
+      report(`${lang} ${width} rubber form: far price refused, junk text flagged`, rub2, lang === "th" && width === 380 ? `${far.bad} || ${junk.warn}` : "");
       await page.eval(`document.querySelector(".own-rubber").scrollIntoView({ block: "start" }); window.scrollBy(0, -70);`);
       await sleep(200);
       await page.shot(path.join(SHOTS, `form-rubber-${lang}-${width}.png`));
@@ -277,6 +357,15 @@ const CHECK = `
       const land = await page.eval(CHECK);
       const landInfo = await page.eval(`const p = document.querySelector(".own-land"); return { checks: [...p.querySelectorAll(".up-check")].map((x) => x.textContent).join(" / "), analysis: (p.querySelector(".up-analysis") || { innerText: "" }).innerText.replace(/\\s+/g, " ").slice(0, 160), save: p.querySelector(".up-panel .btn-primary").disabled ? "disabled" : "enabled" };`);
       report(`${lang} ${width} land form`, land, JSON.stringify(landInfo));
+      // a price per square metre far below the official assessed prices of the capital is refused
+      await page.eval(`const i = document.querySelectorAll(${JSON.stringify(nums)}); i[0].value = "1"; i[0].dispatchEvent(new Event("input", { bubbles: true }));`);
+      await sleep(200);
+      const low = await page.eval(`const p = document.querySelector(".own-land"); return { bad: [...p.querySelectorAll(".up-check.bad")].map((x) => x.textContent).join(" / "), disabled: p.querySelector(".up-panel .btn-primary").disabled };`);
+      const land2 = await page.eval(CHECK);
+      if (!low.disabled || !/\d/.test(low.bad)) land2.badText.push("a land price of 1 baht for 2.5 rai was not refused: " + JSON.stringify(low));
+      report(`${lang} ${width} land form: far price refused`, land2, lang === "th" && width === 380 ? low.bad : "");
+      await page.eval(`const i = document.querySelectorAll(${JSON.stringify(nums)}); i[0].value = "1500000"; i[0].dispatchEvent(new Event("input", { bubbles: true }));`);
+      await sleep(150);
       await page.eval(`document.querySelector(".own-land").scrollIntoView({ block: "start" }); window.scrollBy(0, -70);`);
       await sleep(200);
       await page.shot(path.join(SHOTS, `form-land-${lang}-${width}.png`));

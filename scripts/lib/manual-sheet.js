@@ -12,7 +12,7 @@
 
 const path = require("path");
 const { HISTORY_DIR, fetchText, parseCsv, parseNumber, makeRecord, readJson } = require("./common");
-const { parseSheetDate, parseSheetTimestamp } = require("./manual");
+const { parseSheetDate, parseSheetTimestamp, notInFuture } = require("./manual");
 
 const downloads = new Map(); // url -> Promise<rows> (one download per run for both scripts)
 function loadSheet(url) {
@@ -79,6 +79,12 @@ async function readShopPrices(url, { source, unit, prices, check }) {
     if (!day) {
       skipped++;
       console.warn(`       ${source}: skipped row ${i + 2}: cannot read date "${row[cols.date]}"`);
+      continue;
+    }
+    // a date in the future would stay "the newest price" for ever, and no reference price exists to check it against
+    if (!notInFuture(day)) {
+      skipped++;
+      console.warn(`       ${source}: skipped row ${i + 2}: the date ${day} is in the future`);
       continue;
     }
     const enteredAt = parseSheetTimestamp(row[cols.timestamp]) || new Date(`${day}T00:00:00+07:00`).toISOString();

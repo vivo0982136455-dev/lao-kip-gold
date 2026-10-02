@@ -18,11 +18,16 @@ export const RUBBER_TYPES = {
   rss: ["ยางแผ่นรมควัน", null],
   other: ["อื่น ๆ", null],
 };
-// Same limits as scripts/fetch-own-prices.js (a value outside them would be skipped by the bot)
-const RUBBER_MIN = 1000;
-const RUBBER_MAX = 200000;
-const LAND_SQM_MIN = 50;
-const LAND_SQM_MAX = 1000000000;
+// The limits are the bot's own (scripts/fetch-own-prices.js LIMITS, which arrive in data/manual-form.json): a value
+// outside them would be skipped by the bot. The numbers below are used only until that file has arrived.
+// "page_band": the page is a little stricter than the bot ("band"), so that what the page accepts is never skipped.
+const FALLBACK_LIMITS = {
+  rubber: { min: 1000, max: 200000, band: [0.15, 1.3], page_band: [0.17, 1.2] },
+  land: { area_min: 1, area_max: 100000000, sqm_min: 50, sqm_max: 1000000000, official_low: 0.5, official_high: 20 },
+  text_max: 40,
+};
+const limits = () => (s.config && s.config.limits) || FALLBACK_LIMITS;
+export { FALLBACK_LIMITS }; // tests/calc.js compares them with the bot's LIMITS
 const AREA_UNITS = { sqm: 1, rai: 1600, ha: 10000 }; // square metres in one unit
 const CURRENCIES = { LAK: null, THB: "fx-market.THB_LAK", USD: "fx-market.USD_LAK" }; // -> market rate used to turn the price into kip
 
@@ -89,11 +94,23 @@ function textInput(value, onInput) {
   const input = el("input");
   input.type = "text";
   input.autocomplete = "off";
-  input.maxLength = 60;
+  input.maxLength = limits().text_max;
   input.value = value || "";
   input.addEventListener("input", () => onInput(input.value.trim()));
   return input;
 }
+// Text typed by hand is shown on a public page: links, e-mail addresses and phone numbers are taken out, the
+// rest is cut at the limit - the same rule as cleanText() in scripts/fetch-own-prices.js (the bot applies it again).
+const DIGIT = "[0-9๐-๙໐-໙]";
+const LINK = /(?:https?:\/\/|www\.)\S+|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|info|biz|io|co|me|ly|gl|cc|xyz|app|link|shop|site|online|la|th|vn|cn|kh|mm|sg|my)\b(?:\/\S*)?/gi;
+const MAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+const PHONE = new RegExp(`\\+?(?:${DIGIT}[\\s\\-.()]*){7,}`, "g");
+const tidy = (text) => String(text || "").replace(/\s+/g, " ").trim();
+export function cleanText(text) {
+  const out = tidy(tidy(text).replace(MAIL, " ").replace(LINK, " ").replace(PHONE, " ").replace(/[<>]/g, " "));
+  return [...out].slice(0, limits().text_max).join("").trim();
+}
+const textChanged = (text) => cleanText(text) !== tidy(text);
 function dateInput(value, onChange) {
   const input = el("input");
   input.type = "date";
@@ -104,7 +121,7 @@ function dateInput(value, onChange) {
 }
 const provinceOptions = (t) => PROVINCES.map((p) => [p, t.provinces[p] || p]);
 // "Louangnamtha | ເມືອງສິງ": the bot splits it again (scripts/fetch-own-prices.js)
-const placeText = (province, place) => (place ? `${province} | ${place}` : `${province} |`);
+const placeText = (province, place) => (cleanText(place) ? `${province} | ${cleanText(place)}` : `${province} |`);
 
 // Value of `metricId` on `day` (or its newest value): used for THB / USD -> LAK
 function rateOn(summary, metricId, day) {
@@ -245,6 +262,25 @@ export function referencePrice(t, thai, daily, summary, type, province, day) {
   return n ? { lak: n.lak, label: `${t.own_an_thai} ${t["own_type_" + type]}`, date: n.date, exact: n.exact } : null;
 }
 
+// The prices the bot will accept for this kind of rubber on that day, in kip per kg: a band around the Thai
+// reference price ("other" = from the cheapest to the dearest kind). null = no reference: only the outer limits.
+function rubberBand(t, thai, daily, summary, type, province, day) {
+  const kinds = type === "other" ? Object.keys(RUBBER_TYPES).filter((k) => k !== "other") : [type];
+  const refs = kinds.map((k) => referencePrice(t, thai, daily, summary, k, province, day)).filter(Boolean).map((r) => r.lak);
+  if (!refs.length) return null;
+  const [low, high] = limits().rubber.page_band;
+  return [Math.ceil(low * Math.min(...refs)), Math.floor(high * Math.max(...refs))];
+}
+// The prices per square metre the bot will accept in that province (same rule as loadReferences().land there):
+// around the official assessed prices of Vientiane Capital, the only table the app holds
+function landBand(ctx, province) {
+  const L = limits().land;
+  const table = ctx.stat && ctx.stat.land && ctx.stat.land.vientiane;
+  const all = table ? table.districts.flatMap((d) => table.classes.flatMap((c) => (Array.isArray(d[c]) ? d[c] : []))) : [];
+  if (!all.length) return [L.sqm_min, L.sqm_max];
+  return [province === "Vientiane Capital" ? Math.max(L.sqm_min, Math.min(...all) * L.official_low) : L.sqm_min, Math.min(L.sqm_max, Math.max(...all) * L.official_high)];
+}
+
 // ---------- Rubber: the price the buyer paid ----------
 export function rubberEntryCard(ctx, thai, daily) {
   const { t, summary } = ctx;
@@ -276,9 +312,15 @@ export function rubberEntryCard(ctx, thai, daily) {
     },
     checks() {
       const out = [];
-      if (!v.date) out.push(["bad", t.up_check_date]);
+      const L = limits().rubber;
+      if (!v.date || v.date > todayVientiane()) out.push(["bad", t.up_check_date]);
       if (!v.price) out.push(["bad", t.own_check_price]);
-      else if (v.price < RUBBER_MIN || v.price > RUBBER_MAX) out.push(["bad", fill(t.own_check_rubber_range, { min: whole(RUBBER_MIN), max: whole(RUBBER_MAX) })]);
+      else if (v.price < L.min || v.price > L.max) out.push(["bad", fill(t.own_check_rubber_range, { min: whole(L.min), max: whole(L.max) })]);
+      else if (v.date) {
+        const band = rubberBand(t, thai, daily, summary, v.type, v.province, v.date);
+        if (band && (v.price < band[0] || v.price > band[1])) out.push(["bad", fill(t.own_check_rubber_band, { min: whole(band[0]), max: whole(band[1]) })]);
+      }
+      if (textChanged(v.place)) out.push(["warn", t.own_check_text_cleaned]);
       return out;
     },
     analysis() {
@@ -341,12 +383,17 @@ export function landEntryCard(ctx) {
     },
     checks() {
       const out = [];
-      if (!v.date) out.push(["bad", t.up_check_date]);
+      const L = limits().land;
+      if (!v.date || v.date > todayVientiane()) out.push(["bad", t.up_check_date]);
       if (!v.total) out.push(["bad", t.own_check_land_total]);
-      if (!v.area) out.push(["bad", t.own_check_land_area]);
+      if (!v.area || areaSqm() < L.area_min || areaSqm() > L.area_max) out.push(["bad", t.own_check_land_area]);
       if (v.total && v.currency !== "LAK" && !rate()) out.push(["bad", t.own_check_no_rate]);
       const p = perSqm();
-      if (p && (p < LAND_SQM_MIN || p > LAND_SQM_MAX)) out.push(["bad", t.own_check_land_range]);
+      if (p) {
+        const [low, high] = landBand(ctx, v.province);
+        if (Math.round(p) < low || Math.round(p) > high) out.push(["bad", fill(t.own_check_land_range, { min: whole(low), max: whole(high) })]);
+      }
+      if (textChanged(v.place)) out.push(["warn", t.own_check_text_cleaned]);
       return out;
     },
     analysis() {

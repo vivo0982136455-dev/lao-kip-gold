@@ -39,4 +39,11 @@ function parseSheetTimestamp(text) {
   return new Date(`${day}T${hms}+07:00`).toISOString();
 }
 
-module.exports = { manualUrl, parseSheetDate, parseSheetTimestamp };
+// Is `day` ("YYYY-MM-DD") today or earlier? An answer dated in the future would stay "the newest price" for ever.
+// One day of slack: the clock of the person who typed the date is not ours.
+function notInFuture(day, now = Date.now()) {
+  const tomorrow = new Date(now + (7 + 24) * 3600000).toISOString().slice(0, 10); // Vientiane time (UTC+7) + 1 day
+  return day <= tomorrow;
+}
+
+module.exports = { manualUrl, parseSheetDate, parseSheetTimestamp, notInFuture };

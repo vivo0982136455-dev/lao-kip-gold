@@ -9,8 +9,12 @@
 // A question is recognised by words in its title (Thai), so its position in the form does not matter.
 // The page cannot read the form itself (Google sends no CORS headers), which is why this runs here.
 
+// The file also carries the limits of the owner's own prices (scripts/fetch-own-prices.js LIMITS), so that the
+// page checks an entry with the very numbers the bot will check it with.
+
 const path = require("path");
 const { DATA_DIR, ROOT_DIR, fetchText, readJson, writeIfChanged } = require("./lib/common");
+const { LIMITS } = require("./fetch-own-prices");
 
 const OUT_FILE = path.join(DATA_DIR, "manual-form.json");
 
@@ -75,6 +79,7 @@ async function main() {
     form_id: formMatch[1],
     sheet_id: sheetMatch ? sheetMatch[1] : null,
     ...form,
+    limits: LIMITS,
   };
   writeIfChanged(OUT_FILE, JSON.stringify(out, null, 2) + "\n");
   console.log(`[OK]   manual-form: ${Object.keys(form.entries).join(", ")}${form.direct_submit_ok ? "" : " (direct submit NOT possible)"}`);

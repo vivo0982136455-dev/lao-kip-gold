@@ -59,9 +59,13 @@ const CHECK = `
       ["overview", {}, "overview"],
       ["gold", {}, "gold"],
       ["living", {}, "living"],
+      ["economy overview", { eco_tab: "overview" }, "economy"],
       ["population", { eco_tab: "population" }, "economy"],
       ["wages", { eco_tab: "wages" }, "economy"],
+      ["plan", { eco_tab: "plan" }, "economy"],
       ["policy", { eco_tab: "policy" }, "economy"],
+      ["foreign investment", { eco_tab: "fdi" }, "economy"],
+      ["debt", { eco_tab: "debt" }, "economy"],
       ["rubber market", { eco_tab: "rubber", eco_rubber_view: "market" }, "economy"],
       ["rubber who buys", { eco_tab: "rubber", eco_rubber_view: "buyers" }, "economy"],
       ["rubber by province", { eco_tab: "rubber", eco_rubber_view: "lao" }, "economy"],
@@ -81,6 +85,16 @@ const CHECK = `
     // none of them a failed copy, and the card that says what is read by hand
     const auto = await page.eval(`return { labels: document.querySelectorAll("#view .tag-auto").length, read: !!document.querySelector("#view .policy-read"), failed: document.querySelectorAll("#view .fresh-stale").length };`);
     check("live: policy tab - reserves and fuel price update themselves, nothing failed", auto.labels >= 4 && auto.read && auto.failed === 0, JSON.stringify(auto));
+    // plan tab (audit 2026-10-02): a number from before the plan's first year is a baseline, never met / near / far;
+    // the summary line counts every target once
+    await open({ eco_tab: "plan" }, "economy", "planrows");
+    await sleep(800);
+    const plan = await page.eval(`const rows = [...document.querySelectorAll("#view .plan-table tbody tr")].map((tr) => ({ year: Number(((tr.querySelector(".plan-actual .fresh") || { textContent: "" }).textContent.match(/20\\d\\d/) || [0])[0]), status: [...tr.querySelectorAll(".status")].map((s) => s.className.replace("status status-", "")), byForecast: !!tr.querySelector(".plan-actual .status + .sub-line") })); const first = (await (await fetch("data/invest-static.json")).json()).plan.period[0]; const summary = ([...document.querySelectorAll("#view .card p.note")].map((p) => p.textContent).find((x) => /\\d+ .*: .*\\d/.test(x)) || "").match(/\\d+/g) || []; return { rows: rows.length, first, early: rows.filter((r) => r.year && r.year < first && !r.byForecast && r.status.some((s) => ["met", "near", "far"].includes(s))).length, summary: summary.map(Number), twoWays: rows.filter((r) => r.status.length === 2).length };`);
+    check("live: plan tab - no status from a number before the plan, the summary adds up", plan.rows >= 10 && plan.first > 2000 && plan.early === 0 && plan.summary[0] === plan.rows && plan.summary.slice(1).reduce((a, b) => a + b, 0) === plan.rows, JSON.stringify(plan));
+    // foreign investment: UNCTAD's total (unpacked from a .7z file on GitHub's servers) is there and did not fail
+    await open({ eco_tab: "fdi" }, "economy", "fditotal");
+    const fdi = await page.eval(`return { tiles: document.querySelectorAll("#view .stats .stat").length, unctad: [...document.querySelectorAll("#view .card p.note")].some((p) => p.textContent.includes("UNCTAD") && /\\d+%/.test(p.textContent)), failed: document.querySelectorAll("#view .fresh-stale").length };`);
+    check("live: foreign investment - UNCTAD's total next to the reported amounts, nothing failed", fdi.tiles === 4 && fdi.unctad && fdi.failed === 0, JSON.stringify(fdi));
     // cost of living: the official Lao fuel prices, read on GitHub's servers from the ministry's notices
     await open({}, "living", "fuel");
     const fuel = await page.eval(`const c = [...document.querySelectorAll("#view .card")].find((x) => x.querySelector(".fuel-notice")); return c ? { rows: c.querySelectorAll(".row").length, provinces: c.querySelectorAll(".fuel-provinces tbody tr").length, failed: c.querySelectorAll(".fresh-stale").length, from: c.querySelector(".fuel-notice").textContent.slice(0, 60) } : null;`);
@@ -111,6 +125,11 @@ const CHECK = `
     await sleep(300);
     const form = await page.eval(`const p = document.querySelector(".own-rubber"); return { checks: [...p.querySelectorAll(".up-check")].map((x) => x.textContent).join(" / "), save: p.querySelector(".up-panel .btn-primary").disabled ? "disabled" : "enabled" };`);
     check("live: rubber entry form ready (questions found in the real form)", form.save === "enabled" && form.checks.startsWith("✓"), JSON.stringify(form));
+    // a price far from the Thai price of the day is refused with the bot's own limits (nothing is sent)
+    await page.eval(`const i = document.querySelector(".own-rubber .up-grid input[inputmode='numeric']"); i.value = "150000"; i.dispatchEvent(new Event("input", { bubbles: true }));`);
+    await sleep(300);
+    const far = await page.eval(`const p = document.querySelector(".own-rubber"); return { bad: [...p.querySelectorAll(".up-check.bad")].map((x) => x.textContent).join(" / "), disabled: p.querySelector(".up-panel .btn-primary").disabled };`);
+    check("live: rubber entry form refuses a price far from that day's Thai price", far.disabled && /\d/.test(far.bad), JSON.stringify(far));
     await page.eval(`[...document.querySelectorAll(".own-rubber .up-actions button")].pop().click();`);
 
     // ---------- second visit: through the worker ----------

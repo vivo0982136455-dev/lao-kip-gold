@@ -9,14 +9,22 @@
 // A place written by the page looks like "Louangnamtha | ເມືອງສິງ": province (same spelling as "provinces" in
 // i18n/*.json), then the district / village typed by the owner. Text typed straight into the form is kept as it is.
 //
+// The form link is public: anybody can send an answer. Until only the owner can write (see README, "Who can
+// write"), every answer is checked hard before it may appear on the site (audit 2026-10-02):
+//   - rubber: inside a band around the Thai market price of the same kind of rubber on that day, in kip
+//   - land:   inside a band around the official assessed prices
+//   - the day must not lie in the future
+//   - text: no links, no e-mail addresses, no phone numbers, at most 40 characters
+// The limits are in LIMITS below; the page reads the same numbers from data/manual-form.json ("limits").
+//
 // Writes:
 //   data/own-prices.json               every entry, newest first (text fields included) - read by the Economy page
 //   data/latest|history/rubber-lao-manual.json   newest price of each kind of rubber + one value per day (for charts)
 // The Sheet is the full truth: both files are rebuilt from it on every run.
 
 const path = require("path");
-const { DATA_DIR, LATEST_DIR, parseNumber, makeRecord, readJson, replaceHistory, writeIfChanged, runSource, runIfMain } = require("./lib/common");
-const { manualUrl, parseSheetDate, parseSheetTimestamp } = require("./lib/manual");
+const { DATA_DIR, LATEST_DIR, HISTORY_DIR, parseNumber, makeRecord, readJson, replaceHistory, writeIfChanged, runSource, runIfMain } = require("./lib/common");
+const { manualUrl, parseSheetDate, parseSheetTimestamp, notInFuture } = require("./lib/manual");
 const { loadSheet, findColumns } = require("./lib/manual-sheet");
 
 const OUT_FILE = path.join(DATA_DIR, "own-prices.json");
@@ -28,37 +36,64 @@ const META = {
   kind: "shop",
 };
 
-// Plausible values only: catches a missing / extra digit and fake answers (the form link is public)
-const RUBBER_MIN = 1000; // LAK per kg
-const RUBBER_MAX = 200000;
-const LAND_AREA_MIN = 1; // square metres
-const LAND_AREA_MAX = 100000000; // 10,000 hectares
-const LAND_SQM_MIN = 50; // LAK per square metre (the lowest official assessed price in Vientiane is 1,000)
-const LAND_SQM_MAX = 1000000000;
-const TEXT_MAX = 80;
+// Plausible values only. "band" = times the reference price of that day; the page is a little stricter
+// ("page_band"), so that what the page accepts is never skipped here (the two use slightly different
+// reference prices: nearest border market and market exchange rate there, all markets and the central bank's rate here).
+const LIMITS = {
+  rubber: {
+    min: 1000, // LAK per kg: outer limits, the only check when no Thai price is known for the day
+    max: 200000,
+    band: [0.15, 1.3], // x the Thai market price of the same kind of rubber on that day, in kip.
+    // Why so wide: Thailand quotes cup lump and latex per kg of DRY rubber, a Lao farmer is paid per kg as delivered
+    // (wet): the prices reported from Bokeo and Oudomxai in 2025 (10,000-22,000 kip, data/invest-static.json
+    // "rubber.reports") were 25%-66% of the Thai cup lump price of that year in kip. Sheets sell near the Thai price.
+    page_band: [0.17, 1.2],
+  },
+  land: {
+    area_min: 1, // square metres
+    area_max: 100000000, // 10,000 hectares
+    sqm_min: 50, // LAK per square metre: outer limits
+    sqm_max: 1000000000,
+    official_low: 0.5, // Vientiane Capital: not below half of the lowest official assessed price there ...
+    official_high: 20, // ... every province: not above 20 x the highest official assessed price in the capital
+    // (market prices lie above assessed prices; the tables of the other provinces are not in the app, so only
+    // the upper end can be checked for them)
+  },
+  text_max: 40,
+};
 
 const PROVINCES = [
   "Vientiane Capital", "Louangphabang", "Phongsaly", "Louangnamtha", "Bokeo", "Oudomxai", "Houaphan", "Xaignabouly", "Xiengkhouang",
   "Vientiane", "Xaisomboun", "Bolikhamxai", "Khammouan", "Savannakhet", "Salavan", "Sekong", "Champasack", "Attapeu",
 ];
 
-const clean = (text) => String(text || "").replace(/\s+/g, " ").trim().slice(0, TEXT_MAX);
+// ---------- text typed by hand (shown on a public page) ----------
+// Links, e-mail addresses and phone numbers are taken out; the rest is cut at LIMITS.text_max characters.
+const DIGIT = "[0-9๐-๙໐-໙]"; // also Thai and Lao digits
+const LINK = /(?:https?:\/\/|www\.)\S+|\b[\w-]+(?:\.[\w-]+)*\.(?:com|net|org|info|biz|io|co|me|ly|gl|cc|xyz|app|link|shop|site|online|la|th|vn|cn|kh|mm|sg|my)\b(?:\/\S*)?/gi;
+const MAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g;
+const PHONE = new RegExp(`\\+?(?:${DIGIT}[\\s\\-.()]*){7,}`, "g"); // 7 or more digits in a row, also with spaces or dashes between them
+const tidy = (text) => String(text || "").replace(/\s+/g, " ").trim();
+function cleanText(text, max = LIMITS.text_max) {
+  const s = tidy(tidy(text).replace(MAIL, " ").replace(LINK, " ").replace(PHONE, " ").replace(/[<>]/g, " "));
+  return [...s].slice(0, max).join("").trim(); // cut by characters, never in the middle of one
+}
 
 // "Louangnamtha | ເມືອງສິງ" -> { province: "Louangnamtha", place: "ເມືອງສິງ" }; anything else -> { province: null, place: text }
 function splitPlace(text) {
-  const s = clean(text);
+  const s = tidy(text);
   const i = s.indexOf("|");
   if (i > 0) {
     const head = s.slice(0, i).trim().toLowerCase();
     const province = PROVINCES.find((p) => p.toLowerCase() === head);
-    if (province) return { province, place: s.slice(i + 1).trim() };
+    if (province) return { province, place: cleanText(s.slice(i + 1)) };
   }
-  return { province: null, place: s };
+  return { province: null, place: cleanText(s) };
 }
 
 // Kind of rubber from the words typed (Thai, Lao or English). Checked in this order.
 function rubberType(text) {
-  const s = clean(text).toLowerCase();
+  const s = tidy(text).toLowerCase();
   if (/ก้อน|ถ้วย|ກ້ອນ|ຖ້ວຍ|cup|lump/.test(s)) return "cuplump";
   if (/น้ำยาง|ນ້ຳຢາງ|ນໍ້າຢາງ|latex/.test(s)) return "latex";
   if (/รมควัน|ຮົມຄວັນ|smoked|rss/.test(s)) return "rss";
@@ -66,14 +101,111 @@ function rubberType(text) {
   return "other";
 }
 
-// One row of the sheet -> its day and the time it was entered (null when the date cannot be read)
+// ---------- reference prices for the checks (all from files the other fetchers keep up to date) ----------
+const RAOT_KIND = { cuplump: "cuplump", latex: "latex", sheet: "uss", rss: "rss3" }; // data/rubber-daily.json
+const MOC_ITEM = { cuplump: "rubber_cuplump", latex: "rubber_latex", sheet: "rubber_sheet", rss: "rubber_sheet" }; // data/thai-prices.json
+const NEAR_DAYS = 7; // a price of up to a week before still counts as "that day" (markets close on holidays)
+const daysBetween = (a, b) => (Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000;
+// newest row [day, ...] that is not after `day` and not more than `within` days before it
+const nearRow = (rows, day, within, ok = () => true) => {
+  let best = null;
+  for (const r of rows || []) if (r[0] <= day && daysBetween(r[0], day) <= within && ok(r) && (!best || r[0] > best[0])) best = r;
+  return best;
+};
+
+function loadReferences() {
+  const daily = readJson(path.join(DATA_DIR, "rubber-daily.json"), null);
+  const thai = readJson(path.join(DATA_DIR, "thai-prices.json"), null);
+  const stat = readJson(path.join(DATA_DIR, "invest-static.json"), null);
+  const kinds = (daily && daily.thai_border && daily.thai_border.kinds) || {};
+  const items = (thai && thai.items) || {};
+
+  // kip per baht by day: Bank of the Lao PDR (middle of buying and selling), else the market rate
+  const sides = new Map(); // day -> { buy, sell }
+  for (const r of readJson(path.join(HISTORY_DIR, "bol.json"), [])) {
+    if (r.metric !== "THB_LAK_buy" && r.metric !== "THB_LAK_sell") continue;
+    const day = String(r.source_date).slice(0, 10);
+    if (!sides.has(day)) sides.set(day, {});
+    sides.get(day)[r.metric === "THB_LAK_buy" ? "buy" : "sell"] = r.value;
+  }
+  const rates = [...sides].filter(([, s]) => s.buy && s.sell).map(([day, s]) => [day, (s.buy + s.sell) / 2]);
+  for (const r of readJson(path.join(HISTORY_DIR, "fx-market.json"), [])) {
+    const day = new Date(Date.parse(r.source_date) + 7 * 3600000).toISOString().slice(0, 10);
+    if (r.metric === "THB_LAK" && !sides.has(day)) rates.push([day, r.value]);
+  }
+  const rate = (day) => {
+    const row = nearRow(rates, day, 10);
+    return row ? row[1] : null;
+  };
+
+  // Thai market price of one kind of rubber on a day, baht per kg: the central markets together (RAOT), else the
+  // ministry of commerce's price; a day of up to a week before; else the average of that month
+  const thb = (kind, day) => {
+    const raot = kinds[RAOT_KIND[kind]];
+    const moc = items[MOC_ITEM[kind]];
+    const value = (r) => (r[3] !== null && r[3] !== undefined ? r[3] : r[1] !== null && r[1] !== undefined ? r[1] : r[2]);
+    const a = raot && nearRow(raot.days, day, NEAR_DAYS, (r) => value(r) > 0);
+    if (a) return value(a);
+    const b = moc && nearRow(moc.days, day, NEAR_DAYS, (r) => r[1] > 0);
+    if (b) return b[1];
+    const month = day.slice(0, 7);
+    const c = raot && (raot.months || []).find((r) => r[0] === month && value(r) > 0);
+    if (c) return value(c);
+    const d = moc && (moc.monthly || []).find((r) => r[0] === month && r[1] > 0);
+    return d ? d[1] : null;
+  };
+  // -> [lowest, highest] reference in kip per kg for an entry of `type` on `day` (the same number twice for a
+  //    known kind; the cheapest and the dearest kind for "other"), or null when nothing is known for that day
+  const rubber = (type, day) => {
+    const lak = rate(day);
+    if (!lak) return null;
+    const list = (RAOT_KIND[type] ? [type] : Object.keys(RAOT_KIND)).map((k) => thb(k, day)).filter((v) => v > 0);
+    return list.length ? [Math.min(...list) * lak, Math.max(...list) * lak] : null;
+  };
+
+  // official assessed land prices of Vientiane Capital, kip per square metre: [lowest, highest] of the whole table
+  let official = null;
+  const districts = stat && stat.land && stat.land.vientiane && stat.land.vientiane.districts;
+  if (districts && districts.length) {
+    const classes = stat.land.vientiane.classes;
+    const all = districts.flatMap((d) => classes.flatMap((c) => (Array.isArray(d[c]) ? d[c] : [])));
+    if (all.length) official = [Math.min(...all), Math.max(...all)];
+  }
+  // -> [lowest, highest] accepted price per square metre in that province
+  const land = (province) => {
+    const L = LIMITS.land;
+    if (!official) return [L.sqm_min, L.sqm_max];
+    return [province === "Vientiane Capital" ? Math.max(L.sqm_min, official[0] * L.official_low) : L.sqm_min, Math.min(L.sqm_max, official[1] * L.official_high)];
+  };
+  return { rubber, land, official };
+}
+
+// ---------- the checks ----------
+function checkRubber(price, type, day, refs) {
+  const L = LIMITS.rubber;
+  if (price < L.min || price > L.max) throw new Error(`price looks wrong: ${price}`);
+  const ref = refs && refs.rubber(type, day);
+  if (!ref) return;
+  const low = Math.round(L.band[0] * ref[0]);
+  const high = Math.round(L.band[1] * ref[1]);
+  if (price < low || price > high) throw new Error(`price ${price} is outside ${low}-${high} (the Thai market price of that day in kip x ${L.band[0]} to x ${L.band[1]})`);
+}
+function checkLand(perSqm, area, province, refs) {
+  const L = LIMITS.land;
+  if (area < L.area_min || area > L.area_max) throw new Error(`area looks wrong: ${area}`);
+  const [low, high] = refs ? refs.land(province) : [L.sqm_min, L.sqm_max];
+  if (perSqm < low || perSqm > high) throw new Error(`price per square metre ${perSqm} is outside ${low}-${high}`);
+}
+
+// One row of the sheet -> its day and the time it was entered (throws when the date is missing or in the future)
 function rowTime(row, cols) {
   const day = parseSheetDate(row[cols.date]) || parseSheetDate(row[cols.timestamp]);
-  if (!day) return null;
+  if (!day) throw new Error(`cannot read date "${row[cols.date]}"`);
+  if (!notInFuture(day)) throw new Error(`the date ${day} is in the future`);
   return { day, at: parseSheetTimestamp(row[cols.timestamp]) || new Date(`${day}T00:00:00+07:00`).toISOString() };
 }
 
-function readRubber(rows, cols) {
+function readRubber(rows, cols, refs) {
   const entries = [];
   let skipped = 0;
   if (cols.rubber_price < 0) return { configured: false, entries, skipped };
@@ -82,11 +214,11 @@ function readRubber(rows, cols) {
     if (raw === "") return;
     try {
       const time = rowTime(row, cols);
-      if (!time) throw new Error(`cannot read date "${row[cols.date]}"`);
       const price = parseNumber(raw, "rubber price");
-      if (price < RUBBER_MIN || price > RUBBER_MAX) throw new Error(`price looks wrong: ${price}`);
-      const typeText = cols.rubber_type >= 0 ? clean(row[cols.rubber_type]) : "";
-      entries.push({ date: time.day, type: rubberType(typeText), type_text: typeText, price, ...splitPlace(cols.rubber_place >= 0 ? row[cols.rubber_place] : ""), at: time.at });
+      const rawType = cols.rubber_type >= 0 ? row[cols.rubber_type] : "";
+      const type = rubberType(rawType);
+      checkRubber(price, type, time.day, refs);
+      entries.push({ date: time.day, type, type_text: cleanText(rawType), price, ...splitPlace(cols.rubber_place >= 0 ? row[cols.rubber_place] : ""), at: time.at });
     } catch (err) {
       skipped++;
       console.warn(`       own rubber: skipped row ${i + 2}: ${err.message}`);
@@ -95,7 +227,7 @@ function readRubber(rows, cols) {
   return { configured: true, entries: newestFirst(entries), skipped };
 }
 
-function readLand(rows, cols) {
+function readLand(rows, cols, refs) {
   const entries = [];
   let skipped = 0;
   if (cols.land_total < 0 || cols.land_area < 0) return { configured: false, entries, skipped };
@@ -105,13 +237,12 @@ function readLand(rows, cols) {
     if (rawTotal === "" && rawArea === "") return;
     try {
       const time = rowTime(row, cols);
-      if (!time) throw new Error(`cannot read date "${row[cols.date]}"`);
       const total = parseNumber(rawTotal, "land price");
       const area = parseNumber(rawArea, "land area");
-      if (area < LAND_AREA_MIN || area > LAND_AREA_MAX) throw new Error(`area looks wrong: ${area}`);
+      const where = splitPlace(cols.land_place >= 0 ? row[cols.land_place] : "");
       const perSqm = Math.round(total / area);
-      if (perSqm < LAND_SQM_MIN || perSqm > LAND_SQM_MAX) throw new Error(`price per square metre looks wrong: ${perSqm}`);
-      entries.push({ date: time.day, ...splitPlace(cols.land_place >= 0 ? row[cols.land_place] : ""), total, area, per_sqm: perSqm, at: time.at });
+      checkLand(perSqm, area, where.province, refs);
+      entries.push({ date: time.day, ...where, total, area, per_sqm: perSqm, at: time.at });
     } catch (err) {
       skipped++;
       console.warn(`       own land: skipped row ${i + 2}: ${err.message}`);
@@ -166,8 +297,9 @@ async function run() {
   }
 
   const cols = findColumns(rows[0]);
-  const rubber = readRubber(rows, cols);
-  const land = readLand(rows, cols);
+  const refs = loadReferences();
+  const rubber = readRubber(rows, cols, refs);
+  const land = readLand(rows, cols, refs);
   writeOwn({ stale: false, rubber, land });
   console.log(`[OK]   own-prices: rubber ${rubber.configured ? rubber.entries.length + " entries" : "no questions"}${rubber.skipped ? ` (${rubber.skipped} skipped)` : ""}, land ${land.configured ? land.entries.length + " entries" : "no questions"}${land.skipped ? ` (${land.skipped} skipped)` : ""}`);
 
@@ -197,4 +329,4 @@ async function run() {
 
 runIfMain(module, run);
 
-module.exports = { run, splitPlace, rubberType, readRubber, readLand, PROVINCES };
+module.exports = { run, splitPlace, rubberType, readRubber, readLand, cleanText, loadReferences, checkRubber, checkLand, PROVINCES, LIMITS };

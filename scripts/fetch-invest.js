@@ -21,11 +21,19 @@
 //        { "count": 1, "error": "", "data": [ { "refYear": 2025, "netWgt": 423910705, "cifvalue": 686578294, "primaryValue": 686578294, ... } ] }
 //        reporter 156 = China, partner 418 = Lao PDR, 4001 = natural rubber, M = imports; weight in kg, value in US dollars.
 //        A year that is not published yet answers { "count": 0, "data": [] }.
+//   UNCTAD (checked 2026-10-02): GET https://unctadstat-api.unctad.org/bulkdownload/US.FdiFlowsStock/US_FdiFlowsStock
+//        a .7z archive (LZMA2, 0.7 MB) with one CSV of 3.5 MB (scripts/lib/sevenzip.js unpacks it and checks its CRC):
+//          Year,Economy,Economy Label,Flow,Flow Label,Direction,Direction Label,Millions of US$ at current prices,...
+//          2024,418,"Lao People's Dem. Rep.",09,"Stock",1,"Inward",15392.638,,,0.030465,,,95.43212,,,415.33119,,
+//        418 = Lao PDR; Flow 09 = stock, 08 = flow; Direction 1 = inward. For Laos the stock is the running total
+//        of the yearly inflows (2010-2021 and 2025: stock change = inflow, to the last digit).
+//        (unctad.org itself answers scripts with a browser check; the statistics API above does not.)
 // One failing part keeps its old numbers (marked stale); the other parts still update.
 
 const path = require("path");
-const { DATA_DIR, fetchJson, readJson, writeIfChanged } = require("./lib/common");
+const { DATA_DIR, fetchJson, readJson, writeIfChanged, parseCsv } = require("./lib/common");
 const { fromWorldBank, fromImf, fromImfSdmx } = require("./fetch-economy");
+const { unpack7z } = require("./lib/sevenzip");
 
 const OUT_FILE = path.join(DATA_DIR, "invest.json");
 const RUBBER_FIRST_MONTH = "2000-01";
@@ -38,6 +46,7 @@ const SOURCES = {
   imf_dip: { source_name: "IMF Direct Investment Positions by Counterpart Economy (formerly CDIS)", source_url: "https://data.imf.org/en/datasets/IMF.STA:DIP", license: "IMF - free to use with attribution" },
   imf_pcps: { source_name: "IMF Primary Commodity Prices (rubber, RSS3)", source_url: "https://data.imf.org/en/datasets/IMF.RES:PCPS", license: "IMF - free to use with attribution" },
   comtrade: { source_name: "UN Comtrade: China's imports of natural rubber (HS 4001) from Lao PDR", source_url: "https://comtradeplus.un.org/", license: "UN Comtrade - free public data, with attribution" },
+  unctad: { source_name: "UNCTADstat: Foreign direct investment - inward and outward flows and stock, annual", source_url: "https://unctadstat.unctad.org/datacentre/dataviewer/US.FdiFlowsStock", license: "UNCTAD - free to use with attribution" },
 };
 
 // Yearly indicators ("unit" is the meaning after "scale")
@@ -153,6 +162,50 @@ async function fdiPositions() {
   return { unit: "USD m", year, total: toM(world.values.get(year)), list, totals };
 }
 
+// Direct investment in Laos, all investor countries together (UNCTAD): stock at the end of each year, USD millions.
+// The table by country above holds only what a few investor countries report; this is the total to compare it with.
+const UNCTAD_FDI = "https://unctadstat-api.unctad.org/bulkdownload/US.FdiFlowsStock/US_FdiFlowsStock";
+const UNCTAD_LAO = "418";
+const FDI_TOTAL_FIRST_YEAR = 2010;
+async function fetchBuffer(url, timeoutMs) {
+  const res = await fetch(url, { headers: { "User-Agent": "lao-kip-gold-dashboard (personal, non-commercial)" }, signal: AbortSignal.timeout(timeoutMs) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+// csv = the text of the file -> { unit, year, total, values: [[year, stock]], flows: [[year, inflow]] }
+function fdiTotalFromCsv(csv) {
+  const head = csv.slice(0, csv.indexOf("\n"));
+  const cols = parseCsv(head)[0].map((h) => h.trim());
+  const at = { year: cols.indexOf("Year"), economy: cols.indexOf("Economy"), flow: cols.indexOf("Flow Label"), direction: cols.indexOf("Direction Label"), value: cols.indexOf("Millions of US$ at current prices") };
+  if (Object.values(at).some((i) => i < 0)) throw new Error(`UNCTAD: unexpected columns: ${head.slice(0, 160)}`);
+  // only the lines of Laos are parsed (the file has 36,000 lines)
+  const lines = csv.split("\n").filter((l) => l.includes(`,${UNCTAD_LAO},`));
+  const stock = [];
+  const flows = [];
+  for (const row of parseCsv(lines.join("\n"))) {
+    if (row[at.economy] !== UNCTAD_LAO || row[at.direction] !== "Inward" || row[at.value] === "") continue;
+    const year = Number(row[at.year]);
+    const value = Number(row[at.value]);
+    if (!Number.isInteger(year) || !Number.isFinite(value) || year < FDI_TOTAL_FIRST_YEAR) continue;
+    if (row[at.flow] === "Stock") stock.push([year, round(value, 1)]);
+    else if (row[at.flow] === "Flow") flows.push([year, round(value, 1)]);
+  }
+  stock.sort((a, b) => a[0] - b[0]);
+  flows.sort((a, b) => a[0] - b[0]);
+  if (stock.length < 5) throw new Error(`UNCTAD: only ${stock.length} years of stock for Laos`);
+  const [year, total] = stock[stock.length - 1];
+  // plausible: a positive amount that does not jump (the stock of Laos grows by its yearly inflow, about 1-2 bn)
+  const before = stock[stock.length - 2][1];
+  if (!(total > 1000 && total < 200000) || Math.abs(total / before - 1) > 0.5) throw new Error(`UNCTAD: stock ${total} (${year}) after ${before} looks wrong`);
+  return { unit: "USD m", year, total, values: stock, flows };
+}
+async function fdiTotal() {
+  const files = unpack7z(await fetchBuffer(UNCTAD_FDI, TIMEOUT_MS));
+  const file = files.find((f) => /\.csv$/i.test(f.name)) || files[0];
+  if (!file) throw new Error("UNCTAD: the archive is empty");
+  return fdiTotalFromCsv(file.data.toString("utf8"));
+}
+
 // Lao rubber at the Chinese border: [[year, USD per kg, tonnes, USD millions], ...] from China's customs records.
 // Years that are closed for good (3+ years ago) are kept from last time: one request per year is all Comtrade allows.
 const COMTRADE = "https://comtradeapi.un.org/public/v1/preview/C/A/HS?reporterCode=156&partnerCode=418&cmdCode=4001&flowCode=M";
@@ -248,6 +301,17 @@ async function main() {
     console.error(`[FAIL] fdi_positions: ${err.message}`);
     out.parts.fdi_positions = failEntry(parts.fdi_positions, { source: "imf_dip", list: [] }, err, now);
   }
+  // All investors together (UNCTAD)
+  total++;
+  try {
+    out.parts.fdi_total = okEntry(parts.fdi_total, { source: "unctad", ...(await fdiTotal()) }, now);
+    const f = out.parts.fdi_total;
+    console.log(`[OK]   fdi_total: ${f.year}, stock ${f.total} USD m (${f.values.length} years)`);
+  } catch (err) {
+    failed++;
+    console.error(`[FAIL] fdi_total: ${err.message}`);
+    out.parts.fdi_total = failEntry(parts.fdi_total, { source: "unctad", unit: "USD m", values: [] }, err, now);
+  }
 
   // Lao rubber at the Chinese border, yearly (UN Comtrade)
   total++;
@@ -286,4 +350,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { main, rubberChina };
+module.exports = { main, rubberChina, fdiTotalFromCsv };

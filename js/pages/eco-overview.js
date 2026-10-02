@@ -5,7 +5,7 @@ import { el, card, cardHead, pctPill } from "../ui.js";
 import { formatNumber } from "../format.js";
 import {
   THIS_YEAR, lastOf, pct, indicator, latest, valueIn, usdText, pctText, freshness, invTile, factsCard,
-  statusBadge, targetStatus, fill, ready, monthText, usdParts,
+  statusBadge, targetStatus, fill, ready, monthText, usdParts, reservesMonths,
 } from "./eco-common.js";
 
 export function overviewTab(panel, e) {
@@ -14,6 +14,8 @@ export function overviewTab(panel, e) {
   if (!ready(panel, e)) return;
   const inv = e.invest;
   const target = (id) => e.stat.plan.targets.find((x) => x.id === id);
+  // A number is compared with a target of the plan only when it comes from inside the plan's years (see eco-plan.js)
+  const judge = (value, tg, when) => targetStatus(value, tg.target, tg.op, { when, from: e.stat.plan.period[0] });
 
   // ---------- Key numbers ----------
   const stats = el("div", "stats");
@@ -41,9 +43,12 @@ export function overviewTab(panel, e) {
   const debtL = latest(debt, THIS_YEAR);
   if (debtL) stats.append(invTile(t, t.inv_k_debt, pctText(debtL[1]), `IMF · ${t.inv_estimate}`, freshness(t, { year: debtL[0], stale: debt.stale })));
 
-  const resMo = indicator(e, "wb.FI.RES.TOTL.MO");
-  const resL = latest(resMo);
-  if (resL) stats.append(invTile(t, t.inv_k_reserves, { num: resL[1].toFixed(1), unit: t.inv_unit_months }, `World Bank · ${t.inv_of_imports}`, freshness(t, { year: resL[0], stale: resMo.stale })));
+  // reserves in months of imports: the newest number the app has (the World Bank's report, else its yearly series)
+  const res = reservesMonths(e);
+  if (res) {
+    const sub = res.bol === null ? `${res.src} · ${t.inv_of_imports}` : `${res.src} · ${t.inv_def_bol}: ${res.bol.toFixed(1)} ${t.inv_unit_months}`;
+    stats.append(invTile(t, t.inv_k_reserves, { num: res.value.toFixed(1), unit: t.inv_unit_months }, sub, freshness(t, { ...res.when, stale: res.stale, checked: res.checked })));
+  }
 
   const fdi = indicator(e, "wb.BX.KLT.DINV.CD.WD");
   const fdiL = latest(fdi);
@@ -64,9 +69,9 @@ export function overviewTab(panel, e) {
   // ---------- Short facts computed from the data ----------
   const facts = [];
   const gT = target("growth");
-  if (growthL && gT) facts.push([fill(t.inv_fact_growth, { value: pctText(growthL[1]), year: growthL[0], target: pctText(gT.target, 0) }), statusBadge(t, targetStatus(growthL[1], gT.target, gT.op))]);
+  if (growthL && gT) facts.push([fill(t.inv_fact_growth, { value: pctText(growthL[1]), year: growthL[0], target: pctText(gT.target, 0) }), statusBadge(t, judge(growthL[1], gT, { year: growthL[0] }))]);
   const iT = target("inflation");
-  if (cpiL && iT) facts.push([fill(t.inv_fact_inflation, { value: pctText(cpiL[1]), month: monthText(cpiL[0], t), target: pctText(iT.target, 0) }), statusBadge(t, targetStatus(cpiL[1], iT.target, iT.op))]);
+  if (cpiL && iT) facts.push([fill(t.inv_fact_inflation, { value: pctText(cpiL[1]), month: monthText(cpiL[0], t), target: pctText(iT.target, 0) }), statusBadge(t, judge(cpiL[1], iT, { month: cpiL[0] }))]);
 
   const ds = inv.parts.debt_service;
   if (ds && ds.years && ds.years.length) {
@@ -77,13 +82,25 @@ export function overviewTab(panel, e) {
       facts.push([fill(t.inv_fact_debt_due, { year: ds.years[i], amount: usdText(total, t), china: china === null ? "—" : pctText(china, 0), stock: ds.first_projected - 1 }), null]);
     }
   }
+  // reserves: counted in two ways when the report gives both - one status only when both give the same answer
   const rT = target("reserves");
-  if (resL && rT) facts.push([fill(t.inv_fact_reserves, { value: resL[1].toFixed(1), year: resL[0], target: rT.target }), statusBadge(t, targetStatus(resL[1], rT.target, rT.op))]);
+  if (res && rT) {
+    const when = res.when.month ? monthText(res.when.month, t) : `${t.year} ${res.when.year}`;
+    if (res.bol === null) facts.push([fill(t.inv_fact_reserves, { value: res.value.toFixed(1), when, target: rT.target }), statusBadge(t, judge(res.value, rT, res.when))]);
+    else {
+      const each = [judge(res.bol, rT, res.when), judge(res.value, rT, res.when)];
+      facts.push([fill(t.inv_fact_reserves_two, { wb: res.value.toFixed(1), bol: res.bol.toFixed(1), when, target: rT.target }), statusBadge(t, each[0] === each[1] ? each[0] : "split")]);
+    }
+  }
 
+  // who invests: the World Bank's share of the year's inflow, and - said as what it is - the share inside the
+  // amounts that a few investor countries report to the IMF (not a share of all investment: see eco-fdi.js)
   const fp = inv.parts.fdi_positions;
+  const wbFdi = e.stat.facts.fdi_2025;
   if (fp && fp.list && fp.list.length >= 2 && fp.total) {
     const top2 = fp.list.slice(0, 2);
-    facts.push([fill(t.inv_fact_fdi_top, { a: t.countries[top2[0][0]] || top2[0][1], b: t.countries[top2[1][0]] || top2[1][1], share: pctText(((top2[0][2] + top2[1][2]) / fp.total) * 100, 0), year: fp.year }), null]);
+    const values = { a: t.countries[top2[0][0]] || top2[0][1], b: t.countries[top2[1][0]] || top2[1][1], share: pctText(((top2[0][2] + top2[1][2]) / fp.total) * 100, 0), year: fp.year, n: fp.list.length };
+    facts.push([(wbFdi ? fill(t.inv_fact_fdi_wb, wbFdi) + " · " : "") + fill(t.inv_fact_fdi_top, values), null]);
   }
 
   const rub = inv.monthly.rubber_usd;
@@ -93,7 +110,8 @@ export function overviewTab(panel, e) {
     const perKg = (cents) => (cents * 2.20462) / 100; // US cents per pound -> USD per kg
     facts.push([fill(t.inv_fact_rubber, { value: perKg(now[1]).toFixed(2), month: monthText(now[0], t) }), pctPill(pct(ago[1], now[1]), { decimals: 1 })]);
   }
-  if (facts.length) panel.append(factsCard(t, t.inv_facts_title, facts, t.inv_facts_note));
+  const [planFrom, planTo] = e.stat.plan.period;
+  if (facts.length) panel.append(factsCard(t, t.inv_facts_title, facts, fill(t.inv_facts_note, { from: planFrom, to: planTo, span: planTo - planFrom + 1 })));
 
   // ---------- What to watch (for the owner's own situations) ----------
   panel.append(el("h2", "section-title", t.inv_watch_title));

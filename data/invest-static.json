@@ -209,8 +209,9 @@
     }
   },
   "plan": {
-    "_about": "10th National Socio-Economic Development Plan 2026-2030 (NSEDP). op '>=' = at least, '<=' = at most. 'actual' says which automatic number is compared (see js/pages/eco-plan.js).",
+    "_about": "10th National Socio-Economic Development Plan 2026-2030 (NSEDP). op '>=' = at least, '<=' = at most. 'actual' says which number is compared (see js/pages/eco-plan.js): the newest one the app has, an automatic series or a hand-read fact. Only a number from inside 'period' gets a status; an earlier one is the baseline. 'checked' = the day the targets were last read in the two KPL articles (all 14 targets and the project numbers matched).",
     "source": "kpl_plan",
+    "checked": "2026-10-02",
     "period": [2026, 2030],
     "projects": { "total": 230, "ongoing": 61, "new": 169, "source": "kpl_plan2" },
     "targets": [
@@ -231,12 +232,15 @@
     ]
   },
   "facts": {
-    "_about": "Numbers quoted from the reports; the sentences are in i18n (inv_debt_*, inv_drivers_*, inv_fdi_where_*, inv_infl_why_*), the numbers here. Re-read on 2026-10-02 in the June 2026 edition of the World Bank's Lao Economic Monitor (wb_lem_2606): debt level, deferrals, debt service, reserves, growth, foreign investment and inflation now quote that edition; the peak of 2022, the share of EDL, the creditor shares, the bond and the decree are from the December 2025 edition (wb_lem).",
+    "_about": "Numbers quoted from the reports; the sentences are in i18n (inv_debt_*, inv_drivers_*, inv_fdi_where_*, inv_infl_why_*), the numbers here. Re-read on 2026-10-02 in the June 2026 edition of the World Bank's Lao Economic Monitor (wb_lem_2606): debt level, deferrals, debt service, reserves, growth, foreign investment and inflation now quote that edition; the peak of 2022, the share of EDL, the creditor shares, the bond and the decree are from the December 2025 edition (wb_lem). Debt service: the report gives the same US$1.5 billion a year for 2026-2030 twice - in its debt chapter as 'external debt service ... excluding deferrals', in its outlook as 'on external and domestic debt'. The debt chapter's wording is used (scope: external): it fits the report's other numbers (about US$2 billion in 2026; 13 percent of GDP in 2026, which is a different measure and therefore a fact of its own, debt_service_year). debt_mof = the Ministry of Finance's own count (2025 Public Debt Bulletin, as quoted in the report): 84% of GDP at the end of 2025; the World Bank's 87.1% adds deferred interest, currency swaps and expenditure arrears. reserves_wb: 'months' = months of imports of goods and services (World Bank), 'months_bol' = the Bank of the Lao PDR's own count for the same US$4.3 billion (footnote 6 of the report: without the goods imports of foreign businesses that earn export revenues or bring in their own capital).",
+    "checked": "2026-10-02",
     "debt_peak": { "peak": 130, "peak_year": 2022, "before": 94, "before_year": 2024, "now": 87.1, "now_year": 2025, "source": "wb_lem_2606", "sources": ["wb_lem"] },
+    "debt_mof": { "pct": 84, "year": 2025, "deferred_bn": 2.4, "from": 2020, "to": 2025, "source": "wb_lem_2606" },
     "debt_edl": { "share": 40, "source": "wb_lem" },
     "debt_china_half": { "multilateral": 18, "other_bilateral": 12, "source": "wb_lem" },
     "debt_deferred": { "usd_bn": 2.9, "from": 2020, "to": 2025, "source": "wb_lem_2606" },
-    "debt_service_avg": { "usd_bn": 1.5, "gdp": 13, "gdp_year": 2026, "from": 2026, "to": 2030, "source": "wb_lem_2606" },
+    "debt_service_avg": { "usd_bn": 1.5, "from": 2026, "to": 2030, "scope": "external", "excludes_deferrals": true, "source": "wb_lem_2606" },
+    "debt_service_year": { "usd_bn": 2, "gdp": 13, "year": 2026, "source": "wb_lem_2606" },
     "debt_bond": { "usd_m": 300, "coupon": 11.25, "month": "2025-11", "source": "wb_lem" },
     "debt_crowd_out": { "source": "wb_lem" },
     "debt_decree": { "no": "490/GOL", "date": "2025-07-10", "source": "wb_lem" },
@@ -245,7 +249,7 @@
     "imf_advice": { "source": "imf_art4" },
     "growth_drivers": { "growth": 4.8, "year": 2025, "tourists_m": 4.6, "tourists_growth": 11.2, "next": 3.8, "next_year": 2026, "source": "wb_lem_2606" },
     "fdi_2025": { "year": 2025, "gdp": 8, "china": 38, "ca": 12, "ca_before": 3.4, "bop_bn": 1.4, "source": "wb_lem_2606" },
-    "reserves_wb": { "usd_bn": 4.3, "months": 3.8, "month": "2026-04", "source": "wb_lem_2606" },
+    "reserves_wb": { "usd_bn": 4.3, "months": 3.8, "months_bol": 5.3, "month": "2026-04", "source": "wb_lem_2606" },
     "inflation_why": { "avg2024": 23, "avg2025": 7.7, "jan2026": 5.1, "peak2026": 10.2, "peak_month": "2026-04", "forecast2026": 9.4, "source": "wb_lem_2606" }
   },
   "rubber": {
@@ -318,7 +322,7 @@
           { "id": "fx", "band": 1, "notice": "313/BOL", "date": "2026-04-10", "old_band": 6.5, "old_notice": "191/BOL", "old_month": "2025-03", "source": "wb_lem_2606" },
           { "id": "reserve", "kip": 8, "foreign": 11, "date": "2024-08-27", "source": "bol_reserve" },
           { "id": "dollar", "share": 66, "month": "2026-03", "source": "wb_lem_2606" },
-          { "id": "reserves", "usd_bn": 4.3, "months": 3.8, "month": "2026-04", "before": 3.5, "source": "wb_lem_2606" },
+          { "id": "reserves", "usd_bn": 4.3, "months": 3.8, "months_bol": 5.3, "month": "2026-04", "before": 3.5, "before_year": 2025, "source": "wb_lem_2606" },
           { "id": "fatf", "month": "2025-02", "source": "wb_lem_2606" }
         ]
       },
@@ -356,7 +360,8 @@
         "items": [
           { "id": "level", "pct": 87.1, "year": 2025, "before": 94, "source": "wb_lem_2606" },
           { "id": "deferral", "usd_bn": 2.9, "from": 2020, "to": 2025, "source": "wb_lem_2606" },
-          { "id": "service", "usd_bn": 1.5, "from": 2026, "to": 2030, "gdp": 13, "year": 2026, "source": "wb_lem_2606" },
+          { "id": "service", "usd_bn": 1.5, "from": 2026, "to": 2030, "scope": "external", "excludes_deferrals": true, "source": "wb_lem_2606" },
+          { "id": "service_year", "usd_bn": 2, "gdp": 13, "year": 2026, "source": "wb_lem_2606" },
           { "id": "decree", "no": "490/GOL", "date": "2025-07-10", "source": "wb_lem" }
         ]
       },

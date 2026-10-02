@@ -77,6 +77,7 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 30 | **Official retail fuel prices in Laos**: Vientiane Capital (premium, regular, diesel; kip per litre) from the ministry's notices, every province from the state fuel company | Ministry of Industry and Commerce, Department of Internal Trade `https://dit.moic.gov.la/public/oil` (HTML list of notices: number, Lao date, PDF) + the PDFs themselves (scans with a text layer made by the scanner; read with `scripts/lib/pdf-text.js`) · Lao State Fuel Company `https://laostatefuel.com/en/gas-price.html` (ticker with all 18 provinces; `?province=1&page=N` = history of the capital; robots.txt allows all) | inside the 30-minute job, asked at most every 6 hours (`fetch-fuel-lao.js`) | ✅ Verified 2026-10-02. A number read from a scan is used only when TWO readings of it are clean and equal (new column of page 1, old + printed change, row 1 and row 10 of the province table, three other provinces minus their transport cost, the old column of the next notice, the fuel company's row): 27 of the 85 notices of 2024 - Sept 2026 can be confirmed (all from Oct 2025 on; older scans have no text layer), and every pair of neighbouring confirmed notices agrees (26 of 26). A notice that cannot be confirmed is listed with its link and the page says that a newer notice exists. The fuel company types its list by hand (about monthly, with mistakes: "369,330", one row with a wrong date): its rows are marked in the file and a confirmed notice always wins. No notices on the ministry's page between 8 April and 22 July 2026. |
 | 31 | Is there a newer edition of the report the hand-read facts come from? (World Bank "Lao PDR Economic Monitor") | World Bank Documents & Reports search `https://search.worldbank.org/api/v3/wds?format=json&qterm=Lao PDR Economic Monitor&count_exact=Lao People's Democratic Republic&fl=docdt,display_title,url,docty&rows=40&srt=docdt&order=desc` (keep `docty` = Report with "Economic Monitor" in the title) | weekly (`fetch-report-watch.js`) | ✅ Verified 2026-10-02: newest = June 2026 (docdt 2026-06-30) = the edition in `policy.read`. Never changes a fact by itself: the Policy tab only shows a warning with the link when a newer edition exists. |
 | 32 | Wages: (a) the statutory minimum wage in force today in Laos + 16 countries (ASEAN's 11 members, China, Japan, South Korea, Australia, USA, Israel) and Thailand's rates by province; (b) the ILO's yearly minimum-wage series (USD, PPP, own currency) and average monthly earnings; (c) market exchange rates of 14 currencies | (a) by hand in `data/invest-static.json` → `wages`, one official source per country (Thai Ministry of Labour Notification No. 14, Viet Nam Decree 293/2025, Malaysia P.U.(A) 376, NWPC Philippines, MOM Singapore, MHLW Japan, Minimum Wage Commission Korea, Fair Work Ombudsman, US DOL, Israel NII, AKP Cambodia, KPL Laos …) · (b) ILOSTAT `https://rplumber.ilo.org/data/indicator/?id=EAR_INEE_CUR_NB_A&ref_area=LAO+THA+…&timefrom=2012&format=.csv` and `id=EAR_EMTA_SEX_CUR_NB_A&sex=SEX_T` (CSV, no key) · (c) `https://open.er-api.com/v6/latest/USD` | (a) by hand, with `checked`; a rise that is already decided is entered as a dated step and switches on by itself · (b) + (c) weekly (`fetch-wages.js`) | ✅ Read / verified 2026-10-02. No API gives today's minimum wages of all 17 countries (ILO is 1-2 years behind). ILO quirks: Cambodia's dollars are in the "LCU" column and its USD column is wrong; no minimum-wage rows for Singapore and Brunei; `EAR_4MMN_CUR_NB_A` is deprecated. Myanmar is converted at the official rate, which is far from the market rate - the row says so. |
+| 33 | Direct investment in Laos, ALL investor countries together: stock at the end of each year and the yearly inflow, US$ million (2010 →) - the total to put next to the table by country (#17, IMF DIP), which holds only what six investor countries report | UNCTADstat bulk download `https://unctadstat-api.unctad.org/bulkdownload/US.FdiFlowsStock/US_FdiFlowsStock` (a .7z archive, LZMA2, with one CSV: Year, Economy 418 = Lao PDR, Flow Label Stock / Flow, Direction Label Inward, "Millions of US$ at current prices"; no key) - unpacked by `scripts/lib/sevenzip.js`, which checks the CRC of what it unpacks | weekly, inside `fetch-invest.js` (part `fdi_total`) | ✅ Read / verified 2026-10-02 (file of 2026-08-10; Laos 2024 = 15,392.6, 2025 = 16,797.4). For Laos the stock is the running total of the inflows (2010-2021 and 2025: stock change = inflow exactly; 2022-2024 use an earlier edition of the flows). It is SMALLER than the six reporters' own total (17,333.8 in 2024): the two sources do not count alike, and the page says so. `unctad.org` itself answers scripts with a browser check (not used, never bypassed); the UNCTADstat user API needs a registered key (not used). |
 
 Checked and rejected (2026-10-01, Lao rubber and land prices): Facebook / TikTok / WhatsApp (no free read API, and forbidden
 by [CONSTRAINT]); Selina Wamucii "Natural Rubber Price in Lao" (a January 2023 export unit value under a current-month title);
@@ -261,6 +262,65 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Idea not built: read the scanned notices with a real OCR program (Tesseract) on GitHub's servers, which would
   confirm almost every notice instead of about one in two. It needs a system package in the workflow and cannot be
   tested on the owner's PC - only worth it if the "newer notice not read" warning shows too often.
+
+### Audit 2026-10-02 — an outside review of the whole app (owner: "please check and improve")
+The audit lists findings in four groups. Rule of the audit: P0 first, show the result, wait for the owner before P1.
+Every finding was first checked against the code and the primary source; two were found to need a different fix
+from the one the audit proposed (marked "checked:" below).
+
+**P0 - critical (done 2026-10-02, except the part of P0-3 that needs the owner's choice)**
+- P0-1 Plan tab and overview judged 2026-2030 targets with numbers of 2025, 2024 and 2022 ("far from target 8").
+  Now: only a number from inside the plan's years gets met / near / far; an earlier one is the "baseline", one
+  that is too old is not compared; GDP per person (target for 2030) is judged by the IMF forecast for 2030 and
+  the badge says so. The number compared is the newest one the app has: state revenue 21.2% (2025, World Bank
+  report) instead of 13.9% (2022, yearly series); reserves 3.8 months (World Bank) and 5.3 months (Bank of the
+  Lao PDR's own count) for April 2026 instead of 2.4 months (2024), each with its own result, plus the central
+  bank's newest monthly reserves under the target's name. Summary today: met 0, near 1 (forecast), far 1
+  (inflation), depends on the way of counting 1, baseline 7, no data 4 = 14.
+  checked: the plan's source (KPL) does not say which way of counting the "5 months" target means - so the row
+  shows both results instead of picking one.
+- P0-2 "93% of foreign investment comes from China and Thailand" divided by the total of the six countries that
+  report to the IMF. Now: the column is "% of the reported amounts", the overview sentence says "of the amounts
+  reported" next to the World Bank's "China about 38% of the 2025 inflow", and UNCTAD's total for all investors
+  is fetched (source #33) and shown.
+  checked: UNCTAD's total for 2024 (US$15.39 bn) is SMALLER than what the six countries report themselves
+  (US$17.33 bn): the "coverage" the audit asked for is 113%. For Laos UNCTAD's stock is the running total of the
+  yearly inflows recorded on the Lao side (2010-2021 and 2025: stock change = inflow, to the last digit), the
+  investor countries count more. The page shows the 113% and says that the two sources do not count alike, so no
+  share "of all investment" can be given.
+- P0-3 Anyone can send answers to the public price form. Done now: every answer is checked hard before it may
+  appear (rubber inside a band around that day's Thai price in kip, land inside a band around the official
+  assessed prices, no date in the future - also for shop gold and silver, where a future date used to slip past
+  the Lao Bullion Bank check -, text without links / e-mail / phone numbers and at most 40 characters); the page
+  uses the bot's own limits. `tests/own-prices.js` sends 9 kinds of fake answers at a sample sheet: none gets
+  through (against the old checks 13 of its 14 checks fail). Existing real rows are unchanged.
+  STILL OPEN - the owner must choose how only he can write (the form itself is still public):
+  (a) private sheet + sign-in form + a service-account key in GitHub Secrets, or (b, recommended) an Apps Script
+  endpoint on the sheet that accepts a secret typed once per device; then the form is closed and the sheet private.
+- P0-4 Debt service "(domestic and external) about US$1.5 bn a year" next to "13% of GDP".
+  checked: the World Bank report says it both ways - its debt chapter "external debt service ... excluding
+  deferrals", its outlook "on external and domestic debt". The debt chapter's wording is used (it fits the
+  report's other numbers), the 13% of GDP for 2026 is a fact of its own, and the page has two sentences. The
+  Ministry of Finance's own debt figure (84% of GDP, end of 2025) is shown next to the World Bank's 87.1% and
+  the IMF's 80.6%, each with what it counts.
+- New tests: `tests/calc.js` (rules and formulas with fixed numbers, 24 checks), `tests/own-prices.js` (14
+  checks), and in `tests/states.js` the plan tab (no status from a number before the plan, the summary adds up,
+  revenue 21.2%), the fall-back without the hand-read facts, the reported-share wording and the entry forms
+  refusing a far price.
+
+**P1 - important (not started; waits for the owner's go)**
+P1-1 one resolver per indicator + "why the numbers differ" · P1-2 forecast line spliced across two sources ·
+P1-3 nominal / real / PPP labels · P1-4 age of the data, "IMF estimate" label, edition stored · P1-5 read
+bol.gov.la directly, rename the "market" rate · P1-6 "Compare" tab (Laos and five neighbours) · P1-7 missing
+indicators (first report which open sources exist) · P1-8 "market size" wording + consumption, PPP income,
+poverty · P1-9 kip signal: "not enough cases" below 20 · P1-10 data registry proposal + validation of the economy
+files (tests/calc.js was started under P0 and is to be extended here).
+
+**P2 - valuable / P3 - nice to have (not started)**: as listed in the audit (gold premium like for like, kip line
+wording, wage multiples of the same year only, numbers out of i18n sentences, chart read-outs, three charts,
+unsupported sentences, sources page, integrity hashes + CSP, notes, risk card; text sizes and contrast, tab index
++ search on phones, 768 px test, target 0 in points, one real-rate function, unused indicators, i18n split + lint,
+Singapore's date).
 
 ### Phase 8 — Install as an app (2026-10-01, owner agreed)
 - `manifest.webmanifest` (name, colours, icons 192 / 512 / maskable 512, 4 shortcuts) + `icons/` drawn by

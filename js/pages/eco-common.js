@@ -80,6 +80,31 @@ export function valueIn(ind, year) {
   return hit ? hit[1] : null;
 }
 
+// ---------- The newest number the app has: an automatic series or a hand-read fact, whichever is newer ----------
+// A candidate is { value, when: { year } | { month }, ... } (or null). A year counts as its last month.
+const periodKey = (when) => (when.month ? when.month : `${when.year}-12`);
+export const periodYear = (when) => (when.month ? Number(when.month.slice(0, 4)) : when.year);
+export function newest(...candidates) {
+  return candidates.filter(Boolean).reduce((best, c) => (!best || periodKey(c.when) > periodKey(best.when) ? c : best), null);
+}
+// One hand-read policy fact of data/invest-static.json ("policy" > area > item)
+export function policyItem(e, area, id) {
+  const a = e.stat && e.stat.policy && e.stat.policy.areas.find((x) => x.id === area);
+  return (a && a.items.find((x) => x.id === id)) || null;
+}
+// Foreign-exchange reserves in months of imports: the number of the newest World Bank report (hand-read, with the
+// Bank of the Lao PDR's own count of the same reserves next to it) or the yearly World Bank series.
+//   -> { value, bol: months in the central bank's count | null, usd_bn | null, when, src, stale, checked, source } | null
+export function reservesMonths(e) {
+  const f = e.stat && e.stat.facts && e.stat.facts.reserves_wb;
+  const ind = indicator(e, "wb.FI.RES.TOTL.MO");
+  const l = latest(ind);
+  return newest(
+    f ? { value: f.months, bol: f.months_bol === undefined ? null : f.months_bol, usd_bn: f.usd_bn, when: { month: f.month }, src: "World Bank", stale: false, checked: e.stat.facts.checked || e.stat.checked, source: f.source } : null,
+    l ? { value: l[1], bol: null, usd_bn: null, when: { year: l[0] }, src: "World Bank", stale: ind.stale, checked: null, source: null } : null
+  );
+}
+
 // USD millions -> "10.02 พันล้าน USD" / "886.8 ล้าน USD"
 export function usdText(millions, t) {
   if (Math.abs(millions) >= 1000) return `${(millions / 1000).toFixed(2)} ${t.unit_usd_bn}`;
@@ -89,6 +114,12 @@ export const pctText = (v, d = 1) => `${v.toFixed(d)}%`;
 // 688 -> "688", 35493 -> "35,493" (counts, hectares, square metres, kip prices: never decimals)
 export const whole = (v) => Math.round(v).toLocaleString("en-US");
 
+// Is a number too old to be called current? Yearly data: more than 2 years behind; monthly data: more than 6 months.
+export function isOld({ year, month }) {
+  if (year !== undefined && year !== null) return year < THIS_YEAR - 2;
+  return month ? monthsAgo(month) > 6 : false;
+}
+
 // "Latest or old" label for one number.
 //   period: { year } | { month: "2026-08" } | { date: "2026-02-26" } ; stale = our last download failed (old copy kept)
 //   Yearly data is "old" when it is more than 2 years behind, monthly data when more than 6 months behind.
@@ -96,16 +127,10 @@ export const whole = (v) => Math.round(v).toLocaleString("en-US");
 export function freshness(t, { year, month, date, stale, checked, compact }) {
   const box = el("span", "fresh");
   let period = "";
-  let old = false;
-  if (year !== undefined && year !== null) {
-    period = `${t.year} ${year}`;
-    old = year < THIS_YEAR - 2;
-  } else if (month) {
-    period = monthText(month, t);
-    old = monthsAgo(month) > 6;
-  } else if (date) {
-    period = `${t.inv_as_of} ${formatDate(date, t)}`;
-  }
+  const old = isOld({ year, month });
+  if (year !== undefined && year !== null) period = `${t.year} ${year}`;
+  else if (month) period = monthText(month, t);
+  else if (date) period = `${t.inv_as_of} ${formatDate(date, t)}`;
   if (period) box.append(el("span", "", period));
   let status;
   if (stale) status = el("span", "fresh-stale", `⚠ ${t.inv_fetch_failed}`);
@@ -192,19 +217,29 @@ export function barTable(headers, rows) {
   return box;
 }
 
-// Target status: "met" | "near" | "far" | "none" -> badge with an icon (never colour alone)
+// Target status -> badge with an icon (never colour alone).
+//   met / near / far = a judgement · baseline = a number from before the plan starts (no judgement) ·
+//   old = too old to compare · split = two ways of counting give different answers · none = no number
 export function statusBadge(t, status) {
-  const icon = { met: "✓", near: "≈", far: "✗", none: "—" }[status];
+  const icon = { met: "✓", near: "≈", far: "✗", none: "—", baseline: "○", old: "—", split: "±" }[status];
   return el("span", `status status-${status}`, `${icon} ${t["inv_status_" + status]}`);
 }
 
-// Compare an actual value with a target. op: ">=" (at least) or "<=" (at most). near = within 10% of the target.
-export function targetStatus(actual, target, op) {
+export const NEAR_GAP = 0.1; // "near" = not more than 10% of the target away from it
+// Compare an actual value with a target. op: ">=" (at least) or "<=" (at most).
+// period = { when: { year } | { month }, from: first year of the plan } (optional). With it, only a number from
+// inside the plan is judged: an earlier one is the "baseline" (where the plan starts from, not a result), and a
+// number that is too old to be called current is not compared at all ("old").
+export function targetStatus(actual, target, op, period) {
   if (actual === null || actual === undefined) return "none";
+  if (period && period.when) {
+    if (isOld(period.when)) return "old";
+    if (periodYear(period.when) < period.from) return "baseline";
+  }
   const ok = op === ">=" ? actual >= target : actual <= target;
   if (ok) return "met";
   const gap = Math.abs(actual - target) / Math.abs(target);
-  return gap <= 0.1 ? "near" : "far";
+  return gap <= NEAR_GAP ? "near" : "far";
 }
 
 // Are the lazily loaded files there? If not, show a placeholder (loading) or a message (failed) and return false.
