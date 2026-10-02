@@ -28,6 +28,9 @@ const amount = (v) => v.toLocaleString("en-US", Number.isInteger(v) ? {} : { min
 const times = (v) => `${v >= 10 ? v.toFixed(0) : v.toFixed(1)}×`;
 // "2012" (only the year is known) or a full day
 const whenText = (when, t) => (when.length === 4 ? when : dayFull(when, t));
+// "2.8–4.1" as one piece: a word joiner (U+2060) after the dash keeps a narrow tile from breaking the range in two
+// (the unit then goes into the small line below: number + unit would not fit side by side on a phone)
+const range = (low, high) => `${low}–${String.fromCharCode(0x2060)}${high}`;
 
 // One country today: the step in force and the next one, the amount for a month in its own currency and in dollars.
 //   steps = [[day, amount, (monthly amount named by the law)]]; rates = units of each currency for one US dollar
@@ -71,7 +74,7 @@ function tiles(e, rows, W, wages) {
   const review = e.stat.policy && e.stat.policy.areas.flatMap((a) => a.items).find((i) => i.id === "review" && i.labour);
   if (review) {
     const offers = [review.labour, review.government, review.employers];
-    stats.append(invTile(t, t.wg_k_review, { num: `${(Math.min(...offers) / 1e6).toFixed(1)}–${(Math.max(...offers) / 1e6).toFixed(1)}`, unit: t.pol_unit_mkip }, fill(t.wg_k_review_sub, { date: dayFull(review.date, t) }), freshness(t, { checked: e.stat.policy.checked || e.stat.checked }), "official"));
+    stats.append(invTile(t, t.wg_k_review, range((Math.min(...offers) / 1e6).toFixed(1), (Math.max(...offers) / 1e6).toFixed(1)), `${t.pol_unit_mkip} · ${fill(t.wg_k_review_sub, { date: dayFull(review.date, t) })}`, freshness(t, { checked: e.stat.policy.checked || e.stat.checked }), "official"));
   }
   return stats;
 }

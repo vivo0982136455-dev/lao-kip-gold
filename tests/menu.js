@@ -29,11 +29,21 @@ const STATE = `
   };
 `;
 
+// true while the menu is completely inside the screen / false when it is completely outside
+const IS_OPEN = `(() => { const r = document.getElementById("sidebar").getBoundingClientRect(); return r.right > 1 && r.left >= 0; })()`;
+
 (async () => {
   const site = await startSite(ROOT, PORT);
   const browser = await launch({ port: 9343 });
   try {
     const page = await browser.newPage({ width: 380, height: 820 });
+    // The menu slides in and out: wait until it has arrived (a fixed pause was too short on a busy computer),
+    // then read the state. Gives up after 5 seconds - the check after it then reports what it sees.
+    const settle = async (open) => {
+      await page.until(`${IS_OPEN} === ${open}`, 5000);
+      await sleep(150);
+      return page.eval(STATE);
+    };
     for (const lang of ["th", "lo"]) {
       await page.goto(BASE + "#/overview", 300);
       await page.eval(`localStorage.setItem("lang", "${lang}"); localStorage.setItem("theme", "dark");`);
@@ -45,34 +55,30 @@ const STATE = `
       check(`${lang} phone: the page title starts at the left edge`, start.titleLeft === 16, "left = " + start.titleLeft);
 
       await page.eval(`document.getElementById("more-btn").click();`);
-      await sleep(400);
-      const opened = await page.eval(STATE);
+      const opened = await settle(true);
       check(`${lang} phone: "more" opens the menu, close button visible`, opened.open && opened.closeShown && opened.expanded === "true", JSON.stringify(opened));
       if (lang === "th") await page.shot(path.join(SHOTS, "menu-open-380.png"));
 
       await page.eval(`document.getElementById("menu-close").click();`);
-      await sleep(400);
-      const closed = await page.eval(STATE);
+      const closed = await settle(false);
       check(`${lang} phone: the close button closes it`, !closed.open && closed.expanded === "false", JSON.stringify(closed));
 
       await page.eval(`document.getElementById("more-btn").click();`);
-      await sleep(300);
+      await settle(true);
       await page.eval(`document.getElementById("backdrop").click();`);
-      await sleep(400);
-      check(`${lang} phone: a tap beside the menu closes it`, !(await page.eval(STATE)).open);
+      check(`${lang} phone: a tap beside the menu closes it`, !(await settle(false)).open);
 
       await page.eval(`document.getElementById("more-btn").click();`);
-      await sleep(300);
+      await settle(true);
       await page.s("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
       await page.s("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-      await sleep(400);
-      check(`${lang} phone: Escape closes it`, !(await page.eval(STATE)).open);
+      check(`${lang} phone: Escape closes it`, !(await settle(false)).open);
 
       await page.eval(`document.getElementById("more-btn").click();`);
-      await sleep(300);
+      await settle(true);
       await page.eval(`document.querySelector('#nav a[href="#/forecast"]').click();`);
-      await sleep(600);
-      const moved = await page.eval(STATE);
+      await page.until(`location.hash === "#/forecast"`, 5000);
+      const moved = await settle(false);
       check(`${lang} phone: choosing a page closes it and opens the page`, !moved.open && moved.hash === "#/forecast", JSON.stringify(moved));
     }
 

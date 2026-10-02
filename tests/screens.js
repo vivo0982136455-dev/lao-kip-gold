@@ -1,5 +1,5 @@
 // Every screen of the site x Thai / Lao x dark / light x phone 380 / desktop 1440, in a real Edge (headless).
-// Checks: no sideways scroll, nothing sticking out of the screen, no "undefined" / "NaN" / unfilled {placeholder},
+// Checks: no sideways scroll, nothing sticking out of the screen or out of its own tile / card, no "undefined" / "NaN" / unfilled {placeholder},
 // every chart drawn, no console errors. Saves pictures of the screens for a look by eye.
 // Usage: node tests/screens.js [quick]      quick = Thai dark phone only (22 screens instead of 176)
 const fs = require("fs");
@@ -47,6 +47,10 @@ const CHECK = `
     const chart = window.Chart && Chart.getChart(c);
     const r = c.getBoundingClientRect();
     if (!chart || r.width < 50 || r.height < 50) out.deadCharts++;
+  }
+  // text that sticks out of its own tile or card (it can still be inside the screen, so the check above misses it)
+  for (const box of document.querySelectorAll("#view .stat, #view .card")) {
+    if (box.scrollWidth > box.clientWidth + 2) out.wide.push("wider than its box: " + (box.className || "") + ": " + (box.textContent || "").trim().slice(0, 40) + " [" + box.scrollWidth + " > " + box.clientWidth + "]");
   }
   out.wide = out.wide.slice(0, 5);
   return out;

@@ -74,6 +74,16 @@ function startSite(root, port) {
 // A fresh profile for every launch = a true first visit. The folder is removed again when the browser closes.
 async function launch({ port = 9333, args = [] } = {}) {
   if (!EDGE) throw new Error("No Edge / Chrome found - set BROWSER_PATH to the browser's .exe");
+  // a test that was stopped half-way leaves its profile (~50 MB) behind: old ones are removed here
+  for (const name of fs.readdirSync(os.tmpdir())) {
+    const stamp = /^lkg-test-profile-\d+-(\d+)$/.exec(name);
+    if (!stamp || Date.now() - Number(stamp[1]) < 2 * 3600000) continue;
+    try {
+      fs.rmSync(path.join(os.tmpdir(), name), { recursive: true, force: true });
+    } catch {
+      /* still held by a browser that hangs */
+    }
+  }
   const profile = path.join(os.tmpdir(), `lkg-test-profile-${port}-${Date.now()}`);
   fs.mkdirSync(SHOTS, { recursive: true });
   const child = spawn(EDGE, ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "--no-first-run", "--no-default-browser-check", "--disable-extensions", "--disable-sync", ...args, "about:blank"], { stdio: "ignore" });
@@ -104,10 +114,19 @@ async function launch({ port = 9333, args = [] } = {}) {
       else resolve(msg.result);
     } else if (msg.method) for (const fn of listeners) fn(msg);
   };
+  // A browser that hangs must fail the test, not block it for ever: every command gets 90 seconds for its answer
   const send = (method, params = {}, sessionId) =>
     new Promise((resolve, reject) => {
       const id = nextId++;
-      waiting.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        waiting.delete(id);
+        reject(new Error(`the browser did not answer "${method}" within 90 seconds`));
+      }, 90000);
+      const done = (fn) => (value) => {
+        clearTimeout(timer);
+        fn(value);
+      };
+      waiting.set(id, { resolve: done(resolve), reject: done(reject) });
       ws.send(JSON.stringify({ id, method, params, sessionId }));
     });
 

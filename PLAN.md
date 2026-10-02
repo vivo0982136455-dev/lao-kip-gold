@@ -254,6 +254,10 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Acceptance: `node tests/all.js` (22 screens x Thai / Lao x dark / light x 380 / 1440 px = 176; states.js opens the
   wages tab with all 17 rows, without exchange rates and "100 days later" when the decided rises are in force, the
   fuel card in three states, the policy tab with the live files, with a newer report and without the files).
+- Tests made stricter the same day: a tile or card whose content is wider than the box itself is reported (a
+  range with its unit overflowed a tile while staying inside the screen - the old check only looked at the screen
+  edge); every test of `tests/all.js` has a time limit and every browser command 90 seconds, so a hanging
+  browser fails the run instead of blocking it; the menu test waits for the menu to arrive instead of pausing.
 - Idea not built: read the scanned notices with a real OCR program (Tesseract) on GitHub's servers, which would
   confirm almost every notice instead of about one in two. It needs a system package in the workflow and cannot be
   tested on the owner's PC - only worth it if the "newer notice not read" warning shows too often.

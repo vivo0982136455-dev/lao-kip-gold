@@ -27,6 +27,9 @@ const CHECK = `
     if (/\\bundefined\\b|\\bNaN\\b|\\[object |\\bnull\\b|Infinity/.test(text)) out.badText.push(text.trim().slice(0, 80));
     if (/\\{[a-z_0-9]+\\}/.test(text)) out.placeholders.push(text.trim().slice(0, 80));
   }
+  for (const box of document.querySelectorAll("#view .stat, #view .card")) {
+    if (box.scrollWidth > box.clientWidth + 2) out.wide.push("wider than its box: " + (box.className || "") + ": " + (box.textContent || "").trim().slice(0, 40) + " [" + box.scrollWidth + " > " + box.clientWidth + "]");
+  }
   out.wide = out.wide.slice(0, 4);
   return out;
 `;
