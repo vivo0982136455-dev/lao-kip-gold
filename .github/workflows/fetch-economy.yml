@@ -53,9 +53,10 @@ jobs:
         run: node scripts/fetch-economy.js
 
       # Numbers for the economy tabs: GDP structure, debt by creditor + repayment schedule, FDI by country, world rubber
+      # 30 seconds on a good day; on a day the World Bank's API answers "502" each failing series costs two minutes
       - name: Fetch investor data (World Bank IDS, IMF)
         if: always()
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: node scripts/fetch-invest.js
 
       # "if: always()" = prices still update even if one economy source failed

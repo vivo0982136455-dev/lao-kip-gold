@@ -40,7 +40,13 @@ async function fetchText(url, extraHeaders = {}, timeoutMs = TIMEOUT_MS) {
         headers: { "User-Agent": "lao-kip-gold-dashboard (personal, non-commercial)", ...extraHeaders },
         signal: AbortSignal.timeout(timeoutMs),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
+      if (!res.ok) {
+        // An error page that nobody reads keeps its connection - and with it this program - open until the time
+        // limit of the request. Seen 2026-10-03: the World Bank answered "502", the weekly step had written its
+        // file and was still stopped by its 10-minute limit. So: let the page go before giving up on it.
+        if (res.body) await res.body.cancel().catch(() => {});
+        throw new Error(`HTTP ${res.status} from ${url}`);
+      }
       return await res.text();
     } catch (err) {
       lastError = err;

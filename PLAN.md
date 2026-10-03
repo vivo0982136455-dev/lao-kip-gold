@@ -362,6 +362,12 @@ from the one the audit proposed (marked "checked:" below).
   Formulas that were written twice now live in `js/calc.js` and `scripts/lib/units.js` (output byte-identical).
 - Tests: `node tests/all.js` = calc 42, own-prices 14, bol-route 22, data-check 31, 184 screens, 238+ page
   states, menu 16, install 37, offline label; `tests/live.js` has 9 more checks for this group.
+- Found on GitHub's servers right after the push (2026-10-03 evening, the World Bank's API answered "502"): the
+  investor-data step had written its file and was still stopped by its 10-minute limit. Cause: an error page
+  that is never read keeps its connection - and the program - open until the request's time limit (Node 20).
+  `fetchText()` now lets the page go before it reports the error (`tests/download.js`: the program ends 0.1 s
+  after its work instead of lingering); the step's limit is 15 minutes. The failed series keep last week's
+  values and are marked, as designed.
 
 **P2 - valuable / P3 - nice to have (not started)**: as listed in the audit (gold premium like for like, kip line
 wording, wage multiples of the same year only, numbers out of i18n sentences, chart read-outs, three charts,

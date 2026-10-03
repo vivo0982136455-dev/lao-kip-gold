@@ -173,7 +173,10 @@ const UNCTAD_LAO = "418";
 const FDI_TOTAL_FIRST_YEAR = 2010;
 async function fetchBuffer(url, timeoutMs) {
   const res = await fetch(url, { headers: { "User-Agent": "lao-kip-gold-dashboard (personal, non-commercial)" }, signal: AbortSignal.timeout(timeoutMs) });
-  if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
+  if (!res.ok) {
+    if (res.body) await res.body.cancel().catch(() => {}); // an unread error page would keep the program open (see lib/common.js)
+    throw new Error(`HTTP ${res.status} from ${url}`);
+  }
   return Buffer.from(await res.arrayBuffer());
 }
 // csv = the text of the file -> { unit, year, total, values: [[year, stock]], flows: [[year, inflow]] }
