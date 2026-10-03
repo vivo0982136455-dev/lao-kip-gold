@@ -60,6 +60,7 @@ const CHECK = `
       ["gold", {}, "gold"],
       ["living", {}, "living"],
       ["economy overview", { eco_tab: "overview" }, "economy"],
+      ["compare with the neighbours", { eco_tab: "compare" }, "economy"],
       ["population", { eco_tab: "population" }, "economy"],
       ["wages", { eco_tab: "wages" }, "economy"],
       ["plan", { eco_tab: "plan" }, "economy"],
@@ -103,6 +104,36 @@ const CHECK = `
     await open({ eco_tab: "wages" }, "economy", "wagerows");
     const wage = await page.eval(`const rows = [...document.querySelectorAll("#view .wage-table tbody tr")]; return { rows: rows.length, dollars: rows.filter((tr) => /[0-9]/.test(tr.cells[1].textContent)).length, charts: document.querySelectorAll("#view canvas").length, failed: document.querySelectorAll("#view .fresh-stale").length };`);
     check("live: wages tab - 17 countries, dollars for 16, the ILO chart", wage.rows === 17 && wage.dollars >= 15 && wage.charts === 1 && wage.failed === 0, JSON.stringify(wage));
+    // ---------- audit 2026-10-02, group P1 ----------
+    // P1-5: the official rate is read from the central bank's own page on GitHub's servers, and Settings says so;
+    // the API rate is called a reference rate
+    await open({}, "settings", "route");
+    const route = await page.eval(`const items = [...document.querySelectorAll("#view .status-item")]; const bol = items.find((x) => x.textContent.includes("Bank of the Lao PDR")); const fx = items.find((x) => x.textContent.includes("open.er-api.com")); return { route: bol && bol.querySelector(".status-route") ? bol.querySelector(".status-route").textContent : "", failed: bol ? !!bol.querySelector(".error-text") : null, fx: fx ? fx.querySelector(".status-top").firstChild.textContent : "", chip: fx && fx.querySelector(".chip") ? fx.querySelector(".chip").textContent : "" };`);
+    check("live: settings - the official rate comes straight from the central bank's page, and the page says so", route.route.includes("อ่านตรงจากเว็บ BOL") && route.failed === false, JSON.stringify(route));
+    check("live: settings - the API rate is a reference rate, not a market rate", /^Reference mid rate/.test(route.fx) && route.chip === "อ้างอิง", JSON.stringify(route));
+    await open({}, "rates", "apirate");
+    const api = await page.eval(`const c = [...document.querySelectorAll("#view .card")].find((x) => x.dataset.kind === "reference"); return c ? c.querySelector(".card-head").textContent : "";`);
+    check("live: rates page - the card of the API rate has its own name", api.includes("อัตรากลางอ้างอิง (API)"), api);
+    // P1-6: Laos next to its neighbours - every row names its year, another year than the card's is marked
+    await open({ eco_tab: "compare" }, "economy", "comparerows");
+    const cmp = await page.eval(`const cards = [...document.querySelectorAll("#view .compare-card")]; const rows = cards.flatMap((c) => [...c.querySelectorAll("tbody tr")].map((tr) => ({ card: c.dataset.year, value: tr.cells[1].textContent.trim(), year: (tr.cells[2].textContent.match(/(19|20)\\d\\d/) || [""])[0], marked: !!tr.cells[2].querySelector(".cmp-year-off") }))); return { cards: cards.length, rows: rows.length, noYear: rows.filter((r) => r.value !== "—" && !r.year).length, unmarked: rows.filter((r) => r.year && r.year !== r.card && !r.marked).length, marked: rows.filter((r) => r.marked).length, failed: document.querySelectorAll("#view .fresh-stale").length };`);
+    check("live: compare tab - 11 indicators x 6 countries, a year in every row, other years marked, nothing failed", cmp.cards === 11 && cmp.rows === 66 && cmp.noYear === 0 && cmp.unmarked === 0 && cmp.failed === 0, JSON.stringify(cmp));
+    // P1-3: the GDP tab says which prices a number is in, and shows GDP per person at purchasing power
+    await open({ eco_tab: "gdp" }, "economy", "gdpprices");
+    const gdp = await page.eval(`const tiles = [...document.querySelectorAll("#view .stats .stat")].map((x) => x.textContent); return { current: tiles.filter((x) => x.includes("ราคาปัจจุบัน")).length, constant: tiles.filter((x) => x.includes("ราคาคงที่")).length, ppp: tiles.filter((x) => x.includes("PPP")).length, charts: document.querySelectorAll("#view canvas").length, failed: document.querySelectorAll("#view .fresh-stale").length };`);
+    check("live: GDP tab - current prices, constant prices and PPP named on the tiles", gdp.current >= 2 && gdp.constant >= 1 && gdp.ppp === 1 && gdp.charts >= 4 && gdp.failed === 0, JSON.stringify(gdp));
+    // P1-4: a number of an earlier year does not carry the "latest" tick - it says how far behind it is
+    await open({ eco_tab: "overview" }, "economy", "freshness");
+    const fresh = await page.eval(`const year = new Date().getFullYear(); const tiles = [...document.querySelectorAll("#view .stats .stat")].map((x) => ({ text: x.querySelector(".fresh") ? x.querySelector(".fresh").textContent : "", tick: !!x.querySelector(".fresh-ok"), behind: !!x.querySelector(".fresh-behind, .fresh-old") })); const old = tiles.filter((x) => { const y = (x.text.match(/(19|20)\\d\\d/) || [""])[0]; return y && Number(y) < year - 1; }); return { tiles: tiles.length, old: old.length, oldWithTick: old.filter((x) => x.tick && !/ตรวจ/.test(x.text)).length, oldWithAge: old.filter((x) => x.behind).length, differ: !!document.querySelector("#view .differ-card") };`);
+    check("live: economy overview - an older year shows its age, never the 'latest' tick; the 'why numbers differ' card is there", fresh.tiles >= 6 && fresh.oldWithTick === 0 && fresh.old === fresh.oldWithAge && fresh.differ, JSON.stringify(fresh));
+    // P1-8: the head count is not called a market; what people can spend has its own tiles
+    await open({ eco_tab: "population" }, "economy", "spending");
+    const pop = await page.eval(`const text = [...document.querySelectorAll("#view li, #view p, #view .stat")].map((x) => x.textContent); const h = [...document.querySelectorAll("#view h2.section-title")].find((x) => x.nextElementSibling && x.nextElementSibling.nextElementSibling && x.nextElementSibling.nextElementSibling.classList.contains("stats")); return { market: text.filter((x) => x.includes("ตลาด") && x.includes("ล้านคน")).length, tiles: h ? h.nextElementSibling.nextElementSibling.querySelectorAll(".stat").length : 0 };`);
+    check("live: population tab - no head count called a market, four tiles on what people can spend", pop.market === 0 && pop.tiles === 4, JSON.stringify(pop));
+    // P1-9: the kip hint shows a percentage only with 20 checked cases or more
+    await open({}, "forecast", "hintcases");
+    const hint = await page.eval(`const tiles = [...document.querySelectorAll("#view .stats .stat")].slice(0, 2).map((x) => ({ value: x.querySelector(".stat-value").textContent, sub: x.querySelector(".stat-sub") ? x.querySelector(".stat-sub").textContent : "" })); return tiles.map((x) => ({ ...x, n: Number((x.sub.match(/\\d+/) || ["0"])[0]) }));`);
+    check("live: kip hint - a percentage only from 20 checked cases", hint.length === 2 && hint.every((x) => (/^\d+%$/.test(x.value) ? x.n >= 20 : x.value === "กรณียังไม่พอ")), JSON.stringify(hint));
     // the "who buys" view has its two data files (buyers per year, daily border markets)
     await open({ eco_tab: "rubber", eco_rubber_view: "buyers", eco_rubber_border_kind: "cuplump" }, "economy", "buyers");
     const buyers = await page.eval(`return { tiles: document.querySelectorAll("#view .stat").length, charts: document.querySelectorAll("#view canvas").length, failed: document.getElementById("view").innerText.includes("⚠") };`);

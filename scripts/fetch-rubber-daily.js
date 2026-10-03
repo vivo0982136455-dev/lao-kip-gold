@@ -8,7 +8,7 @@
 //   malaysia     Malaysian Rubber Board (LGM): official daily prices of SMR 20 (block rubber) and latex in bulk
 //   china        Shanghai Futures Exchange daily report: settlement price of the most traded contract of
 //                natural rubber (RU) and of TSR 20 (NR, traded on its energy exchange INE)
-//   fx           market rates of the US dollar (to turn baht, ringgit, yuan, peso into dollars and kip)
+//   fx           reference mid rates (API) of the US dollar (to turn baht, ringgit, yuan, peso into dollars and kip)
 // Writes data/rubber-daily.json (loaded only on the Economy > Rubber tab).
 // Usage: node scripts/fetch-rubber-daily.js            (today's numbers, always asks)
 //        node scripts/fetch-rubber-daily.js months=14  (also read the 14 months before: fills the history once)
@@ -48,7 +48,7 @@ const SOURCES = {
   raot: { source_name: "Rubber Authority of Thailand: central rubber market prices", source_url: "https://misdata.rubberthaiecon.com/report/repprices.php", license: "Rubber Authority of Thailand - public price report, with attribution" },
   lgm: { source_name: "Malaysian Rubber Board (LGM): daily rubber prices", source_url: "https://www.lgm.gov.my", license: "Malaysian Rubber Board - official prices, with attribution" },
   shfe: { source_name: "Shanghai Futures Exchange: daily trading report (natural rubber RU, TSR 20 NR)", source_url: "https://www.shfe.com.cn/reports/tradedata/dailyandweeklydata/", license: "© Shanghai Futures Exchange - shown for personal, non-commercial information" },
-  fx: { source_name: "Market mid rate (open.er-api.com / ExchangeRate-API)", source_url: "https://www.exchangerate-api.com", license: "Free API - attribution: Rates By Exchange Rate API" },
+  fx: { source_name: "Reference mid rate (API: open.er-api.com / ExchangeRate-API)", source_url: "https://www.exchangerate-api.com", license: "Free API - attribution: Rates By Exchange Rate API" },
 };
 
 const RAOT_URL = process.env.RAOT_URL || "https://misdata.rubberthaiecon.com/report/repprices.php";

@@ -4,9 +4,14 @@
 
 import { el, card, cardHead, sectionTitle, statTile, table, emptyState } from "../ui.js";
 import { formatDate, formatPct, todayVientiane, addDays, formatAxis } from "../format.js";
+import { fill } from "./eco-common.js";
 
 const ARROW = { up: "▲", down: "▼", flat: "▬" };
-const WINDOW_DAYS = 30;
+const WINDOW_DAYS = 30; // gold estimate against the real price
+const HINT_WINDOW_DAYS = 90; // checked hints that count for the accuracy
+// Fewer checked hints than this: words, never a percentage. "2 of 2 = 100%" reads like a trading signal and is
+// only noise (audit 2026-10-02, P1-9).
+export const MIN_CASES = 20;
 
 // Table whose cells may wrap (status words are long, especially in Lao) so it fits a phone
 const wrapTable = (headers, rows) => {
@@ -17,16 +22,30 @@ const wrapTable = (headers, rows) => {
 
 // ---------- Shared helpers (also used by the Overview page) ----------
 
-// Accuracy over the last 30 days: { usd: {correct, total}, thb: {...} }
+// Accuracy of the hints checked in the last 90 days: { usd: { correct, total, naive, enough }, thb: {...} }
+//   naive  = how often "the same direction every day" would have been right, with the direction that came most
+//            often - the best a guess without any information can do. A hint is worth something only above it.
+//   enough = there are at least MIN_CASES checked hints
 export function hintAccuracy(hints) {
-  const from = addDays(todayVientiane(), -(WINDOW_DAYS - 1));
+  const from = addDays(todayVientiane(), -(HINT_WINDOW_DAYS - 1));
   const done = ((hints && hints.hints) || []).filter((h) => h.status === "resolved" && h.target_date >= from);
-  const count = (cur) => ({ correct: done.filter((h) => h.correct[cur]).length, total: done.length });
+  const count = (cur) => {
+    const seen = { up: 0, down: 0, flat: 0 };
+    for (const h of done) seen[h.actual[cur]]++;
+    return { correct: done.filter((h) => h.correct[cur]).length, total: done.length, naive: Math.max(seen.up, seen.down, seen.flat), enough: done.length >= MIN_CASES };
+  };
   return { usd: count("usd"), thb: count("thb") };
 }
 
+const share = (part, total) => `${Math.round((part / total) * 100)}%`;
+// "62%" - or words when there are too few checked hints for a percentage to mean anything
 function pctText(acc, t) {
-  return acc.total ? `${Math.round((acc.correct / acc.total) * 100)}%` : t.not_enough_data;
+  return acc.enough ? share(acc.correct, acc.total) : t.hint_few_cases;
+}
+// The line under a hint: the accuracy next to the naive guess, or why there is no percentage yet
+function accuracyNote(acc, t) {
+  if (!acc.usd.enough) return fill(t.hint_few_note, { n: acc.usd.total, min: MIN_CASES });
+  return fill(t.hint_acc_note, { days: HINT_WINDOW_DAYS, n: acc.usd.total, usd: share(acc.usd.correct, acc.usd.total), usd_naive: share(acc.usd.naive, acc.usd.total), thb: share(acc.thb.correct, acc.thb.total), thb_naive: share(acc.thb.naive, acc.thb.total) });
 }
 
 // Gold estimate error vs the real Lao price (Lao Bullion Bank sell per 15 g), last 30 days
@@ -76,13 +95,20 @@ export function todayHintCard(hints, t, withLink) {
     }
   }
   const acc = hintAccuracy(hints);
-  c.append(el("p", "note", `${t.hint_estimate_only} ${t.accuracy_30d}: USD ${pctText(acc.usd, t)} · THB ${pctText(acc.thb, t)}`));
+  c.append(el("p", "note", `${t.hint_estimate_only} ${accuracyNote(acc, t)}`));
   if (withLink) {
     const a = el("a", "card-link", t.see_details + " →");
     a.href = "#/forecast";
     c.append(a);
   }
   return c;
+}
+
+// One accuracy tile: the share of right hints with the naive guess under it - or, with too few checked hints,
+// words and how many are still missing
+function accuracyTile(title, acc, t) {
+  const sub = acc.enough ? `${t.hints_checked}: ${acc.total} · ${t.hint_naive}: ${share(acc.naive, acc.total)}` : fill(t.hint_few_sub, { n: acc.total, min: MIN_CASES });
+  return statTile(`${title} (${fill(t.days_n, { days: HINT_WINDOW_DAYS })})`, pctText(acc, t), sub, "estimated");
 }
 
 // ---------- Page ----------
@@ -101,8 +127,8 @@ export function render(view, ctx) {
   const stats = el("div", "stats");
   stats.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
   stats.append(
-    statTile(`${t.accuracy_usd} (${t.days_30})`, pctText(acc.usd, t), `${t.hints_checked}: ${acc.usd.total}`, "estimated"),
-    statTile(`${t.accuracy_thb} (${t.days_30})`, pctText(acc.thb, t), `${t.hints_checked}: ${acc.thb.total}`, "estimated"),
+    accuracyTile(t.accuracy_usd, acc.usd, t),
+    accuracyTile(t.accuracy_thb, acc.thb, t),
     statTile(t.gold_error_adj, adjErr === null ? t.not_enough_data : `±${adjErr.toFixed(2)}%`, `${t.days_compared}: ${errs.filter((e) => e.adjErr !== null).length}`, "estimated"),
     statTile(t.gold_error_raw, rawErr === null ? t.not_enough_data : `±${rawErr.toFixed(2)}%`, `${t.days_compared}: ${errs.length}`, "estimated")
   );
@@ -113,7 +139,7 @@ export function render(view, ctx) {
   const how = card(null);
   how.append(cardHead(t.method_title, null, false, t));
   const steps = el("ol", "steps");
-  for (const key of ["method_1", "method_2", "method_3", "method_4"]) steps.append(el("li", "", t[key].replace("{pct}", (hints && hints.flat_threshold_pct) || 0.02)));
+  for (const key of ["method_1", "method_2", "method_3", "method_4", "method_5"]) steps.append(el("li", "", fill(t[key], { pct: (hints && hints.flat_threshold_pct) || 0.02, days: HINT_WINDOW_DAYS, min: MIN_CASES })));
   how.append(steps);
   how.style.marginTop = "12px";
   view.append(how);

@@ -3,8 +3,8 @@
 //
 // How it works (all days are Vientiane dates):
 // 1) MAKE a hint for today - only on weekdays, only if BOL has NOT published today's rate yet,
-//    and only when the market rate for today is available. The hint is the direction of the
-//    market rate (today vs the previous market day): up / down / flat. A hint is never changed later.
+//    and only when the reference mid rate (API) for today is available. The hint is the direction of the
+//    reference rate (today vs the previous day it has): up / down / flat. A hint is never changed later.
 // 2) CHECK the hint when BOL publishes that day: compare BOL mid rate (buy+sell)/2 with the
 //    previous BOL day -> actual direction -> correct or not.
 //    If BOL has not published after 5 days (holiday), the hint is closed as "no_publication".

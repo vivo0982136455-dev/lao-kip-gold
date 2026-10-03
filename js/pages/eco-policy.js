@@ -15,6 +15,7 @@ import { chartCard } from "../charts.js";
 import { lazyJson } from "../lazy.js";
 import { lastOf, monthText, monthShort, dayFull as dayText, freshness, sourcesFoot, invTile, fill, staticSource, ready, whole } from "./eco-common.js";
 import { todayVientiane } from "../format.js";
+import { inflationSeries } from "./eco-latest.js";
 
 const isDay = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const isMonth = (v) => typeof v === "string" && /^\d{4}-\d{2}$/.test(v);
@@ -80,16 +81,8 @@ function liveLevers(file) {
   return out;
 }
 
-// Monthly inflation: the IMF series, continued with the months the central bank has already published.
-//   -> { values: [[month, %]], last: [month, %], from: "imf" | "bol", imfLast: month, stale } | null
-function inflationSeries(e, live) {
-  const cpi = e.economy.monthly && e.economy.monthly.cpi_yoy;
-  if (!cpi || !cpi.values.length) return null;
-  const imfLast = lastOf(cpi.values)[0];
-  const more = live.inflation ? live.inflation.rows.filter(([m]) => m > imfLast) : [];
-  const values = [...cpi.values, ...more];
-  return { values, last: lastOf(values), from: more.length ? "bol" : "imf", imfLast, stale: more.length ? live.inflation.stale : cpi.stale, source: cpi.source };
-}
+// (monthly inflation - the IMF series continued with the central bank's newer months - comes from eco-latest.js,
+// the same resolver every tab uses)
 
 // ---------- the official fuel prices ----------
 // What the newest notice says, next to the price before the 2026 crisis and the highest price since then.
@@ -118,7 +111,7 @@ function tiles(e, live, fuel) {
   const fx = findItem(P, "money", "fx");
   if (fx) add(t.pol_k_band, `±${fx.band}%`, fill(t.pol_k_band_sub, { old: fx.old_band, date: dayText(fx.date, t) }), { checked });
   // the newest inflation next to the ceiling of the plan
-  const inf = inflationSeries(e, live);
+  const inf = inflationSeries(e);
   const target = e.stat.plan && e.stat.plan.targets.find((x) => x.id === "inflation");
   if (inf) {
     const who = inf.from === "bol" ? "BOL" : "IMF";
@@ -190,7 +183,7 @@ function howCard(t) {
 // ---------- one policy and its effect in one picture: the policy rate next to inflation ----------
 function rateChart(e, live) {
   const { t } = e;
-  const inf = inflationSeries(e, live);
+  const inf = inflationSeries(e);
   if (!live.history || !inf) return null;
   const today = todayVientiane();
   const thisMonth = today.slice(0, 7);
@@ -230,7 +223,7 @@ function rateChart(e, live) {
   const atPeak = inflation.get(peak[0].slice(0, 7)); // inflation in the month of the highest rate
   ul.append(el("li", "", fill(t.pol_chart_note_path, { peak: peak[1], peak_date: dayText(peak[0], t), peak_inflation: atPeak === undefined ? "—" : atPeak.toFixed(1), cuts, now: live.rate.rate, date: dayText(live.rate.date, t) })));
   if (inf.from === "bol") ul.append(el("li", "", fill(t.pol_chart_note_bol, { month: monthText(last[0], t), imf_month: monthText(inf.imfLast, t) })));
-  c.append(ul, sourcesFoot(t, [staticSource(e, "bol_rate"), inf.from === "bol" ? live.sources.bol_inflation : null, e.economy.sources && e.economy.sources[inf.source]]));
+  c.append(ul, sourcesFoot(t, [staticSource(e, "bol_rate"), ...[...inf.sources].reverse()]));
   return c;
 }
 
@@ -404,7 +397,7 @@ function adviceCard(e) {
 export function policyTab(panel, e) {
   const { t } = e;
   panel.append(el("p", "muted tab-intro", t.pol_intro));
-  const bank = lazyJson("data/bol-policy.json", e.rerender);
+  const bank = { state: e.bankState, data: e.bank }; // loaded by the page for every tab (economy.js)
   const fuelFile = lazyJson("data/fuel-lao.json", e.rerender);
   const watch = lazyJson("data/report-watch.json", e.rerender);
   if (!ready(panel, e, ["stat"])) return;

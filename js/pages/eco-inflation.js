@@ -9,6 +9,7 @@ import {
   fill, monthText, monthShort,
 } from "./eco-common.js";
 import { inflationCompare } from "./living-parts.js";
+import { inflationSeries, latestInflation, differCard } from "./eco-latest.js";
 
 const addMonths = (m, n) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1 + n, 1)).toISOString().slice(0, 7);
 
@@ -16,14 +17,14 @@ export function inflationTab(panel, e) {
   const { t, economy: eco } = e;
   panel.append(el("p", "muted tab-intro", t.inv_infl_intro));
   const mon = eco.monthly || {};
-  const cpi = mon.cpi_yoy;
+  const cpi = inflationSeries(e); // the IMF's months, continued with the newer months of the central bank
   const usd = mon.bol_usd_mid;
   const target = e.stat && e.stat.plan.targets.find((x) => x.id === "inflation");
 
   // ---------- Key numbers ----------
   const stats = el("div", "stats");
-  const cpiL = cpi && lastOf(cpi.values);
-  if (cpiL) stats.append(invTile(t, t.inv_k_inflation, pctText(cpiL[1]), `IMF · ${t.inv_vs_last_year}`, freshness(t, { month: cpiL[0], stale: cpi.stale })));
+  const now = latestInflation(e);
+  if (now) stats.append(invTile(t, t.inv_k_inflation, pctText(now.value), `${now.src} · ${t.inv_vs_last_year}`, freshness(t, { ...now.when, stale: now.stale })));
   const imfNow = valueIn(indicator(e, "imf.PCPIPCH"), THIS_YEAR);
   if (imfNow !== null) stats.append(invTile(t, fill(t.inv_k_imf_year, { year: THIS_YEAR }), pctText(imfNow), `IMF · ${t.inv_yearly_avg}`, freshness(t, { year: THIS_YEAR })));
   if (target) stats.append(invTile(t, t.inv_k_infl_target, `≤ ${pctText(target.target, 0)}`, t.inv_plan_name, null));
@@ -100,4 +101,8 @@ export function inflationTab(panel, e) {
     grid.append(c);
   }
   panel.append(grid);
+
+  // the monthly number of two sources and the yearly averages are not the same measure: said side by side
+  const differ = differCard(e, ["inflation"]);
+  if (differ) panel.append(differ);
 }

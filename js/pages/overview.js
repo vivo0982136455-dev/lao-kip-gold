@@ -67,7 +67,7 @@ export function render(view, ctx) {
       t
     ),
     metricCard(
-      { title: "card_market_fx", kind: "market", note: "note_market_fx", rows: [["row_usd_lak", "fx-market.USD_LAK"], ["row_thb_lak", "fx-market.THB_LAK"]] },
+      { title: "card_market_fx", kind: "reference", note: "note_market_fx", rows: [["row_usd_lak", "fx-market.USD_LAK"], ["row_thb_lak", "fx-market.THB_LAK"]] },
       summary,
       t
     )
@@ -85,7 +85,7 @@ export function render(view, ctx) {
       seriesDefs: [
         { metric: "calc.bol_USD_LAK_mid", label: t.series_bol_mid, kind: "official" },
         { metric: "calc.bcel_USD_LAK_mid", label: t.series_bcel_mid, kind: "bank" },
-        { metric: "fx-market.USD_LAK", label: t.series_market, kind: "market" },
+        { metric: "fx-market.USD_LAK", label: t.series_market, kind: "reference" },
       ],
     }),
     dailyChartCard({
@@ -96,7 +96,7 @@ export function render(view, ctx) {
       seriesDefs: [
         { metric: "calc.bol_THB_LAK_mid", label: t.series_bol_mid, kind: "official" },
         { metric: "calc.bcel_THB_LAK_mid", label: t.series_bcel_mid, kind: "bank" },
-        { metric: "fx-market.THB_LAK", label: t.series_market, kind: "market" },
+        { metric: "fx-market.THB_LAK", label: t.series_market, kind: "reference" },
       ],
     })
   );

@@ -1,11 +1,49 @@
 // Economy tab 2: GDP & structure - size, growth, GDP per person (vs the 2030 goal), which sectors make the
 // economy and how fast each grows, trade, and what drove growth (World Bank report).
+// GDP is shown in three ways that must not be mixed up (audit 2026-10-02, P1-3):
+//   current prices  = dollars of each year: falls when the kip falls (2022: -18% while production grew)
+//   constant prices = at the prices and the exchange rate of one base year: what was really produced
+//   PPP             = adjusted for what things cost in each country: for comparing living standards
 
 import { el, card, cardHead } from "../ui.js";
 import { chartCard } from "../charts.js";
+import { formatNumber } from "../format.js";
 import {
   indicator, latest, valueIn, usdText, pctText, freshness, sourcesFoot, barTable, yearChart, ready, staticSource, fill,
+  buildSeries, unitName, invTile, sourceOf, pct,
 } from "./eco-common.js";
+import { growthNow, rangeText } from "./eco-latest.js";
+
+const BASE_YEAR = 2015; // World Bank NY.GDP.MKTP.KD = "constant 2015 US$"
+
+// GDP in dollars of each year next to GDP at the prices and the exchange rate of the base year, on one axis
+function sizeChart(e) {
+  const { t } = e;
+  const s = buildSeries(e, { actual: "wb.NY.GDP.MKTP.CD", forecast: "imf.NGDPD" });
+  if (!s) return null;
+  const real = indicator(e, "wb.NY.GDP.MKTP.KD");
+  const series = [{ label: t.inv_gdp_current, kind: "official", color: "--cat-1", values: s.actual }];
+  if (real && real.values.length) series.push({ label: fill(t.inv_gdp_constant, { base: BASE_YEAR }), kind: "official", color: "--cat-3", values: s.years.map((y) => valueIn(real, y)) });
+  if (s.forecast) series.push({ label: t.series_imf_forecast, kind: "official", color: "--cat-1", dashed: true, soft: true, values: s.forecast, shown: s.forecastOnly });
+  const subtitle = [`${t.unit}: ${unitName(s.unit, t)}`, `${t.source}: World Bank + IMF`, `${t.latest_actual_year} ${s.lastActual}`, s.forecast ? (s.rebased ? t.forecast_rebased : t.dashed_is_forecast) : null, s.stale || (real && real.stale) ? "⚠ " + t.inv_fetch_failed : null].filter(Boolean).join(" · ");
+  const c = chartCard({ title: t.inv_gdp_size_title, subtitle, labels: s.years.map(String), series, unit: s.unit, t, firstColTitle: t.year });
+  // the year in which the two lines part most: dollars fell, production did not (numbers from the series themselves)
+  const cur = indicator(e, "wb.NY.GDP.MKTP.CD");
+  const growth = indicator(e, "wb.NY.GDP.MKTP.KD.ZG");
+  const fx = indicator(e, "wb.PA.NUS.FCRF");
+  let worst = null;
+  for (let i = 1; i < cur.values.length; i++) {
+    const [year, value] = cur.values[i];
+    const change = pct(cur.values[i - 1][1], value);
+    const grew = valueIn(growth, year);
+    if (cur.values[i - 1][0] === year - 1 && grew !== null && grew > 0 && change < 0 && (!worst || change < worst.change)) worst = { year, change, grew };
+  }
+  const before = worst && valueIn(fx, worst.year - 1);
+  const after = worst && valueIn(fx, worst.year);
+  if (worst && before && after) c.append(el("p", "note", fill(t.inv_gdp_nominal_note, { year: worst.year, nominal: pctText(Math.abs(worst.change), 0), real: pctText(worst.grew), fx_before: formatNumber(before, "LAK"), fx: formatNumber(after, "LAK") })));
+  c.append(sourcesFoot(t, s.sources.map((id) => sourceOf(e, id)).filter(Boolean)));
+  return c;
+}
 
 const SECTORS = [
   // [share indicator, growth indicator, text key, sub-line key]
@@ -17,18 +55,42 @@ const SECTORS = [
 export function gdpTab(panel, e) {
   const { t } = e;
   panel.append(el("p", "muted tab-intro", t.inv_gdp_intro));
-  if (!ready(panel, e)) return;
+  if (!ready(panel, e, ["invest", "stat", "bank"])) return;
   const target = (id) => e.stat.plan.targets.find((x) => x.id === id);
   const wb = e.invest.sources.worldbank;
+
+  // ---------- Key numbers: each one says which of the three ways it is ----------
+  const stats = el("div", "stats");
+  const gdp = indicator(e, "wb.NY.GDP.MKTP.CD");
+  const gdpL = latest(gdp);
+  if (gdpL) stats.append(invTile(t, t.inv_k_gdp, { num: gdpL[1].toFixed(2), unit: t.unit_usd_bn }, `World Bank · ${t.inv_current_prices}`, freshness(t, { year: gdpL[0], stale: gdp.stale })));
+  const growth = growthNow(e);
+  if (growth) stats.append(invTile(t, t.inv_k_growth, rangeText(growth), `${growth.list.length > 1 ? fill(t.inv_n_sources, { n: growth.list.length }) : t["dif_who_" + growth.list[0].who]} · ${t.inv_constant_prices}`, freshness(t, { year: growth.year, stale: growth.list.some((x) => x.stale) })));
+  const pc = indicator(e, "wb.NY.GDP.PCAP.CD");
+  const pcL = latest(pc);
+  if (pcL) stats.append(invTile(t, t.inv_k_gdppc, { num: formatNumber(pcL[1], "USD per person"), unit: "USD" }, `World Bank · ${t.inv_current_prices}`, freshness(t, { year: pcL[0], stale: pc.stale })));
+  const ppp = indicator(e, "wb.NY.GDP.PCAP.PP.CD");
+  const pppL = latest(ppp);
+  const pcSame = pppL ? valueIn(pc, pppL[0]) : null;
+  if (pppL) stats.append(invTile(t, t.inv_k_gdppc_ppp, { num: formatNumber(pppL[1], "intl$ per person"), unit: t.inv_unit_intl }, pcSame ? `World Bank · ${fill(t.inv_gdp_ppp_sub, { times: (pppL[1] / pcSame).toFixed(1) })}` : "World Bank", freshness(t, { year: pppL[0], stale: ppp.stale })));
+  panel.append(stats);
 
   // ---------- Size, growth, per person ----------
   const grid = el("div", "grid grid-2");
   const charts = [
-    yearChart(e, { actual: "wb.NY.GDP.MKTP.CD", forecast: "imf.NGDPD" }, { title: t.eco_gdp }),
+    sizeChart(e),
     yearChart(e, { actual: "wb.NY.GDP.MKTP.KD.ZG", forecast: "imf.NGDP_RPCH" }, { title: t.eco_growth, unitLabel: t.unit_pct_year, target: target("growth") && { value: target("growth").target, label: t.inv_plan_target_line } }),
     yearChart(e, { actual: "wb.NY.GDP.PCAP.CD", forecast: "imf.NGDPDPC" }, { title: t.inv_gdppc_title, target: target("gdp_pc") && { value: target("gdp_pc").target, year: target("gdp_pc").by, label: fill(t.inv_plan_target_by, { year: target("gdp_pc").by }) } }),
   ];
   for (const c of charts) if (c) grid.append(c);
+
+  // how to read the three kinds of GDP number (general explanation, no numbers)
+  const how = card("estimated");
+  how.append(cardHead(t.inv_gdp_read_title, null, false, t));
+  const lines = el("ul", "watch-list");
+  for (const k of ["inv_gdp_read_1", "inv_gdp_read_2", "inv_gdp_read_3"]) lines.append(el("li", "", t[k]));
+  how.append(lines);
+  grid.append(how);
 
   // ---------- Structure: share of GDP + growth per sector (latest year) ----------
   const shares = SECTORS.map(([sId, gId, key, sub]) => {

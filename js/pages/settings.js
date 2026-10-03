@@ -3,6 +3,7 @@
 import { el, card, cardHead, kindChip, statusBadge, sourceStatus, sourceLink, sectionTitle } from "../ui.js";
 import { formatDate, toMs } from "../format.js";
 import { installState, askInstall } from "../pwa.js";
+import { fill } from "./eco-common.js";
 
 function settingRow(label, options, current, onPick) {
   const row = el("div", "setting-row");
@@ -19,6 +20,20 @@ function settingRow(label, options, current, onPick) {
   return row;
 }
 
+// A source with two routes (the official rate: the bank's own page, or the public mirror as the backup) says which
+// one gave the numbers on show, and whether the two agreed (scripts/fetch-bol.js writes route / cross_check)
+function routeLine(src, t) {
+  if (!src.route) return null;
+  const parts = [t["route_" + src.route] || src.route];
+  if (src.route === "direct") {
+    const c = src.cross_check;
+    parts.push(!c ? t.route_check_none : !c.same_day ? fill(t.route_check_wait, { date: formatDate(c.mirror_date, t) }) : c.agree ? t.route_check_ok : fill(t.route_check_diff, { pct: c.max_diff_pct }));
+  }
+  const line = el("div", "status-route", parts.join(" · "));
+  if (src.route !== "direct" && src.route_note) line.append(el("div", "error-text", src.route_note));
+  return line;
+}
+
 // One status row per source: name, kind, status, newest data time, error
 function statusRows(summary, economy, hints, t) {
   const rows = [];
@@ -27,7 +42,10 @@ function statusRows(summary, economy, hints, t) {
     const name = el("div");
     name.append(sourceLink(src));
     if (src.last_error && src.stale) name.append(el("div", "error-text", src.last_error.message));
-    rows.push([name, kindChip(src.kind, t), statusBadge(status, t), src.latest_source_date ? formatDate(src.latest_source_date, t) : "—"]);
+    const route = routeLine(src, t);
+    if (route) name.append(route);
+    // "shown_as": the label of a source whose stored kind is kept for older copies of the app (the API rate)
+    rows.push([name, kindChip(src.shown_as || src.kind, t), statusBadge(status, t), src.latest_source_date ? formatDate(src.latest_source_date, t) : "—"]);
   }
   if (economy && economy.indicators) {
     for (const group of ["worldbank", "imf"]) {

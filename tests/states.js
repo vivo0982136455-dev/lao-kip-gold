@@ -2,7 +2,9 @@
 // the land table, every kind of rubber of the Thai border markets, every "see the effect" button of the policy tab,
 // the wages tab (all countries, without exchange rates, after the next rises), the official fuel card and the policy
 // tab with and without the files that update themselves, the plan tab (only a number from inside the plan is judged;
-// the fall-back without the hand-read facts), the investment tab with and without UNCTAD's total, and the two entry
+// the fall-back without the hand-read facts), the investment tab with and without UNCTAD's total, the route of the
+// official rate on the Settings page (bank's page / mirror, compared or not), the kip hint with 2 and with 25
+// checked cases (words, never "100%", below 20), the population tab (a head count is not a market), the Compare tab (one row = one year), the labels of prices and age on the economy tabs, and the two entry
 // forms opened and filled in, also with a price the checks must refuse (NOT saved: requests to Google are blocked here).
 // Usage: node tests/states.js
 const fs = require("fs");
@@ -311,6 +313,228 @@ const CHECK = `
       if (!f.head.includes(REPORTED[lang]) || f.tiles !== 3 || f.unctad) r.badText.push(`fdi without UNCTAD: ${JSON.stringify(f)}`);
       report(`${lang} fdi: without UNCTAD's total`, r);
       site.override.clear();
+    }
+
+    // ---------- 2i. which route gave the official rate, and the API rate under its own name (audit P1-5) ----------
+    const summaryFile = JSON.parse(fs.readFileSync(path.join(ROOT, "data/summary.json"), "utf8"));
+    const WORDS = {
+      th: { direct: "อ่านตรงจากเว็บ BOL", mirror: "สำเนาสำรอง", agree: "ตรงกันทุกค่า", wait: "ยังเทียบไม่ได้", none: "ยังไม่ได้เทียบ", via: "ผ่านสำเนาสำรอง", reference: "อ้างอิง", market: "ตลาด", card: "อัตรากลางอ้างอิง (API)" },
+      lo: { direct: "ອ່ານໂດຍກົງຈາກເວັບ BOL", mirror: "ສຳເນົາສຳຮອງ", agree: "ກົງກັນທຸກຄ່າ", wait: "ຍັງທຽບບໍ່ໄດ້", none: "ຍັງບໍ່ໄດ້ທຽບ", via: "ຜ່ານສຳເນົາສຳຮອງ", reference: "ອ້າງອີງ", market: "ຕະຫຼາດ", card: "ອັດຕາກາງອ້າງອີງ (API)" },
+    };
+    const withRoute = (extra, fxKind) => {
+      const copy = JSON.parse(JSON.stringify(summaryFile));
+      for (const k of ["route", "route_note", "cross_check"]) delete copy.sources.bol[k];
+      Object.assign(copy.sources.bol, extra);
+      delete copy.sources["fx-market"].shown_as;
+      if (fxKind === "reference") copy.sources["fx-market"].shown_as = fxKind; // what the bot writes now
+      else copy.sources["fx-market"].kind = fxKind;
+      return JSON.stringify(copy);
+    };
+    const check = (same_day, agree, max_diff_pct, mirror_date = "2026-10-02") => ({ against: "mirror", mirror_date, same_day, agree, max_diff_pct });
+    // [name, what data/latest/bol.json says, kind of the API rate in the file, what the Settings row must say]
+    const ROUTES = [
+      ["direct, the mirror agrees", { route: "direct", route_note: null, cross_check: check(true, true, 0) }, "reference", (x, w) => x.route.includes(w.direct) && x.route.includes(w.agree) && x.fxChip === w.reference],
+      ["direct, the mirror differs", { route: "direct", route_note: null, cross_check: check(true, false, 0.27) }, "reference", (x, w) => x.route.includes(w.direct) && x.route.includes("0.27%")],
+      ["direct, the mirror is a day behind", { route: "direct", route_note: null, cross_check: check(false, null, null, "2026-10-01") }, "reference", (x, w) => x.route.includes(w.direct) && x.route.includes(w.wait)],
+      ["direct, the mirror could not be read", { route: "direct", route_note: null, cross_check: null }, "reference", (x, w) => x.route.includes(w.direct) && x.route.includes(w.none)],
+      ["mirror, with the reason", { route: "mirror", route_note: "HTTP 503 from https://www.bol.gov.la/en/ExchangRate", cross_check: null }, "reference", (x, w) => x.route.includes(w.mirror) && x.route.includes("HTTP 503") && !x.route.includes(w.direct)],
+      ["a file from before the change: no route line, the old kind", {}, "market", (x, w) => x.route === "" && x.fxChip === w.market],
+      ["a kind this page does not know: its id, never 'undefined'", {}, "benchmark", (x) => x.fxChip === "benchmark"],
+    ];
+    const settingsInfo = `const items = [...document.querySelectorAll("#view .status-item")]; const of = (name) => items.find((li) => li.textContent.includes(name)); const bol = of("Bank of the Lao PDR"); const fx = of("open.er-api.com"); return { route: bol && bol.querySelector(".status-route") ? bol.querySelector(".status-route").textContent : "", fxChip: fx && fx.querySelector(".chip") ? fx.querySelector(".chip").textContent : "(no row)" };`;
+    const ratesInfo = `const cards = [...document.querySelectorAll("#view .card")]; const api = cards.find((c) => c.dataset.kind === "reference"); const table = cards.find((c) => c.querySelector("table")); return { card: api ? api.querySelector(".card-head").firstChild.textContent : "(no card)", chip: api && api.querySelector(".chip") ? api.querySelector(".chip").textContent : "", foot: table && table.querySelector(".card-foot") ? table.querySelector(".card-foot").textContent : "", lineColour: getComputedStyle(document.documentElement).getPropertyValue("--kind-reference").trim(), marketColour: getComputedStyle(document.documentElement).getPropertyValue("--kind-market").trim() };`;
+    for (const lang of ["th", "lo"]) {
+      const w = WORDS[lang];
+      for (const [name, extra, fxKind, good] of ROUTES) {
+        site.override.set("/data/summary.json", withRoute(extra, fxKind));
+        await open(lang, {}, "settings");
+        const r = await page.eval(CHECK);
+        const x = await page.eval(settingsInfo);
+        if (!good(x, w)) r.badText.push("settings route: " + JSON.stringify(x));
+        report(`${lang} settings: ${name}`, r, lang === "th" ? x.route || "(no route line)" : "");
+      }
+      // the rates page: the API rate has its own name and label, in the colour of its kind; a mirror day is credited
+      for (const [route, credited] of [["direct", false], ["mirror", true]]) {
+        site.override.set("/data/summary.json", withRoute({ route, route_note: null, cross_check: null }, "reference"));
+        await open(lang, {}, "rates");
+        const r = await page.eval(CHECK);
+        const x = await page.eval(ratesInfo);
+        if (x.card !== w.card || x.chip !== w.reference || x.foot.includes(w.via) !== credited || !x.lineColour || x.lineColour !== x.marketColour) r.badText.push("rates: " + JSON.stringify(x));
+        report(`${lang} rates: the API rate by its own name, route ${route}`, r, lang === "th" ? `${x.card} | ${x.foot}` : "");
+      }
+      site.override.clear();
+    }
+
+    // ---------- 2j. the kip hint: a small sample shows words, never "100%" (audit P1-9) ----------
+    const FEW = { th: "กรณียังไม่พอ", lo: "ກໍລະນີຍັງບໍ່ພໍ" };
+    const dayBack = (n) => new Date(Date.now() + 7 * 3600000 - n * 86400000).toISOString().slice(0, 10);
+    const oneHint = (n, said, real) => ({ target_date: dayBack(n), made_at: dayBack(n) + "T02:00:00.000Z", basis: { from_day: dayBack(n + 1), to_day: dayBack(n), usd_pct: 0.05, thb_pct: 0.05 }, hint: { usd: said, thb: said }, status: "resolved", actual: { usd: real, thb: real }, actual_pct: { usd: 0.04, thb: 0.04 }, correct: { usd: said === real, thb: said === real }, resolved_at: dayBack(n) + "T09:00:00.000Z" });
+    const hintFile = (list) => JSON.stringify({ flat_threshold_pct: 0.02, hints: list.sort((a, b) => (a.target_date < b.target_date ? -1 : 1)) });
+    // 2 checked hints, both right: the old page said "100%"
+    const small = hintFile([oneHint(1, "up", "up"), oneHint(2, "down", "down")]);
+    // 25 checked hints: 16 right = 64%; "up every day" would have been right 15 times = 60%
+    const many = [];
+    for (const [count, said, real] of [[12, "up", "up"], [3, "down", "up"], [4, "down", "down"], [6, "up", "down"]]) for (let i = 0; i < count; i++) many.push(oneHint(many.length + 1, said, real));
+    const big = hintFile(many);
+    const hintInfo = `const tiles = [...document.querySelectorAll("#view .stats .stat")].slice(0, 2).map((x) => ({ value: x.querySelector(".stat-value").textContent, sub: x.querySelector(".stat-sub") ? x.querySelector(".stat-sub").textContent : "" })); const note = document.querySelector("#view .hint-card p.note:last-of-type"); return { tiles, note: note ? note.textContent : "" };`;
+    for (const lang of ["th", "lo"]) {
+      for (const [name, text, hash] of [["2 checked hints", small, "forecast"], ["2 checked hints", small, "overview"], ["25 checked hints", big, "forecast"], ["25 checked hints", big, "overview"]]) {
+        site.override.set("/data/forecast/hints.json", text);
+        await open(lang, {}, hash);
+        const r = await page.eval(CHECK);
+        const x = await page.eval(hintInfo);
+        const percents = (x.note.match(/\d+%/g) || []).join(" ");
+        if (text === small) {
+          // no percentage anywhere near the hint: not in the tiles, not in the line under the hint
+          if (percents || (hash === "forecast" && (x.tiles.length !== 2 || x.tiles.some((tile) => tile.value !== FEW[lang] || /%/.test(tile.sub) || !/2\D+20/.test(tile.sub)))) || !/2\D+20/.test(x.note)) r.badText.push("small sample: " + JSON.stringify(x));
+        } else if (percents !== "64% 60% 64% 60%" || (hash === "forecast" && (x.tiles.length !== 2 || x.tiles.some((tile) => tile.value !== "64%" || !tile.sub.includes("25") || !tile.sub.includes("60%"))))) r.badText.push("big sample: " + JSON.stringify(x));
+        report(`${lang} ${hash}: kip hint with ${name}`, r, lang === "th" ? (hash === "forecast" ? x.tiles.map((tile) => `${tile.value} (${tile.sub})`).join(" | ") : x.note) : "");
+      }
+      site.override.clear();
+    }
+
+    // ---------- 2k. population: a head count is never called a market; what people can spend has its own tiles (P1-8) ----------
+    const popFile = JSON.parse(fs.readFileSync(path.join(ROOT, "data/population.json"), "utf8"));
+    const MARKET = { th: "ตลาด", lo: "ຕະຫຼາດ" };
+    const PEOPLE = { th: "ล้านคน", lo: "ລ້ານຄົນ" };
+    const popInfo = (lang) => `const h = [...document.querySelectorAll("#view h2.section-title")].find((x) => x.nextElementSibling && x.nextElementSibling.nextElementSibling && x.nextElementSibling.nextElementSibling.classList.contains("stats")); const tiles = h ? [...h.nextElementSibling.nextElementSibling.querySelectorAll(".stat")] : []; return { tiles: tiles.map((x) => ({ label: x.querySelector(".stat-label").textContent, value: x.querySelector(".stat-value").textContent, old: !!x.querySelector(".fresh-old"), year: (x.querySelector(".fresh").textContent.match(/(19|20)\\d\\d/) || [""])[0] })), market: [...document.querySelectorAll("#view li, #view p, #view .stat, #view td")].map((x) => x.textContent).filter((x) => x.includes(${JSON.stringify(MARKET[lang])}) && x.includes(${JSON.stringify(PEOPLE[lang])})) };`;
+    const yearOf = (id) => String(popFile.indicators[id].values[popFile.indicators[id].values.length - 1][0]);
+    for (const lang of ["th", "lo"]) {
+      await open(lang, { eco_tab: "population" });
+      let r = await page.eval(CHECK);
+      let x = await page.eval(popInfo(lang));
+      const home = stat.population.household;
+      const want = [yearOf("gni_ppp"), yearOf("consumption"), yearOf("poverty_national"), String(home.year)];
+      if (x.market.length) r.badText.push("a head count is called a market: " + x.market[0].slice(0, 90));
+      if (x.tiles.length !== 4 || x.tiles.some((tile, i) => tile.year !== want[i]) || !x.tiles[1].old || !x.tiles[3].old || x.tiles[0].old || x.tiles[3].value.indexOf(home.size.toFixed(1)) !== 0) r.badText.push("spending tiles: " + JSON.stringify(x.tiles));
+      report(`${lang} population: head count and spending power apart`, r, lang === "th" ? x.tiles.map((tile) => `${tile.value} (${tile.year}${tile.old ? ", old" : ""})`).join(" | ") : "");
+
+      // without the hand-read household size, and with a file from before the new indicators: no empty tiles
+      const bareStat = JSON.parse(JSON.stringify(stat));
+      delete bareStat.population.household;
+      site.override.set("/data/invest-static.json", JSON.stringify(bareStat));
+      await open(lang, { eco_tab: "population" });
+      r = await page.eval(CHECK);
+      x = await page.eval(popInfo(lang));
+      if (x.tiles.length !== 3) r.badText.push("without the household size: " + JSON.stringify(x.tiles));
+      report(`${lang} population: without the household size`, r);
+      const barePop = JSON.parse(JSON.stringify(popFile));
+      for (const id of ["gni_ppp", "consumption", "consumption_gdp", "poverty_national", "poverty_3usd"]) delete barePop.indicators[id];
+      site.override.set("/data/population.json", JSON.stringify(barePop));
+      await open(lang, { eco_tab: "population" });
+      r = await page.eval(CHECK);
+      x = await page.eval(popInfo(lang));
+      if (x.tiles.length) r.badText.push("a spending section without any number: " + JSON.stringify(x.tiles));
+      report(`${lang} population: a file from before the spending numbers`, r);
+      site.override.clear();
+    }
+
+    // ---------- 2l. Laos next to its neighbours: every row names its year, another year is always marked (P1-6) ----------
+    const cmpFile = JSON.parse(fs.readFileSync(path.join(ROOT, "data/compare.json"), "utf8"));
+    const cmpInfo = `return [...document.querySelectorAll("#view .compare-card")].map((c) => ({ id: c.dataset.indicator, year: c.dataset.year, stale: !!c.querySelector(".badge-stale, .stale"), rows: [...c.querySelectorAll("tbody tr")].map((tr) => ({ name: tr.cells[0].firstChild.textContent, value: tr.cells[1].textContent.trim(), year: tr.cells[2].textContent.trim(), marked: !!tr.cells[2].querySelector(".cmp-year-off") })) }));`;
+    // the rule of the tab, checked on what the page shows: a row with a number names a year; a year that is not
+    // the card's year carries the mark; a row of the card's year does not
+    const yearProblems = (cards) => {
+      const out = [];
+      for (const c of cards) {
+        for (const r of c.rows) {
+          const yr = (r.year.match(/(19|20)\d\d/) || [""])[0];
+          if (r.value === "—") {
+            if (r.year) out.push(`${c.id}: ${r.name} has no number but a year`);
+          } else if (!yr) out.push(`${c.id}: ${r.name} has no year`);
+          else if (yr !== c.year && !(r.marked && r.year.includes("⚠"))) out.push(`${c.id}: ${r.name} is from ${yr}, the card is ${c.year} - not marked`);
+          else if (yr === c.year && r.marked) out.push(`${c.id}: ${r.name} is marked although it is of the card's year`);
+        }
+        if (c.rows.length !== cmpFile.countries.length) out.push(`${c.id}: ${c.rows.length} rows`);
+      }
+      return out;
+    };
+    const newestOf = (id, iso) => { const list = cmpFile.indicators[id].rows[iso] || []; return list.length ? list[list.length - 1][0] : null; };
+    // an indicator in today's file where a neighbour has no number for Laos' newest year (a mark must show today)
+    const behind = Object.keys(cmpFile.indicators).filter((id) => cmpFile.countries.some((iso) => { const y = newestOf(id, iso); return y !== null && y < newestOf(id, "LAO"); }));
+    for (const lang of ["th", "lo"]) {
+      await open(lang, { eco_tab: "compare" });
+      let r = await page.eval(CHECK);
+      let cards = await page.eval(cmpInfo);
+      let problems = yearProblems(cards);
+      const marks = cards.reduce((n, c) => n + c.rows.filter((x) => x.marked).length, 0);
+      if (cards.length !== 11) problems.push(`${cards.length} cards`);
+      if (behind.length && !marks) problems.push("no mark although " + behind.join(", ") + " has a country behind");
+      if (problems.length) r.badText.push("compare: " + problems.slice(0, 4).join(" | "));
+      report(`${lang} compare: one row = one year, other years marked`, r, lang === "th" ? `${cards.length} cards, ${marks} marked rows (${cards.filter((c) => c.rows.some((x) => x.marked)).map((c) => c.id).join(", ")}) · years ${[...new Set(cards.map((c) => c.year))].join(", ")}` : "");
+
+      // Laos one year behind everybody: the whole card moves to Laos' year, and nobody needs a mark
+      const lagging = JSON.parse(JSON.stringify(cmpFile));
+      const laoGdp = lagging.indicators.gdp.rows.LAO;
+      const dropped = laoGdp.pop()[0];
+      // a country with nothing at all, and a number that failed to update
+      lagging.indicators.urban.rows.MMR = [];
+      lagging.indicators.growth.stale = true;
+      lagging.indicators.growth.last_error = { message: "HTTP 502", at: "2026-10-03T00:00:00.000Z" };
+      site.override.set("/data/compare.json", JSON.stringify(lagging));
+      await open(lang, { eco_tab: "compare" });
+      r = await page.eval(CHECK);
+      cards = await page.eval(cmpInfo);
+      problems = yearProblems(cards);
+      const gdpCard = cards.find((c) => c.id === "gdp");
+      const urbanCard = cards.find((c) => c.id === "urban");
+      if (!gdpCard || gdpCard.year !== String(dropped - 1) || gdpCard.rows.some((x) => x.marked)) problems.push("gdp card with Laos a year behind: " + JSON.stringify(gdpCard));
+      if (!urbanCard || urbanCard.rows.filter((x) => x.value === "—").length !== 1 || urbanCard.rows[urbanCard.rows.length - 1].value !== "—") problems.push("urban card without Myanmar: " + JSON.stringify(urbanCard && urbanCard.rows));
+      if (problems.length) r.badText.push("compare (variant): " + problems.slice(0, 4).join(" | "));
+      report(`${lang} compare: Laos a year behind, a country without numbers, a failed update`, r, lang === "th" ? `gdp card year ${gdpCard && gdpCard.year}` : "");
+      site.override.clear();
+
+      // the file is not there: a sentence, no broken page
+      await block(["*data/compare.json*"]);
+      await open(lang, { eco_tab: "overview" });
+      await page.eval(`document.getElementById("tab-compare").click();`);
+      await sleep(1500);
+      const gone = await page.eval(`return { cards: document.querySelectorAll("#view .compare-card").length, text: document.getElementById("tabpanel").innerText.length, bad: /undefined|NaN/.test(document.getElementById("tabpanel").innerText) };`);
+      states++;
+      if (gone.cards || gone.bad || gone.text < 40) {
+        bad++;
+        console.log(`FAIL ${lang} compare: without its file  ${JSON.stringify(gone)}`);
+      }
+      await block([]);
+    }
+
+    // ---------- 2m. which prices a number is in, how old it is, and why two sources differ (P1-1, P1-3, P1-4) ----------
+    const PRICES = { th: { current: "ราคาปัจจุบัน", constant: "ราคาคงที่", estimate: "ค่าประมาณ IMF" }, lo: { current: "ລາຄາປັດຈຸບັນ", constant: "ລາຄາຄົງທີ່", estimate: "ຄ່າປະມານ IMF" } };
+    const LATEST = { th: "ล่าสุดจากแหล่ง", lo: "ລ່າສຸດຈາກແຫຼ່ງ" };
+    // every tile and every plan row of the screen: the year it shows, whether it carries the "latest" tick, whether it says its age
+    const tilesInfo = `return [...document.querySelectorAll("#view .stats .stat, #view .plan-actual")].map((x) => { const f = x.querySelector(".fresh"); const text = f ? f.textContent : ""; return { label: (x.querySelector(".stat-label") || x).textContent.slice(0, 40), text, year: Number((text.match(/(19|20)\\d\\d/) || [0])[0]), latest: [...x.querySelectorAll(".fresh-ok")].map((n) => n.textContent).join(" "), aged: !!x.querySelector(".fresh-behind, .fresh-old") }; }).filter((x) => x.year);`;
+    const thisYear = new Date(Date.now() + 7 * 3600000).getUTCFullYear();
+    for (const lang of ["th", "lo"]) {
+      const w = PRICES[lang];
+      // GDP tab: the tiles and the size chart say "current prices" / "constant prices"; PPP has its own tile
+      await open(lang, { eco_tab: "gdp" });
+      let r = await page.eval(CHECK);
+      const g = await page.eval(`const tiles = [...document.querySelectorAll("#view .stats .stat")].map((x) => x.textContent); const legend = [...document.querySelectorAll("#view .card")].map((c) => c.textContent); return { current: tiles.filter((x) => x.includes(${JSON.stringify(w.current)})).length, constant: tiles.filter((x) => x.includes(${JSON.stringify(w.constant)})).length, ppp: tiles.filter((x) => x.includes("PPP")).length, chart: legend.some((x) => x.includes(${JSON.stringify(w.current)}) && x.includes(${JSON.stringify(w.constant)})), estimate: legend.some((x) => x.includes(${JSON.stringify(w.estimate)})) };`);
+      if (g.current < 2 || g.constant < 1 || g.ppp !== 1 || !g.chart) r.badText.push("gdp labels: " + JSON.stringify(g));
+      report(`${lang} gdp: current prices, constant prices and PPP are named`, r, lang === "th" ? JSON.stringify(g) : "");
+
+      // every screen with tiles: a number from two years ago or older never carries the "latest" tick, it says its age
+      for (const tab of ["overview", "gdp", "debt", "fdi", "inflation", "population", "plan"]) {
+        await open(lang, { eco_tab: tab });
+        if (tab === "plan") await sleep(500);
+        r = await page.eval(CHECK);
+        const tiles = await page.eval(tilesInfo);
+        const old = tiles.filter((x) => x.year <= thisYear - 2);
+        const wrong = old.filter((x) => x.latest.includes(LATEST[lang]) || !x.aged);
+        if (wrong.length) r.badText.push("an old number shown as the latest: " + JSON.stringify(wrong.slice(0, 3)));
+        report(`${lang} ${tab}: an older year says its age, no "latest" tick`, r, lang === "th" ? `${tiles.length} dated numbers, ${old.length} of them two years old or older` : "");
+      }
+
+      // overview and debt tab: the card that says why two sources give two numbers
+      for (const [tab, topics] of [["overview", 5], ["debt", 2], ["inflation", 1]]) {
+        await open(lang, { eco_tab: tab });
+        const d = await page.eval(`const c = document.querySelector("#view .differ-card"); return c ? { topics: c.querySelectorAll(".differ-topic").length, lines: c.querySelectorAll("li").length } : null;`);
+        states++;
+        if (!d || d.topics !== topics || d.lines < topics * 2) {
+          bad++;
+          console.log(`FAIL ${lang} ${tab}: the "why the numbers differ" card  ${JSON.stringify(d)}`);
+        } else if (lang === "th") console.log(`ok   ${lang} ${tab}: why the numbers differ  ${d.topics} topics, ${d.lines} lines`);
+      }
     }
 
     // ---------- 3. the entry forms, opened and filled in (never saved) ----------

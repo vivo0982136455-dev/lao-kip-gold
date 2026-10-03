@@ -1,4 +1,4 @@
-// Page 2: Exchange rates - all 7 BOL currencies + market rates + history chart.
+// Page 2: Exchange rates - all 7 BOL currencies + the reference mid rate (API) + history chart.
 
 import { el, card, cardHead, metricCard, sectionTitle, isStale, cardFoot, rangeButtons, table, deltaPill } from "../ui.js";
 import { formatNumber } from "../format.js";
@@ -109,14 +109,14 @@ export function render(view, ctx) {
   wrap.append(tbl);
   tableCard.append(wrap, el("p", "note", t.note_rates_table), cardFoot(ids, summary, t));
 
-  // Left: BOL table. Right: BCEL + market stacked, so both columns end at a similar height.
+  // Left: BOL table. Right: BCEL + the reference mid rate (API) stacked, so both columns end at a similar height.
   const right = el("div", "stack");
   right.append(
     bcelCard(summary, t),
     metricCard(
       {
         title: "card_market_fx",
-        kind: "market",
+        kind: "reference",
         note: "note_market_fx",
         rows: [["row_usd_lak", "fx-market.USD_LAK"], ["row_thb_lak", "fx-market.THB_LAK"], ["row_usd_thb", "fx-market.USD_THB"]],
       },
@@ -134,8 +134,8 @@ export function render(view, ctx) {
   // longId: the weekly history in data/long.json used for the 1-year / all ranges
   const seriesDefs = [{ daily: midDailyOf(summary, "bol", selected), longId: `calc.bol_${selected}_LAK_mid`, label: t.series_bol_mid, kind: "official" }];
   if (BCEL_CURRENCIES.includes(selected)) seriesDefs.push({ daily: midDailyOf(summary, "bcel", selected), label: t.series_bcel_mid, kind: "bank" });
-  if (selected === "USD") seriesDefs.push({ metric: "fx-market.USD_LAK", label: t.series_market, kind: "market" });
-  if (selected === "THB") seriesDefs.push({ metric: "fx-market.THB_LAK", label: t.series_market, kind: "market" });
+  if (selected === "USD") seriesDefs.push({ metric: "fx-market.USD_LAK", label: t.series_market, kind: "reference" });
+  if (selected === "THB") seriesDefs.push({ metric: "fx-market.THB_LAK", label: t.series_market, kind: "reference" });
   const chart = dailyChartCard({
     title: `${selected} → LAK (${t.lak_per} 1 ${selected})`,
     subtitle: t.chart_rates_sub,

@@ -67,6 +67,11 @@
       "source_url": "https://www.lsb.gov.la/phc/?p=1511&lang=en",
       "published": "2026-07-07"
     },
+    "undesa_hh_2022": {
+      "source_name": "United Nations, Population Division: Database on Household Size and Composition 2022 (Laos: Lao Social Indicator Survey II 2017, a MICS survey; population census 2015)",
+      "source_url": "https://www.un.org/development/desa/pd/data/household-size-and-composition",
+      "published": "2022"
+    },
     "land_law_2019": {
       "source_name": "Land Law No. 70/NA of 21 June 2019, Articles 3, 110, 117, 120, 123, 132 (unofficial English translation)",
       "source_url": "https://laolandinfo.org/wp-content/uploads/2021/05/Land-Law-2019_Eng-Unofficial-Translation.pdf",
@@ -304,11 +309,12 @@
     ]
   },
   "population": {
-    "_about": "Facts for the Population tab that no API provides. Sentences are in i18n (pop_*).",
+    "_about": "Facts for the Population tab that no API provides. Sentences are in i18n (pop_*). household = average number of people per household, read on 2026-10-03 in the United Nations' database (rows 'Lao People's Dem. Republic': MICS 2017 = 4.7, of which 1 person 3.2% and 6 or more 29.4% of households; Demographic Yearbook / census 2015 = 5.3). The World Bank's API has no household size; a newer survey (LSIS III) is not in the 2022 edition of the database.",
     "census": { "start": "2025-11-03", "end": "2025-12-28", "status": "2026-07-07", "source": "lsb_phc" },
     "work": { "agri_from": 58, "agri_to": 67, "period_from": "2018/19", "period_to": "2024/25", "self_employed": 44, "family_work": 30, "source": "wb_lem_2606" },
     "median_age": { "years": 25, "year": 2025, "source": "wb_lem_2606" },
-    "tourists": { "million": 4.6, "growth": 11.2, "year": 2025, "source": "wb_lem_2606" }
+    "tourists": { "million": 4.6, "growth": 11.2, "year": 2025, "source": "wb_lem_2606" },
+    "household": { "size": 4.7, "year": 2017, "one": 3.2, "six_plus": 29.4, "census_size": 5.3, "census_year": 2015, "source": "undesa_hh_2022", "checked": "2026-10-03" }
   },
   "policy": {
     "_about": "What the State decided and what follows from it, for the Policy tab. One entry = one fact read in its source; the sentences are in i18n (pol_<area>_<id>), the numbers here. 'affects' = which numbers on the site the area moves; 'tab' = where to look at the effect. The two money items 'rate' and 'reserve' are the fallback: the page shows data/bol-policy.json (read from the central bank's site every week) when that file is there. 'read' = the edition of the World Bank's Lao Economic Monitor these facts were read from: data/report-watch.json (weekly) tells the page when a newer edition is out. An item can name more sources in 'sources'. Re-checked against the primary sources on 2026-10-02: the fuel excise cut is now quoted from the ministry's own notice (regular petrol 25% -> 15%; the World Bank's report says 30% -> 15% and premium 40% -> 15%), and the partial return of the tax on 25 June 2026 was added.",

@@ -7,13 +7,14 @@ import {
   THIS_YEAR, indicator, latest, valueIn, usdText, usdParts, pctText, freshness, sourcesFoot, invTile, factsCard, barTable,
   yearChart, ready, staticSource, fill, monthText,
 } from "./eco-common.js";
+import { publicDebt, latestReserves, rangeText, differCard } from "./eco-latest.js";
 
 const TOP = 10; // creditors shown one by one; the rest are added up
 
 export function debtTab(panel, e) {
   const { t } = e;
   panel.append(el("p", "muted tab-intro", t.inv_debt_intro));
-  if (!ready(panel, e)) return;
+  if (!ready(panel, e, ["invest", "stat", "bank"])) return;
   const inv = e.invest;
   const F = e.stat.facts;
   const cr = inv.parts.debt_creditors;
@@ -23,8 +24,10 @@ export function debtTab(panel, e) {
   // ---------- Key numbers ----------
   const stats = el("div", "stats");
   const debt = indicator(e, "imf.GGXWDG_NGDP");
-  const debtL = latest(debt, THIS_YEAR);
-  if (debtL) stats.append(invTile(t, t.inv_k_debt, pctText(debtL[1]), `IMF · ${t.inv_estimate}`, freshness(t, { year: debtL[0], stale: debt.stale })));
+  // the same year counted by the IMF, the Ministry of Finance and the World Bank: the tile shows the range
+  const pd = publicDebt(e);
+  const who = (list) => (list.length > 1 ? fill(t.inv_n_sources, { n: list.length }) : t["dif_who_" + list[0].who]);
+  if (pd) stats.append(invTile(t, t.inv_k_debt, rangeText(pd), pd.list.length > 1 ? who(pd.list) : `${who(pd.list)} · ${t.inv_estimate}`, freshness(t, { year: pd.year, stale: pd.list.some((x) => x.stale) })));
   if (cr && cr.total) stats.append(invTile(t, t.inv_k_debt_ext_gov, usdParts(cr.total, t), "World Bank IDS", freshness(t, { year: cr.year, stale: cr.stale })));
   const ext = indicator(e, "wb.DT.DOD.DECT.CD");
   const extL = latest(ext);
@@ -98,8 +101,9 @@ export function debtTab(panel, e) {
       const principal = future.reduce((a, [, i]) => a + ds.principal[i], 0);
       const last = future[future.length - 1][0];
       facts.push([fill(t.inv_debt_f_principal, { from: ds.first_projected, to: last, amount: usdText(principal, t), share: pctText((principal / cr.total) * 100, 0), stock: stockYear }), null]);
-      const res = latest(indicator(e, "wb.FI.RES.TOTL.CD"));
-      if (res && now) facts.push([fill(t.inv_debt_f_reserves, { reserves: usdText(res[1] * 1000, t), year: res[0] }), null]);
+      // next to the newest reserves the app has (the central bank's monthly figure)
+      const res = latestReserves(e).usd;
+      if (res && now) facts.push([fill(t.inv_debt_f_reserves, { reserves: usdText(res.value * 1000, t), who: res.src, when: res.when.month ? monthText(res.when.month, t) : `${t.year} ${res.when.year}` }), null]);
     }
     // Payments to China were very small while repayments were postponed
     const paid = ds.years.map((y, i) => [y, ds.china[i]]).filter(([y, v]) => y >= 2020 && y < stockYear && v !== null);
@@ -109,12 +113,8 @@ export function debtTab(panel, e) {
 
   // ---------- Why · effects · plan · can it work (quoted from the reports) ----------
   const imfBelow = debt && target ? debt.values.find(([y, v]) => y >= THIS_YEAR && v <= target.target) : null;
-  // The same year's debt counted in three ways (Ministry of Finance, World Bank, IMF): shown side by side, with
-  // what each one counts, so that the different numbers on this page can be told apart
-  const sameYear = F.debt_mof && F.debt_peak && F.imf_unsustainable && F.debt_mof.year === F.debt_peak.now_year && F.debt_mof.year === F.imf_unsustainable.year;
-  const counted = sameYear ? { ...F.debt_mof, wb: F.debt_peak.now, imf: F.imf_unsustainable.debt, sources: [F.imf_unsustainable.source] } : null;
   const blocks = [
-    ["inv_debt_why", [["inv_debt_why_1", F.debt_peak], ["inv_debt_why_defs", counted], ["inv_debt_why_2", F.debt_edl], ["inv_debt_why_3", F.debt_china_half], ["inv_debt_why_4", { source: "wb_lem" }]]],
+    ["inv_debt_why", [["inv_debt_why_1", F.debt_peak], ["inv_debt_why_2", F.debt_edl], ["inv_debt_why_3", F.debt_china_half], ["inv_debt_why_4", { source: "wb_lem" }]]],
     ["inv_debt_effects", [["inv_debt_effect_1", F.debt_crowd_out], ["inv_debt_effect_2", F.reserves_wb], ["inv_debt_effect_3", F.debt_deferred]]],
     ["inv_debt_plan", [["inv_debt_plan_1", F.debt_decree], ["inv_debt_plan_2", target ? { target: target.target, source: "kpl_plan" } : null], ["inv_debt_plan_3", F.debt_bond], ["inv_debt_plan_4", F.debt_restructure]]],
     ["inv_debt_can", [["inv_debt_can_1", F.imf_unsustainable], ["inv_debt_can_2", imfBelow ? { year: imfBelow[0], value: pctText(imfBelow[1]), source: "imf" } : null], ["inv_debt_can_3", F.imf_advice], ["inv_debt_can_4", F.debt_service_avg], ["inv_debt_can_5", F.debt_service_year]]],
@@ -141,6 +141,10 @@ export function debtTab(panel, e) {
     g2.append(c);
   }
   panel.append(g2);
+
+  // ---------- The same thing counted in different ways: every count side by side ----------
+  const differ = differCard(e, ["debt", "debt_service"]);
+  if (differ) panel.append(differ);
 }
 
 export { valueIn };

@@ -13,7 +13,7 @@ const { DATA_DIR, HISTORY_DIR, readJson, writeIfChanged } = require("./lib/commo
 
 const OUT_FILE = path.join(DATA_DIR, "long.json");
 const BOL_CURRENCIES = ["USD", "THB", "CNY", "GBP", "EUR", "JPY", "KRW"];
-const GRAMS_PER_LAO_BAHT = 15;
+const { GRAMS_PER_LAO_BAHT } = require("./lib/units");
 
 const localDay = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : new Date(Date.parse(iso) + 7 * 3600000).toISOString().slice(0, 10));
 const addDays = (day, n) => new Date(Date.parse(day + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10);

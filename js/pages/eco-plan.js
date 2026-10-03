@@ -3,33 +3,36 @@
 // A status (met / near / far) is given only to a number from inside the plan period:
 //   - a number from before the plan starts is the "baseline": where the plan starts from, not a result
 //   - a number that is too old to be called current is not compared at all
-//   - a target for one later year (GDP per person in 2030) is judged by the IMF forecast for that year, and the
-//     badge says so
-//   - the reserves are counted in two ways (World Bank: all imports of goods and services; Bank of the Lao PDR:
-//     without the imports of foreign-funded businesses) and the plan does not say which one it means: both numbers
-//     are shown, each with its own result
-// The number compared is the newest one the app has: an automatic series or a hand-read fact of a report.
+//   - a target for one later year (GDP per person in 2030) is judged by the forecast for that year (the last real
+//     value carried forward with the IMF's forecast of change - the same line as on the GDP tab), and the badge says so
+//   - a number that sources count in different ways (reserves: World Bank and Bank of the Lao PDR; public debt:
+//     IMF, Ministry of Finance, World Bank; growth: three estimates) is shown with every count; when the counts
+//     give different answers, each one gets its own result and the row is counted as "depends on the way of counting"
+// The number compared is the newest one the app has (eco-latest.js): the same number every other tab shows.
 
 import { el, card, cardHead } from "../ui.js";
 import { formatNumber } from "../format.js";
-import { lazyJson } from "../lazy.js";
 import {
-  THIS_YEAR, lastOf, indicator, latest, valueIn, pctText, freshness, sourcesFoot, statusBadge, targetStatus, fill,
-  ready, staticSource, monthText, newest, policyItem, reservesMonths, NEAR_GAP,
+  THIS_YEAR, indicator, latest, valueIn, pctText, freshness, sourcesFoot, statusBadge, targetStatus, fill,
+  ready, staticSource, monthText, newest, policyItem, buildSeries, NEAR_GAP,
 } from "./eco-common.js";
+import { latestInflation, latestReserves, publicDebt, growthNow } from "./eco-latest.js";
 
 // Newest real number for a target:
-//   { value, when: {year|month}, src, stale, source?: id of a hand-read source, parts?: [{ value, def }] }
-//   parts = the same thing counted in two ways (def: "bol" | "wb"), newest first in the order they are shown
+//   { value, when: {year|month}, src, stale, source?: id of a hand-read source,
+//     parts?: [{ value, label, source? }] = the same thing counted by different sources, in the order they are shown }
 function actualOf(e, key) {
+  const { t } = e;
   const yearly = (id, source, before) => {
     const ind = indicator(e, id);
     const l = latest(ind, before);
     return l ? { value: l[1], when: { year: l[0] }, src: source, stale: ind.stale } : null;
   };
+  // several sources for one year -> one entry with its parts
+  const several = (r, src) => (r ? { value: r.list[0].value, when: { year: r.year }, src, stale: r.list.some((x) => x.stale), parts: r.list.length > 1 ? r.list.map((x) => ({ value: x.value, label: t["dif_who_" + x.who], source: x.source })) : null, source: r.list[0].source } : null);
   switch (key) {
     case "gdp_growth":
-      return yearly("wb.NY.GDP.MKTP.KD.ZG", "World Bank");
+      return several(growthNow(e), "World Bank · IMF");
     case "agri_growth":
       return yearly("wb.NV.AGR.TOTL.KD.ZG", "World Bank");
     case "ind_growth":
@@ -39,16 +42,15 @@ function actualOf(e, key) {
     case "gdp_pc":
       return yearly("wb.NY.GDP.PCAP.CD", "World Bank");
     case "inflation": {
-      const s = e.economy.monthly && e.economy.monthly.cpi_yoy;
-      const l = s && lastOf(s.values);
-      return l ? { value: l[1], when: { month: l[0] }, src: "IMF", stale: s.stale } : null;
+      const i = latestInflation(e);
+      return i ? { value: i.value, when: i.when, src: i.src, stale: i.stale } : null;
     }
     case "debt":
-      return yearly("imf.GGXWDG_NGDP", "IMF", THIS_YEAR);
+      return several(publicDebt(e), `IMF (${t.inv_estimate}) · World Bank`);
     case "reserves": {
-      const r = reservesMonths(e);
+      const r = latestReserves(e).months;
       if (!r) return null;
-      return { value: r.value, when: r.when, src: r.src, stale: r.stale, source: r.source, parts: r.bol === null ? null : [{ value: r.bol, def: "bol" }, { value: r.value, def: "wb" }] };
+      return { value: r.value, when: r.when, src: r.src, stale: r.stale, source: r.source, parts: r.bol === null ? null : [{ value: r.bol, label: t.inv_def_bol }, { value: r.value, label: t.inv_def_wb }] };
     }
     case "revenue": {
       // the yearly World Bank series stops years earlier than the bank's own report on Laos
@@ -56,7 +58,7 @@ function actualOf(e, key) {
       return newest(read ? { value: read.revenue, when: { year: read.year }, src: "World Bank", stale: false, source: read.source } : null, yearly("wb.GC.REV.XGRT.GD.ZS", "World Bank"));
     }
     case "budget":
-      return yearly("imf.GGXCNL_NGDP", "IMF", THIS_YEAR);
+      return yearly("imf.GGXCNL_NGDP", `IMF (${t.inv_estimate})`, THIS_YEAR);
     default:
       return null;
   }
@@ -76,8 +78,11 @@ function forecastOf(e, tg) {
       return v === null ? null : { text: fill(t.inv_plan_imf_year, { year: THIS_YEAR, value: pctText(v) }), value: v };
     }
     case "gdp_pc": {
-      const v = imf("imf.NGDPDPC", tg.by);
-      return v === null ? null : { text: fill(t.inv_plan_imf_year, { year: tg.by, value: `${formatNumber(v, "USD per person")} USD` }), value: v, decides: true };
+      // the same forecast line as the chart on the GDP tab: the last real value x the IMF's forecast of change
+      const s = buildSeries(e, { actual: "wb.NY.GDP.PCAP.CD", forecast: "imf.NGDPDPC" });
+      const i = s && s.forecast ? s.years.indexOf(tg.by) : -1;
+      const v = i >= 0 ? s.forecast[i] : null;
+      return v === null || v === undefined ? null : { text: fill(t.inv_plan_imf_path, { year: tg.by, value: `${formatNumber(v, "USD per person")} USD` }), value: v, decides: true };
     }
     case "debt": {
       const ind = indicator(e, "imf.GGXWDG_NGDP");
@@ -94,14 +99,12 @@ function forecastOf(e, tg) {
 }
 
 // The central bank's newest reserves next to the month the "months of imports" were counted for
-function reservesNow(e, a, bank) {
-  const rows = bank.state === "ok" && bank.data.reserves && bank.data.reserves.rows;
-  if (!rows || !rows.length || !a.when.month) return null;
-  const now = lastOf(rows);
-  const then = rows.find(([m]) => m === a.when.month);
-  if (!then || now[0] <= then[0]) return null;
-  const bn = (millions) => (millions / 1000).toFixed(2);
-  return fill(e.t.inv_plan_reserves_now, { usd_bn: bn(now[1]), month: monthText(now[0], e.t), ref_bn: bn(then[1]), ref_month: monthText(then[0], e.t) }) + (bank.data.reserves.stale ? ` ⚠ ${e.t.inv_fetch_failed}` : "");
+function reservesNow(e, a) {
+  const { usd } = latestReserves(e);
+  if (!usd || !usd.rows || !a.when.month) return null;
+  const then = usd.rows.find(([m]) => m === a.when.month);
+  if (!then || usd.when.month <= then[0]) return null;
+  return fill(e.t.inv_plan_reserves_now, { usd_bn: usd.value.toFixed(2), month: monthText(usd.when.month, e.t), ref_bn: (then[1] / 1000).toFixed(2), ref_month: monthText(then[0], e.t) }) + (usd.stale ? ` ⚠ ${e.t.inv_fetch_failed}` : "");
 }
 
 const targetText = (tg, t) => {
@@ -133,8 +136,7 @@ const ALWAYS = ["met", "near", "far"];
 export function planTab(panel, e) {
   const { t } = e;
   panel.append(el("p", "muted tab-intro", t.inv_plan_intro));
-  const bank = lazyJson("data/bol-policy.json", e.rerender); // the central bank's reserves by month (a line under the target)
-  if (!ready(panel, e)) return;
+  if (!ready(panel, e, ["invest", "stat", "bank"])) return;
   const plan = e.stat.plan;
   const from = plan.period[0];
 
@@ -152,6 +154,7 @@ export function planTab(panel, e) {
     const a = tg.actual ? actualOf(e, tg.actual) : null;
     const fc = tg.actual ? forecastOf(e, tg) : null;
     if (a && a.source) read.add(a.source);
+    for (const p of (a && a.parts) || []) if (p.source) read.add(p.source);
     const period = a ? { when: a.when, from } : null;
 
     const tr = el("tr");
@@ -170,15 +173,18 @@ export function planTab(panel, e) {
       status = "none";
       act.append(el("div", "sub-line", t.inv_plan_no_data), statusBadge(t, status));
     } else if (a.parts) {
-      // counted in two ways: each number with its own result; one status for the row only when both agree
+      // counted by several sources: every count is shown; each gets its own result only when the results differ
       const each = a.parts.map((p) => targetStatus(p.value, tg.target, tg.op, period));
-      status = each.every((s) => s === each[0]) ? each[0] : "split";
-      twoWays = true;
+      const same = each.every((s) => s === each[0]);
+      status = same ? each[0] : "split";
+      if (tg.actual === "reserves") twoWays = true;
       a.parts.forEach((p, i) => {
-        act.append(el("div", "plan-value", actualText(tg, p.value, t)), el("div", "sub-line", t["inv_def_" + p.def]), statusBadge(t, each[i]));
+        act.append(el("div", "plan-value", actualText(tg, p.value, t)), el("div", "sub-line", p.label));
+        if (!same) act.append(statusBadge(t, each[i]));
       });
       act.append(when());
-      const now = reservesNow(e, a, bank);
+      if (same) act.append(statusBadge(t, status));
+      const now = tg.actual === "reserves" ? reservesNow(e, a) : null;
       if (now) name.append(el("span", "sub-line", now));
     } else {
       act.append(el("div", "plan-value", actualText(tg, a.value, t)), when());

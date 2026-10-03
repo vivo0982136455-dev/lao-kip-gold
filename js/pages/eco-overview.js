@@ -1,50 +1,58 @@
 // Economy tab 1: overview for investors - the key numbers, short facts computed from the data,
-// and "what to watch" for the owner's own situations (savings, rubber farm, land/business). Never advice.
+// "what to watch" for the owner's own situations (savings, rubber farm, land/business), and a note on why two
+// sources can give two numbers for the same thing. Never advice.
+// Every number that another tab also shows comes from eco-latest.js, so the tabs cannot disagree.
 
 import { el, card, cardHead, pctPill } from "../ui.js";
 import { formatNumber } from "../format.js";
+import { usdPerKg as perKg } from "../calc.js"; // US cents per pound -> USD per kg
 import {
   THIS_YEAR, lastOf, pct, indicator, latest, valueIn, usdText, pctText, freshness, invTile, factsCard,
-  statusBadge, targetStatus, fill, ready, monthText, usdParts, reservesMonths,
+  statusBadge, targetStatus, fill, ready, monthText, usdParts,
 } from "./eco-common.js";
+import { latestInflation, latestReserves, publicDebt, growthNow, debtServiceNow, rangeText, differCard } from "./eco-latest.js";
 
 export function overviewTab(panel, e) {
   const { t, economy: eco } = e;
   panel.append(el("p", "muted tab-intro", t.inv_overview_intro));
-  if (!ready(panel, e)) return;
+  if (!ready(panel, e, ["invest", "stat", "bank"])) return;
   const inv = e.invest;
   const target = (id) => e.stat.plan.targets.find((x) => x.id === id);
   // A number is compared with a target of the plan only when it comes from inside the plan's years (see eco-plan.js)
   const judge = (value, tg, when) => targetStatus(value, tg.target, tg.op, { when, from: e.stat.plan.period[0] });
+  // several sources for the same year: one status only when all of them give the same answer
+  const judgeAll = (values, tg, when) => {
+    const each = values.map((v) => judge(v, tg, when));
+    return each.every((s) => s === each[0]) ? each[0] : "split";
+  };
+  // one source: its name · several: "range of n sources" (who they are and what each counts is in the card at the end)
+  const who = (list) => (list.length > 1 ? fill(t.inv_n_sources, { n: list.length }) : t["dif_who_" + list[0].who]);
 
   // ---------- Key numbers ----------
   const stats = el("div", "stats");
   const gdp = indicator(e, "wb.NY.GDP.MKTP.CD");
   const gdpL = latest(gdp);
-  if (gdpL) stats.append(invTile(t, t.inv_k_gdp, { num: gdpL[1].toFixed(2), unit: t.unit_usd_bn }, "World Bank", freshness(t, { year: gdpL[0], stale: gdp.stale })));
+  if (gdpL) stats.append(invTile(t, t.inv_k_gdp, { num: gdpL[1].toFixed(2), unit: t.unit_usd_bn }, `World Bank · ${t.inv_current_prices}`, freshness(t, { year: gdpL[0], stale: gdp.stale })));
 
-  const growth = indicator(e, "wb.NY.GDP.MKTP.KD.ZG");
-  const growthL = latest(growth);
+  const growth = growthNow(e);
   const imfGrowth = valueIn(indicator(e, "imf.NGDP_RPCH"), THIS_YEAR);
-  if (growthL) {
-    const sub = imfGrowth !== null ? `${t.inv_imf_expects} ${THIS_YEAR}: ${pctText(imfGrowth)}` : "World Bank";
-    stats.append(invTile(t, t.inv_k_growth, pctText(growthL[1]), sub, freshness(t, { year: growthL[0], stale: growth.stale })));
+  if (growth) {
+    const sub = [who(growth.list), imfGrowth !== null ? `${t.inv_imf_expects} ${THIS_YEAR}: ${pctText(imfGrowth)}` : null].filter(Boolean).join(" · ");
+    stats.append(invTile(t, t.inv_k_growth, rangeText(growth), sub, freshness(t, { year: growth.year, stale: growth.list.some((x) => x.stale) })));
   }
 
   const gdppc = indicator(e, "wb.NY.GDP.PCAP.CD");
   const gdppcL = latest(gdppc);
-  if (gdppcL) stats.append(invTile(t, t.inv_k_gdppc, { num: formatNumber(gdppcL[1], "USD per person"), unit: "USD" }, "World Bank", freshness(t, { year: gdppcL[0], stale: gdppc.stale })));
+  if (gdppcL) stats.append(invTile(t, t.inv_k_gdppc, { num: formatNumber(gdppcL[1], "USD per person"), unit: "USD" }, `World Bank · ${t.inv_current_prices}`, freshness(t, { year: gdppcL[0], stale: gdppc.stale })));
 
-  const cpi = eco.monthly && eco.monthly.cpi_yoy;
-  const cpiL = cpi && lastOf(cpi.values);
-  if (cpiL) stats.append(invTile(t, t.inv_k_inflation, pctText(cpiL[1]), `IMF · ${t.inv_vs_last_year}`, freshness(t, { month: cpiL[0], stale: cpi.stale })));
+  const inflation = latestInflation(e);
+  if (inflation) stats.append(invTile(t, t.inv_k_inflation, pctText(inflation.value), `${inflation.src} · ${t.inv_vs_last_year}`, freshness(t, { ...inflation.when, stale: inflation.stale })));
 
-  const debt = indicator(e, "imf.GGXWDG_NGDP");
-  const debtL = latest(debt, THIS_YEAR);
-  if (debtL) stats.append(invTile(t, t.inv_k_debt, pctText(debtL[1]), `IMF · ${t.inv_estimate}`, freshness(t, { year: debtL[0], stale: debt.stale })));
+  const debt = publicDebt(e);
+  if (debt) stats.append(invTile(t, t.inv_k_debt, rangeText(debt), debt.list.length > 1 ? who(debt.list) : `${who(debt.list)} · ${t.inv_estimate}`, freshness(t, { year: debt.year, stale: debt.list.some((x) => x.stale) })));
 
   // reserves in months of imports: the newest number the app has (the World Bank's report, else its yearly series)
-  const res = reservesMonths(e);
+  const res = latestReserves(e).months;
   if (res) {
     const sub = res.bol === null ? `${res.src} · ${t.inv_of_imports}` : `${res.src} · ${t.inv_def_bol}: ${res.bol.toFixed(1)} ${t.inv_unit_months}`;
     stats.append(invTile(t, t.inv_k_reserves, { num: res.value.toFixed(1), unit: t.inv_unit_months }, sub, freshness(t, { ...res.when, stale: res.stale, checked: res.checked })));
@@ -69,28 +77,19 @@ export function overviewTab(panel, e) {
   // ---------- Short facts computed from the data ----------
   const facts = [];
   const gT = target("growth");
-  if (growthL && gT) facts.push([fill(t.inv_fact_growth, { value: pctText(growthL[1]), year: growthL[0], target: pctText(gT.target, 0) }), statusBadge(t, judge(growthL[1], gT, { year: growthL[0] }))]);
+  if (growth && gT) facts.push([fill(t.inv_fact_growth, { value: rangeText(growth), year: growth.year, target: pctText(gT.target, 0) }), statusBadge(t, judgeAll(growth.list.map((x) => x.value), gT, { year: growth.year }))]);
   const iT = target("inflation");
-  if (cpiL && iT) facts.push([fill(t.inv_fact_inflation, { value: pctText(cpiL[1]), month: monthText(cpiL[0], t), target: pctText(iT.target, 0) }), statusBadge(t, judge(cpiL[1], iT, { month: cpiL[0] }))]);
+  if (inflation && iT) facts.push([fill(t.inv_fact_inflation, { value: pctText(inflation.value), month: monthText(inflation.when.month, t), target: pctText(iT.target, 0) }), statusBadge(t, judge(inflation.value, iT, inflation.when))]);
 
-  const ds = inv.parts.debt_service;
-  if (ds && ds.years && ds.years.length) {
-    const i = ds.years.indexOf(Math.max(THIS_YEAR, ds.first_projected));
-    if (i >= 0 && ds.principal[i] !== null) {
-      const total = ds.principal[i] + (ds.interest[i] || 0);
-      const china = ds.china[i] !== null ? (ds.china[i] / total) * 100 : null;
-      facts.push([fill(t.inv_fact_debt_due, { year: ds.years[i], amount: usdText(total, t), china: china === null ? "—" : pctText(china, 0), stock: ds.first_projected - 1 }), null]);
-    }
-  }
+  const due = debtServiceNow(e).ids;
+  if (due) facts.push([fill(t.inv_fact_debt_due, { year: due.year, amount: usdText(due.total, t), china: due.china === null ? "—" : pctText(due.china, 0), stock: due.stock }), null]);
+
   // reserves: counted in two ways when the report gives both - one status only when both give the same answer
   const rT = target("reserves");
   if (res && rT) {
     const when = res.when.month ? monthText(res.when.month, t) : `${t.year} ${res.when.year}`;
     if (res.bol === null) facts.push([fill(t.inv_fact_reserves, { value: res.value.toFixed(1), when, target: rT.target }), statusBadge(t, judge(res.value, rT, res.when))]);
-    else {
-      const each = [judge(res.bol, rT, res.when), judge(res.value, rT, res.when)];
-      facts.push([fill(t.inv_fact_reserves_two, { wb: res.value.toFixed(1), bol: res.bol.toFixed(1), when, target: rT.target }), statusBadge(t, each[0] === each[1] ? each[0] : "split")]);
-    }
+    else facts.push([fill(t.inv_fact_reserves_two, { wb: res.value.toFixed(1), bol: res.bol.toFixed(1), when, target: rT.target }), statusBadge(t, judgeAll([res.bol, res.value], rT, res.when))]);
   }
 
   // who invests: the World Bank's share of the year's inflow, and - said as what it is - the share inside the
@@ -107,7 +106,6 @@ export function overviewTab(panel, e) {
   if (rub && rub.values.length > 12) {
     const now = lastOf(rub.values);
     const ago = rub.values[rub.values.length - 13];
-    const perKg = (cents) => (cents * 2.20462) / 100; // US cents per pound -> USD per kg
     facts.push([fill(t.inv_fact_rubber, { value: perKg(now[1]).toFixed(2), month: monthText(now[0], t) }), pctPill(pct(ago[1], now[1]), { decimals: 1 })]);
   }
   const [planFrom, planTo] = e.stat.plan.period;
@@ -145,4 +143,11 @@ export function overviewTab(panel, e) {
     grid.append(c);
   }
   panel.append(grid);
+
+  // ---------- Why two sources give two numbers ----------
+  const differ = differCard(e, ["growth", "inflation", "debt", "reserves", "debt_service"]);
+  if (differ) {
+    panel.append(el("h2", "section-title", t.dif_section));
+    panel.append(differ);
+  }
 }

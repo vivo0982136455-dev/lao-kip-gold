@@ -92,18 +92,7 @@ export function policyItem(e, area, id) {
   const a = e.stat && e.stat.policy && e.stat.policy.areas.find((x) => x.id === area);
   return (a && a.items.find((x) => x.id === id)) || null;
 }
-// Foreign-exchange reserves in months of imports: the number of the newest World Bank report (hand-read, with the
-// Bank of the Lao PDR's own count of the same reserves next to it) or the yearly World Bank series.
-//   -> { value, bol: months in the central bank's count | null, usd_bn | null, when, src, stale, checked, source } | null
-export function reservesMonths(e) {
-  const f = e.stat && e.stat.facts && e.stat.facts.reserves_wb;
-  const ind = indicator(e, "wb.FI.RES.TOTL.MO");
-  const l = latest(ind);
-  return newest(
-    f ? { value: f.months, bol: f.months_bol === undefined ? null : f.months_bol, usd_bn: f.usd_bn, when: { month: f.month }, src: "World Bank", stale: false, checked: e.stat.facts.checked || e.stat.checked, source: f.source } : null,
-    l ? { value: l[1], bol: null, usd_bn: null, when: { year: l[0] }, src: "World Bank", stale: ind.stale, checked: null, source: null } : null
-  );
-}
+// (the resolvers that answer "what is the newest inflation / reserves / debt" are in eco-latest.js)
 
 // USD millions -> "10.02 พันล้าน USD" / "886.8 ล้าน USD"
 export function usdText(millions, t) {
@@ -120,38 +109,69 @@ export function isOld({ year, month }) {
   return month ? monthsAgo(month) > 6 : false;
 }
 
+// How many months the END of a period lies behind this month. A year ends in December (2024 seen in October 2026
+// = 22 months); a month is itself. Never negative: the running year or month counts as 0.
+export function monthsBehind({ year, month }) {
+  const now = todayVientiane();
+  if (year !== undefined && year !== null) return Math.max(0, (Number(now.slice(0, 4)) - year - 1) * 12 + Number(now.slice(5, 7)));
+  return month ? Math.max(0, monthsAgo(month)) : 0;
+}
+// Up to here a number is simply "the newest the source has"; beyond it the label says how far behind it is
+export const FRESH_MONTHS = { year: 12, month: 3 };
+
 // "Latest or old" label for one number.
 //   period: { year } | { month: "2026-08" } | { date: "2026-02-26" } ; stale = our last download failed (old copy kept)
-//   Yearly data is "old" when it is more than 2 years behind, monthly data when more than 6 months behind.
-// compact: in table rows, say nothing more when the number is fine (only "old" / "failed" are shown)
+//   A tick ("the newest the source has") only for a number that is not behind: the year that ended not more than
+//   12 months ago, a month not more than 3 months back. Otherwise the label says how many months behind it is -
+//   "the newest the source has" is not the same as "current" (audit 2026-10-02: 2024 was called "latest" in
+//   October 2026). Yearly data more than 2 years behind, monthly data more than 6 months behind: "old".
+//   checked = a hand-read fact: the day it was last compared with its source (said next to its age).
+// compact: in table rows, say nothing when the number is fine
 export function freshness(t, { year, month, date, stale, checked, compact }) {
   const box = el("span", "fresh");
   let period = "";
+  const yearly = year !== undefined && year !== null;
   const old = isOld({ year, month });
-  if (year !== undefined && year !== null) period = `${t.year} ${year}`;
+  const behind = yearly || month ? monthsBehind({ year, month }) : 0;
+  const late = behind > (yearly ? FRESH_MONTHS.year : FRESH_MONTHS.month);
+  if (yearly) period = `${t.year} ${year}`;
   else if (month) period = monthText(month, t);
   else if (date) period = `${t.inv_as_of} ${formatDate(date, t)}`;
   if (period) box.append(el("span", "", period));
-  let status;
-  if (stale) status = el("span", "fresh-stale", `⚠ ${t.inv_fetch_failed}`);
-  else if (old) status = el("span", "fresh-old", t.inv_old_data);
-  else if (checked) status = el("span", "fresh-ok", `✓ ${t.inv_checked} ${formatDate(checked, t)}`);
-  else if (!compact) status = el("span", "fresh-ok", `✓ ${t.inv_latest}`);
-  if (status) box.append(status);
+  const age = fill(t.inv_behind, { n: behind });
+  if (stale) box.append(el("span", "fresh-stale", `⚠ ${t.inv_fetch_failed}`));
+  else if (old) box.append(el("span", "fresh-old", `${t.inv_old_data} · ${age}`));
+  else {
+    if (late) box.append(el("span", "fresh-behind", age));
+    if (checked) box.append(el("span", "fresh-ok", `✓ ${t.inv_checked} ${formatDate(checked, t)}`));
+    else if (!late && !compact) box.append(el("span", "fresh-ok", `✓ ${t.inv_latest}`));
+  }
   return box;
 }
 
-// "Source: link, link · updated at the source 13 ก.ค. 2026"
+// What a source says about itself, when the fetcher stored it: its edition (IMF: the month the World Economic
+// Outlook was published), the day the source last changed its data, and the day we read it
+function sourceMeta(t, src) {
+  const parts = [];
+  if (src.edition) parts.push(fill(t.src_edition, { date: /^\d{4}-\d{2}$/.test(src.edition) ? monthText(src.edition, t) : src.edition }));
+  if (src.updated) parts.push(fill(t.src_updated, { date: formatDate(src.updated, t) }));
+  if (src.retrieved) parts.push(fill(t.src_retrieved, { date: formatDate(src.retrieved, t) }));
+  return parts.length ? ` (${parts.join(" · ")})` : "";
+}
+
+// "Source: link (edition April 2026 · read 2 Oct), link · updated at the source 13 ก.ค. 2026"
 export function sourcesFoot(t, sources, sourceUpdated) {
   const foot = el("div", "card-foot");
   foot.append(`${t.source}: `);
   sources.filter(Boolean).forEach((src, i) => {
     if (i > 0) foot.append(", ");
-    foot.append(sourceLink(src));
+    foot.append(sourceLink(src), sourceMeta(t, src));
   });
   if (sourceUpdated) foot.append(` · ${t.inv_source_updated} ${formatDate(sourceUpdated, t)}`);
   return foot;
 }
+// A source of the yearly numbers by its id ("worldbank", "imf" ...), from whichever data file holds it
+export const sourceOf = (e, id) => (e.economy && e.economy.sources && e.economy.sources[id]) || (e.invest && e.invest.sources && e.invest.sources[id]) || null;
 
 // USD millions -> { num: "10.02", unit: "พันล้าน USD" } (for tiles: big number, small unit)
 export function usdParts(millions, t) {
@@ -184,7 +204,8 @@ export function factsCard(t, title, facts, note, kind = "estimated") {
 }
 
 // Table with a bar per row. rows: [{ label, cls, sub, value, text, share }]; bar length = value / max (from 0).
-// value: null = a row without a bar (e.g. a total); cls = class of the name (e.g. "focus-name")
+// value: null = a row without a bar (e.g. a total); a value below zero has no bar either (its text says it);
+// cls = class of the name (e.g. "focus-name"); share = text or an element for the last column
 export function barTable(headers, rows) {
   const max = Math.max(...rows.map((r) => r.value || 0), 0) || 1;
   const tbl = el("table");
@@ -209,7 +230,10 @@ export function barTable(headers, rows) {
     }
     wrap.append(track);
     cell.append(wrap);
-    tr.append(name, cell, el("td", "", r.share === undefined ? "" : r.share));
+    const last = el("td");
+    if (r.share instanceof Node) last.append(r.share);
+    else last.textContent = r.share === undefined ? "" : r.share;
+    tr.append(name, cell, last);
     body.append(tr);
   }
   const box = el("div", "table-wrap wrap-first");
@@ -243,9 +267,11 @@ export function targetStatus(actual, target, op, period) {
 }
 
 // Are the lazily loaded files there? If not, show a placeholder (loading) or a message (failed) and return false.
-// keys: "invest" (data/invest.json), "stat" (data/invest-static.json)
+// keys: "invest" (data/invest.json), "stat" (data/invest-static.json), "bank" (data/bol-policy.json: the central
+// bank's own newest numbers - a tab waits for it so that a number does not change under the reader's eyes, but
+// does not need it: when that file fails, the resolvers of eco-latest.js fall back to the older series)
 export function ready(panel, e, keys = ["invest", "stat"]) {
-  const states = keys.map((k) => e[k + "State"]);
+  const states = keys.map((k) => (k === "bank" && e.bankState === "error" ? "ok" : e[k + "State"]));
   if (states.every((s) => s === "ok")) return true;
   if (states.some((s) => s === "error")) panel.append(el("p", "muted", e.t.inv_load_error));
   else {
@@ -261,8 +287,8 @@ export function staticSource(e, id) {
   const src = e.stat && e.stat.sources && e.stat.sources[id];
   if (!src) return null;
   if (!src.published) return src;
-  // "2025-12" = only the month is known; "2026-02-26" = the day
-  const when = /^\d{4}-\d{2}$/.test(src.published) ? monthText(src.published, e.t) : formatDate(src.published, e.t);
+  // "2022" = only the year is known; "2025-12" = the month; "2026-02-26" = the day
+  const when = /^\d{4}$/.test(src.published) ? src.published : /^\d{4}-\d{2}$/.test(src.published) ? monthText(src.published, e.t) : formatDate(src.published, e.t);
   return { ...src, source_name: `${src.source_name} (${when})` };
 }
 
@@ -282,16 +308,31 @@ export function valueWithUnit(v, unit, t) {
   return unit.startsWith("%") ? `${formatNumber(v, unit)}%` : `${formatNumber(v, unit)} ${unitName(unit, t)}`;
 }
 
+// A rate (%, % of GDP ...) can be compared across sources as it is; a level (dollars, people) cannot
+const isRate = (unit) => String(unit || "").startsWith("%");
+const round3 = (v) => Math.round(v * 1000) / 1000;
+
 // def: { actual: indicator id (World Bank), forecast: indicator id (IMF), unit?: override } -> one value per year
+// When the two sources measure a LEVEL differently (GDP 2025: World Bank 18.30, IMF 17.82 billion dollars), the
+// IMF's forecast LEVELS must not be glued to the World Bank's last value - the first forecast year would show a
+// jump that nobody forecast. The forecast keeps the IMF's own path of change and starts from the last real value:
+//   forecast(year) = last real value x IMF(year) / IMF(last real year)          ("rebased": true in the result)
+// Without an IMF value for the last real year there is no forecast line at all. Rates are joined as they are.
 export function buildSeries(e, def, firstYear = FIRST_YEAR) {
   const act = def.actual && indicator(e, def.actual);
   const fc = def.forecast && indicator(e, def.forecast);
   let actualPoints;
   let forecastPoints = [];
+  let rebased = false;
   if (act && act.values.length) {
     actualPoints = act.values;
-    const lastActual = actualPoints[actualPoints.length - 1][0];
+    const [lastActual, lastValue] = actualPoints[actualPoints.length - 1];
     if (fc) forecastPoints = fc.values.filter(([y]) => y > lastActual);
+    if (forecastPoints.length && !isRate(def.unit || act.unit)) {
+      const base = valueIn(fc, lastActual);
+      forecastPoints = base ? forecastPoints.map(([y, v]) => [y, round3((lastValue * v) / base)]) : [];
+      rebased = forecastPoints.length > 0;
+    }
   } else if (fc && fc.values.length) {
     // IMF only: years before this year = actual/estimate, this year onwards = forecast
     actualPoints = fc.values.filter(([y]) => y < THIS_YEAR);
@@ -321,6 +362,7 @@ export function buildSeries(e, def, firstYear = FIRST_YEAR) {
     sources: [...new Set([act && act.source, forecastPoints.length && fc && fc.source].filter(Boolean))],
     stale: [act, fc].some((x) => x && x.stale),
     isEstimate: !act,
+    rebased,
   };
 }
 
@@ -332,7 +374,8 @@ export function yearChart(e, def, { title, target, firstYear, unitLabel } = {}) 
   const { t } = e;
   const s = buildSeries(e, def, firstYear);
   if (!s) return null;
-  const series = [{ label: t.series_actual, kind: "official", values: s.actual }];
+  // the IMF's numbers for past years are its own estimates until a country's final data arrive: never "actual"
+  const series = [{ label: s.isEstimate ? t.series_imf_estimate : t.series_actual, kind: "official", values: s.actual }];
   if (s.forecast) series.push({ label: t.series_imf_forecast, kind: "official", dashed: true, soft: true, values: s.forecast, shown: s.forecastOnly });
   if (target) {
     const period = e.stat && e.stat.plan && e.stat.plan.period;
@@ -348,10 +391,14 @@ export function yearChart(e, def, { title, target, firstYear, unitLabel } = {}) 
     `${t.unit}: ${unitLabel || unitName(s.unit, t)}`,
     `${t.source}: ${s.sources.map(sourceLabel).join(" + ")}`,
     `${s.isEstimate ? t.latest_estimate_year : t.latest_actual_year} ${s.lastActual}`,
-    s.forecast ? t.dashed_is_forecast : null,
+    s.forecast ? (s.rebased ? t.forecast_rebased : t.dashed_is_forecast) : null,
     s.stale ? "⚠ " + t.inv_fetch_failed : null,
   ].filter(Boolean).join(" · ");
-  return chartCard({ title, subtitle, labels: s.years.map(String), series, unit: s.unit, unitLabel, t, firstColTitle: t.year });
+  const c = chartCard({ title, subtitle, labels: s.years.map(String), series, unit: s.unit, unitLabel, t, firstColTitle: t.year });
+  // every chart names its sources with their edition and the day they were read
+  const sources = s.sources.map((id) => sourceOf(e, id)).filter(Boolean);
+  if (sources.length) c.append(sourcesFoot(t, sources));
+  return c;
 }
 
 export { formatNumber };

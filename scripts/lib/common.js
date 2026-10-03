@@ -228,13 +228,22 @@ function sameValues(a, b) {
   return strip(a) === strip(b);
 }
 
-// Save a successful fetch: update latest (only if values changed) and history.
+// The descriptive part of a latest file (name, link, licence, the route a source used ...): everything except
+// the status and the values. A change here must reach the file even when the values did not change.
+const STATUS_KEYS = ["stale", "last_success_at", "last_error", "records"];
+function sameMeta(old, meta) {
+  const oldKeys = Object.keys(old).filter((k) => !STATUS_KEYS.includes(k));
+  const keys = Object.keys(meta).filter((k) => meta[k] !== undefined);
+  return oldKeys.length === keys.length && keys.every((k) => JSON.stringify(old[k]) === JSON.stringify(meta[k]));
+}
+
+// Save a successful fetch: update latest (only if values or the description changed) and history.
 function saveSuccess(meta, records) {
   const file = path.join(LATEST_DIR, `${meta.source}.json`);
   const old = readJson(file, null);
 
   let latest;
-  if (old && !old.stale && sameValues(old.records, records)) {
+  if (old && !old.stale && sameValues(old.records, records) && sameMeta(old, meta)) {
     latest = old; // nothing new -> keep the file exactly as it is
   } else {
     // Keep the old fetched_at for values that did not change

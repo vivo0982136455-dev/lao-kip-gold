@@ -2,12 +2,16 @@
 // who leaves, and what the next 25 years look like.
 //   data/population.json (scripts/fetch-population.js, weekly): World Bank yearly numbers + projections to 2050,
 //       the neighbours' newest values, Lao Statistics Bureau / UNFPA population by province and age group
-//   data/invest-static.json "population": facts quoted from reports (work, median age) and the state of the census
+//   data/invest-static.json "population": facts quoted from reports (work, median age, household size) and the
+//       state of the census
+// A head count is never called a market (audit 2026-10-02, P1-8): what people can spend has its own section -
+// income per person at purchasing power, household consumption, poverty, household size, each with its own year.
 // Two different counts of the same people are shown, each with its source: the World Bank estimate (7.9 m, 2025)
 // and the Lao Statistics Bureau / UNFPA projection by province (7.6 m, 2024). The 2025 census will replace both.
 
 import { el, card, cardHead, table } from "../ui.js";
 import { chartCard } from "../charts.js";
+import { formatNumber } from "../format.js";
 import { lazyJson } from "../lazy.js";
 import { lastOf, dayFull, freshness, sourcesFoot, invTile, factsCard, barTable, fill, staticSource, countryName, whole, FOCUS_PROVINCES } from "./eco-common.js";
 
@@ -261,7 +265,7 @@ function meaningCard(p, e) {
   const last = (id) => (I[id] && I[id].values.length ? lastOf(I[id].values) : null);
   const pop = last("pop");
   if (pop && n && n.THA && n.THA.pop && n.VNM && n.VNM.pop) {
-    facts.push([fill(t.pop_f_market, { n: million(pop[1]), year: pop[0], tha: ((pop[1] / n.THA.pop[1]) * 100).toFixed(0), vnm: ((pop[1] / n.VNM.pop[1]) * 100).toFixed(0) }), null]);
+    facts.push([fill(t.pop_f_size, { n: million(pop[1]), year: pop[0], tha: ((pop[1] / n.THA.pop[1]) * 100).toFixed(0), vnm: ((pop[1] / n.VNM.pop[1]) * 100).toFixed(0) }), null]);
   }
   const working = last("working");
   const s = p.projections && p.projections.series;
@@ -293,6 +297,38 @@ function meaningCard(p, e) {
   }
   if (!facts.length) return null;
   return factsCard(t, t.pop_meaning_title, facts, t.pop_meaning_note);
+}
+
+// ---------- what people can spend ----------
+const POVERTY_LINE_USD = "3.00"; // World Bank SI.POV.DDAY: people living on less than $3.00 a day (2021 PPP)
+function spendingSection(p, e) {
+  const { t } = e;
+  const I = p.indicators;
+  const last = (id) => (I[id] && I[id].values.length ? lastOf(I[id].values) : null);
+  const stats = el("div", "stats");
+  const sources = [];
+  const gni = last("gni_ppp");
+  if (gni) stats.append(invTile(t, t.pop_k_income, { num: formatNumber(gni[1], "intl$ per person"), unit: t.inv_unit_intl }, `World Bank · ${t.pop_k_income_sub}`, freshness(t, { year: gni[0], stale: I.gni_ppp.stale })));
+  const spent = last("consumption");
+  if (spent) {
+    const share = valueIn(I.consumption_gdp, spent[0]);
+    stats.append(invTile(t, t.pop_k_consumption, { num: spent[1].toFixed(1), unit: t.unit_usd_bn }, share === null ? "World Bank" : `World Bank · ${fill(t.pop_k_consumption_sub, { share: share.toFixed(0) })}`, freshness(t, { year: spent[0], stale: I.consumption.stale })));
+  }
+  const poor = last("poverty_national");
+  if (poor) {
+    const world = valueIn(I.poverty_3usd, poor[0]); // the international line only for the same year
+    stats.append(invTile(t, t.pop_k_poverty, pct1(poor[1]), world === null ? "World Bank" : `World Bank · ${fill(t.pop_k_poverty_sub, { line: POVERTY_LINE_USD, pct: pct1(world) })}`, freshness(t, { year: poor[0], stale: I.poverty_national.stale })));
+  }
+  if (stats.childNodes.length) sources.push(p.sources.worldbank);
+  const home = e.stat.population && e.stat.population.household;
+  if (home) {
+    stats.append(invTile(t, t.pop_k_household, { num: home.size.toFixed(1), unit: t.pop_unit_people }, fill(t.pop_k_household_sub, { census: home.census_size.toFixed(1), year: home.census_year }), freshness(t, { year: home.year, checked: home.checked })));
+    sources.push(staticSource(e, home.source));
+  }
+  if (!stats.childNodes.length) return [];
+  const foot = el("div", "stats-foot");
+  foot.append(el("p", "note", t.pop_spend_note), sourcesFoot(t, sources));
+  return [el("h2", "section-title", t.pop_sec_spend), el("p", "muted tab-intro", t.pop_spend_intro), stats, foot];
 }
 
 // ---------- the census ----------
@@ -335,6 +371,7 @@ export function populationTab(panel, e) {
   };
 
   add(tiles(p, t), meaningCard(p, e));
+  add(...spendingSection(p, e));
   panel.append(el("h2", "section-title", t.pop_sec_size));
   two(populationChart(p, t), agesCard(p, t));
   two(pyramidCard(p, e), neighboursCard(p, t));

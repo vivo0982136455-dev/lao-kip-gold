@@ -14,6 +14,8 @@ import { el, card, cardHead, sectionTitle, statTile, table, emptyState, pctPill 
 import { formatNumber, formatPct } from "../format.js";
 import { chartCard, mountCharts } from "../charts.js";
 import { lazyJson } from "../lazy.js";
+import { realRate } from "../calc.js";
+import { inflationSeries } from "./eco-latest.js";
 import { monthText, monthShort, addMonths, lastOf, pct, nameTable, loadThai, factsBox, fuelSection, inflationCompare, budgetSection } from "./living-parts.js";
 
 const PERIODS = [1, 3, 5]; // years shown in charts / used for the savings comparison
@@ -106,7 +108,8 @@ function keyNumbers(ctx) {
   const { t, economy: eco, summary } = ctx;
   const mon = eco.monthly;
   const stats = el("div", "stats");
-  const inf = lastOf(mon.cpi_yoy && mon.cpi_yoy.values);
+  const infAll = inflationSeries(ctx); // the newest month of the IMF or of the central bank (eco-latest.js)
+  const inf = infAll && infAll.last;
   if (inf) stats.append(statTile(`${t.living_inflation} (${monthText(inf[0], t)})`, formatPct(inf[1], 1), t.living_inflation_sub, "official"));
 
   const cats = Object.entries(mon).filter(([id, s]) => id.startsWith("cpi_cat_") && s.values.length);
@@ -116,7 +119,7 @@ function keyNumbers(ctx) {
   const dep = summary.metrics["bcel-deposit.LAK_fixed_12m"];
   if (dep) stats.append(statTile(t.living_deposit_12m, `${dep.latest.value.toFixed(2)}%`, t.living_deposit_sub, "bank"));
   if (dep && inf) {
-    const real = ((1 + dep.latest.value / 100) / (1 + inf[1] / 100) - 1) * 100;
+    const real = realRate(dep.latest.value, inf[1]);
     stats.append(statTile(t.living_real_rate, formatPct(real, 1), t.living_real_rate_sub, "estimated"));
   }
   return stats;
@@ -126,7 +129,7 @@ function keyNumbers(ctx) {
 function inflationSection(ctx, grid) {
   const { t, economy: eco } = ctx;
   const mon = eco.monthly;
-  const all = mon.cpi_yoy;
+  const all = inflationSeries(ctx);
   if (!all || !all.values.length) return;
   const last = lastOf(all.values)[0];
   const months = [];
@@ -139,7 +142,7 @@ function inflationSection(ctx, grid) {
   grid.append(
     chartCard({
       title: t.living_inflation_chart,
-      subtitle: `${t.living_inflation_sub} · ${t.source}: IMF · ${t.latest_month} ${monthText(last, t)}${all.stale ? " · ⚠ " + t.stale_badge : ""}`,
+      subtitle: `${t.living_inflation_sub} · ${t.source}: ${all.from === "bol" ? "IMF, BOL" : "IMF"} · ${t.latest_month} ${monthText(last, t)}${all.stale ? " · ⚠ " + t.stale_badge : ""}`,
       labels: months.map((m) => monthText(m, t)),
       tickLabels: months.map((m) => monthShort(m, t)),
       series,
@@ -391,7 +394,8 @@ function depositSection(ctx, view) {
   const m = summary.metrics;
   if (!m["bcel-deposit.LAK_fixed_12m"]) return;
   view.append(sectionTitle(t.living_deposit_title));
-  const inf = lastOf(eco.monthly.cpi_yoy && eco.monthly.cpi_yoy.values);
+  const infAll = inflationSeries(ctx);
+  const inf = infAll && infAll.last;
   const terms = [...new Set(Object.keys(m).filter((k) => k.startsWith("bcel-deposit.LAK_")).map((k) => k.slice("bcel-deposit.LAK_".length)))];
   const termValue = (term) => (term === "saving" ? 0 : Number(term.replace(/\D/g, "")));
   terms.sort((a, b) => termValue(a) - termValue(b));
@@ -401,7 +405,7 @@ function depositSection(ctx, view) {
   };
   const rows = terms.map((term) => {
     const lak = m[`bcel-deposit.LAK_${term}`];
-    const real = lak && inf ? ((1 + lak.latest.value / 100) / (1 + inf[1] / 100) - 1) * 100 : null;
+    const real = lak && inf ? realRate(lak.latest.value, inf[1]) : null;
     return [
       term === "saving" ? t.term_saving : `${t.term_fixed} ${termValue(term)} ${t.term_months}`,
       cur("LAK", term),
@@ -436,7 +440,10 @@ export function render(view, ctx) {
   loadThai(ctx.rerender);
   // official Lao fuel prices: used by the fuel section, the facts and the budget (which fall back to the WFP estimate)
   const fuelFile = lazyJson("data/fuel-lao.json", ctx.rerender);
-  ctx = { ...ctx, fuel: fuelFile.state === "ok" ? fuelFile.data : null, fuelState: fuelFile.state };
+  // the central bank's own inflation months (a month ahead of the IMF's series): the same "newest inflation" as
+  // on the economy page (eco-latest.js); without the file the IMF's series alone is used
+  const bankFile = lazyJson("data/bol-policy.json", ctx.rerender);
+  ctx = { ...ctx, fuel: fuelFile.state === "ok" ? fuelFile.data : null, fuelState: fuelFile.state, bank: bankFile.state === "ok" ? bankFile.data : null };
 
   view.append(el("p", "lead", t.living_lead));
   const facts = factsBox(ctx, pricesState === "ok" ? prices : null, market);

@@ -48,7 +48,7 @@ export function statusBadge(status, t) {
 
 // Kind chip: coloured dot + text (official / market / estimated / shop)
 export function kindChip(kind, t) {
-  const chip = el("span", "chip", t["kind_" + kind]);
+  const chip = el("span", "chip", t["kind_" + kind] || kind); // a kind this version of the page does not know yet: its id
   chip.dataset.kind = kind;
   return chip;
 }
@@ -82,6 +82,7 @@ export function cardFoot(metricIds, summary, t) {
     if (!src) return;
     if (i > 0) foot.append(", ");
     foot.append(sourceLink(src));
+    if (src.route === "mirror") foot.append(` (${t.route_via_mirror})`); // the numbers came by the backup route: say so and credit it
   });
   return foot;
 }

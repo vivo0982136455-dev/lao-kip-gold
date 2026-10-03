@@ -1,4 +1,8 @@
-// Source #4: Market exchange rates USD/LAK, USD/THB, THB/LAK (MARKET, not official!).
+// Source #4: Reference mid rates USD/LAK, USD/THB, THB/LAK from a general exchange-rate API (not official, and
+// not a rate anybody in Laos trades at: on 2026-10-02 it was below the central bank's own buying rate - audit P1-5).
+// The site calls it "reference mid rate (API)". The source id "fx-market" and the metric ids are kept: the
+// history files are keyed by them. "kind" stays "market" as well - a copy of the app that was opened before this
+// change knows no other id and would print "undefined" - and "shown_as" tells the page which label to use.
 // Uses open.er-api.com (free, no key). Note: this API updates only ONCE per day,
 // so running every 30 minutes just finds the same values most of the time.
 //
@@ -13,10 +17,11 @@ const URL = process.env.FX_MARKET_URL || "https://open.er-api.com/v6/latest/USD"
 
 const META = {
   source: "fx-market",
-  source_name: "Market mid rate (open.er-api.com / ExchangeRate-API)",
+  source_name: "Reference mid rate (API: open.er-api.com / ExchangeRate-API)",
   source_url: "https://www.exchangerate-api.com",
   license: "Free API - attribution: Rates By Exchange Rate API, https://www.exchangerate-api.com",
   kind: "market",
+  shown_as: "reference",
 };
 
 async function getRecords(fetchedAt) {

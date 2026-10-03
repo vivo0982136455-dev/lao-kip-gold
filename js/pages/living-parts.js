@@ -9,7 +9,9 @@
 import { el, card, cardHead, cardFoot, sourceLink, sectionTitle, table, emptyState, pctPill } from "../ui.js";
 import { formatNumber, formatPct, formatDate, todayVientiane, addDays } from "../format.js";
 import { chartCard } from "../charts.js";
+import { realRate } from "../calc.js";
 import { PROVINCES, dayFull, freshness, fill } from "./eco-common.js";
+import { inflationSeries } from "./eco-latest.js";
 
 // ---------- Shared helpers ----------
 export const monthText = (m, t) => `${t.months[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`; // "2026-08" -> "ส.ค. 2026"
@@ -170,7 +172,8 @@ export function factsBox(ctx, prices, market) {
   const td = thaiPriceLak(summary, "diesel");
   if (ld && td) add(t.fact_diesel.replace("{la}", formatNumber(ld.value, "LAK")).replace("{laMonth}", ld.official ? formatDate(ld.date, t) : monthText(ld.month, t)).replace("{th}", formatNumber(td.value, "LAK")).replace("{thDate}", formatDate(td.date, t)), pctPill(pct(td.value, ld.value), { decimals: 1 }));
 
-  const la = lastOf(mon.cpi_yoy && mon.cpi_yoy.values);
+  const laAll = inflationSeries(ctx); // the same "newest inflation" as every other page (eco-latest.js)
+  const la = laAll && laAll.last;
   const th = lastOf(mon.tha_cpi_yoy && mon.tha_cpi_yoy.values);
   if (la && th) add(t.fact_inflation.replace("{la}", formatPct(la[1], 1)).replace("{laMonth}", monthText(la[0], t)).replace("{th}", formatPct(th[1], 1)).replace("{thMonth}", monthText(th[0], t)), null);
 
@@ -185,7 +188,7 @@ export function factsBox(ctx, prices, market) {
 
   const dep = summary.metrics["bcel-deposit.LAK_fixed_12m"];
   if (dep && la) {
-    const real = ((1 + dep.latest.value / 100) / (1 + la[1] / 100) - 1) * 100;
+    const real = realRate(dep.latest.value, la[1]);
     add(t.fact_deposit.replace("{rate}", `${dep.latest.value.toFixed(2)}%`), pctPill(real, { decimals: 1 }));
   }
   const brent = mon.brent_usd && mon.brent_usd.values;
@@ -471,7 +474,7 @@ export function fuelSection(ctx, prices, years, view, controls) {
 // ---------- 3) Inflation Laos vs Thailand (+ world, yearly) ----------
 export function inflationCompare(ctx, years) {
   const { t, economy: eco } = ctx;
-  const la = eco.monthly && eco.monthly.cpi_yoy;
+  const la = inflationSeries(ctx);
   const th = eco.monthly && eco.monthly.tha_cpi_yoy;
   if (!la || !th) return null;
   const last = lastOf(la.values)[0];

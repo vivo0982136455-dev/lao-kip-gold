@@ -29,7 +29,7 @@ const FALLBACK_LIMITS = {
 const limits = () => (s.config && s.config.limits) || FALLBACK_LIMITS;
 export { FALLBACK_LIMITS }; // tests/calc.js compares them with the bot's LIMITS
 const AREA_UNITS = { sqm: 1, rai: 1600, ha: 10000 }; // square metres in one unit
-const CURRENCIES = { LAK: null, THB: "fx-market.THB_LAK", USD: "fx-market.USD_LAK" }; // -> market rate used to turn the price into kip
+const CURRENCIES = { LAK: null, THB: "fx-market.THB_LAK", USD: "fx-market.USD_LAK" }; // -> reference mid rate (API) used to turn the price into kip
 
 // Kept between redraws of the page (the page is rebuilt when a button or the language changes)
 const s = {
@@ -413,7 +413,7 @@ export function landEntryCard(ctx) {
       const usd = rateOn(summary, "fx-market.USD_LAK", v.date);
       const also = [thb && `${formatNumber(p / thb, "THB")} THB`, usd && `${formatNumber(p / usd, "USD")} USD`].filter(Boolean).join(" · ");
       row(t.own_land_per_sqm, `${whole(p)} ${t.own_cur_lak}`, also ? `≈ ${also} ${t.own_per_sqm_short}` : null);
-      if (v.currency !== "LAK" || v.unit !== "sqm") row(t.own_land_saved_as, `${whole(totalLak())} ${t.own_cur_lak} · ${whole(areaSqm())} ${t.own_unit_sqm}`, v.currency !== "LAK" ? `1 ${v.currency} = ${formatNumber(rate(), "LAK")} ${t.own_cur_lak} (${t.kind_market})` : null);
+      if (v.currency !== "LAK" || v.unit !== "sqm") row(t.own_land_saved_as, `${whole(totalLak())} ${t.own_cur_lak} · ${whole(areaSqm())} ${t.own_unit_sqm}`, v.currency !== "LAK" ? `1 ${v.currency} = ${formatNumber(rate(), "LAK")} ${t.own_cur_lak} (${t.kind_reference})` : null);
       return box;
     },
     formValues: (tag) => ({ date: v.date, land_place: placeText(v.province, v.place), land_total: totalLak(), land_area: areaSqm(), note: note(tag) }),

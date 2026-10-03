@@ -44,11 +44,11 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 
 | # | Data | Source | Frequency | Status |
 |---|------|--------|-----------|--------|
-| 1 | BOL official rates (USD, THB … → LAK, buy/sell) | `https://raw.githubusercontent.com/AllRates-Today/central-bank-exchange-rates/main/data/bol/latest.json` | 1×/day (check several times; BOL publishes business days) | ✅ Verified working (third-party mirror of bol.gov.la) |
+| 1 | BOL official rates (USD, THB … → LAK, buy/sell) | **Since 2026-10-04 (audit P1-5): the bank's own page** `https://www.bol.gov.la/en/ExchangRate` (GET = today; the page's own search form, POST `date=dd-mm-yyyy`, gives an earlier day - weekends and holidays show no rates). Numbers are written the Lao way: `22.361` = 22,361 kip, `674,70` = 674.7. The server omits its intermediate certificate: `scripts/lib/aia.js`. **Backup + cross-check:** the mirror `https://raw.githubusercontent.com/AllRates-Today/central-bank-exchange-rates/main/data/bol/latest.json` (CC BY 4.0) | 1×/day (asked every 30 min; one request on a quiet day) | ✅ Verified 2026-10-03: all 14 values of 1 and 2 Oct equal on both routes. `data/latest/bol.json` says which route gave the numbers (`route`, `route_note`, `cross_check`); a value written another way or more than 20% away from the stored one is refused. Tests: `tests/bol-route.js` |
 | 1b | BOL history (backfill once) | Hugging Face dataset `AllRates/central-bank-exchange-rates` → `rates/bol.csv` | once | Verify file path before use |
 | 2 | World gold spot XAU/USD | goldprice.dev anonymous endpoint `/v1/prices?symbol=XAU-USD-SPOT` (confirm base URL in its docs). Fallback: gold-api.com (free, no key) | every 30 min | Verify response shape |
 | 3 | Thai gold (Gold Traders Association) bar & ornament buy/sell | Since 2026-10-02: the association's own price service `https://www.goldtraders.or.th/api/GoldPrices/Latest?readjson=false` (the JSON its new website reads). Backup: `https://api.chnwt.dev/thai-gold-api/latest` (community API that copied the OLD website; HTTP 500 since the website changed on 2026-10-01) | every 30 min | ✅ Verified 2026-10-02: numbers and time identical to the old source's last answer. Undocumented → may change; fails gracefully. Site terms: personal, non-commercial use. |
-| 4 | Market FX USD/LAK, USD/THB, THB/LAK (mid-market) | A free no-key FX API (e.g. open.er-api.com) — VERIFY that LAK is included | every 30 min | Label as "market rate", never as official |
+| 4 | Reference mid rates USD/LAK, USD/THB, THB/LAK from a general FX API | open.er-api.com (free, no key) | every 30 min (the API updates once a day) | Called "reference mid rate (API)" on the site since 2026-10-04 (audit P1-5): it is not official and not a rate anybody in Laos trades at (on 2026-10-02 it was below the central bank's own buying rate). Source id `fx-market`, metric ids and `kind: market` are kept for the history files and for older copies of the app; `shown_as: reference` gives the label. |
 | 5 | Lao shop gold price (Phouvong) | Manual entry: Google Form → Google Sheet published as CSV → fetched by Action | 1×/day | Owner enters by hand |
 | 6 | Macro (annual) | World Bank API `https://api.worldbank.org/v2/country/LAO/indicator/{CODE}?format=json` — e.g. NY.GDP.MKTP.CD, NY.GDP.MKTP.KD.ZG, FP.CPI.TOTL.ZG, BX.KLT.DINV.CD.WD, PA.NUS.FCRF | 1×/month | Free, no key |
 | 7 | Macro forecasts | IMF DataMapper `https://www.imf.org/external/datamapper/api/v1/{INDICATOR}/LAO` — e.g. NGDP_RPCH, PCPIPCH, BCA_NGDPD, GGXWDG_NGDP | 1×/month | Free, no key. **Answers HTTP 403 to GitHub's runners** (found 2026-10-02 on the first weekly run) → since then the same WEO numbers are read from IMF SDMX first (`https://api.imf.org/external/sdmx/2.1/data/IMF.RES,WEO/LAO.NGDP_RPCH.A?startPeriod=2000`; world = `G001`; NGDPD in USD), DataMapper only as the backup. |
@@ -78,6 +78,8 @@ GitHub Pages (static HTML/CSS/JS + Chart.js) ─┘ reads JSON from the same rep
 | 31 | Is there a newer edition of the report the hand-read facts come from? (World Bank "Lao PDR Economic Monitor") | World Bank Documents & Reports search `https://search.worldbank.org/api/v3/wds?format=json&qterm=Lao PDR Economic Monitor&count_exact=Lao People's Democratic Republic&fl=docdt,display_title,url,docty&rows=40&srt=docdt&order=desc` (keep `docty` = Report with "Economic Monitor" in the title) | weekly (`fetch-report-watch.js`) | ✅ Verified 2026-10-02: newest = June 2026 (docdt 2026-06-30) = the edition in `policy.read`. Never changes a fact by itself: the Policy tab only shows a warning with the link when a newer edition exists. |
 | 32 | Wages: (a) the statutory minimum wage in force today in Laos + 16 countries (ASEAN's 11 members, China, Japan, South Korea, Australia, USA, Israel) and Thailand's rates by province; (b) the ILO's yearly minimum-wage series (USD, PPP, own currency) and average monthly earnings; (c) market exchange rates of 14 currencies | (a) by hand in `data/invest-static.json` → `wages`, one official source per country (Thai Ministry of Labour Notification No. 14, Viet Nam Decree 293/2025, Malaysia P.U.(A) 376, NWPC Philippines, MOM Singapore, MHLW Japan, Minimum Wage Commission Korea, Fair Work Ombudsman, US DOL, Israel NII, AKP Cambodia, KPL Laos …) · (b) ILOSTAT `https://rplumber.ilo.org/data/indicator/?id=EAR_INEE_CUR_NB_A&ref_area=LAO+THA+…&timefrom=2012&format=.csv` and `id=EAR_EMTA_SEX_CUR_NB_A&sex=SEX_T` (CSV, no key) · (c) `https://open.er-api.com/v6/latest/USD` | (a) by hand, with `checked`; a rise that is already decided is entered as a dated step and switches on by itself · (b) + (c) weekly (`fetch-wages.js`) | ✅ Read / verified 2026-10-02. No API gives today's minimum wages of all 17 countries (ILO is 1-2 years behind). ILO quirks: Cambodia's dollars are in the "LCU" column and its USD column is wrong; no minimum-wage rows for Singapore and Brunei; `EAR_4MMN_CUR_NB_A` is deprecated. Myanmar is converted at the official rate, which is far from the market rate - the row says so. |
 | 33 | Direct investment in Laos, ALL investor countries together: stock at the end of each year and the yearly inflow, US$ million (2010 →) - the total to put next to the table by country (#17, IMF DIP), which holds only what six investor countries report | UNCTADstat bulk download `https://unctadstat-api.unctad.org/bulkdownload/US.FdiFlowsStock/US_FdiFlowsStock` (a .7z archive, LZMA2, with one CSV: Year, Economy 418 = Lao PDR, Flow Label Stock / Flow, Direction Label Inward, "Millions of US$ at current prices"; no key) - unpacked by `scripts/lib/sevenzip.js`, which checks the CRC of what it unpacks | weekly, inside `fetch-invest.js` (part `fdi_total`) | ✅ Read / verified 2026-10-02 (file of 2026-08-10; Laos 2024 = 15,392.6, 2025 = 16,797.4). For Laos the stock is the running total of the inflows (2010-2021 and 2025: stock change = inflow exactly; 2022-2024 use an earlier edition of the flows). It is SMALLER than the six reporters' own total (17,333.8 in 2024): the two sources do not count alike, and the page says so. `unctad.org` itself answers scripts with a browser check (not used, never bypassed); the UNCTADstat user API needs a registered key (not used). |
+| 34 | **Laos next to its five neighbours** (Thailand, Viet Nam, Cambodia, Myanmar, China): GDP, GDP per person (current and PPP), growth, inflation, external debt, reserves in months of imports, FDI (share of GDP and US$), merchandise exports, urban share - the same indicator code for all six, the last 10 years of each; public debt from the IMF | World Bank API, one request per indicator: `https://api.worldbank.org/v2/country/LAO;THA;VNM;KHM;MMR;CHN/indicator/{CODE}?format=json&per_page=100&date=2016:2026`; IMF SDMX, one request for six countries: `https://api.imf.org/external/sdmx/2.1/data/IMF.RES,WEO/LAO+THA+VNM+KHM+MMR+CHN.GGXWDG_NGDP.A` (finished years only: the IMF's past years are its own estimates) | weekly (`fetch-compare.js` → `data/compare.json`) | ✅ Verified 2026-10-03. Newest year differs by country (inflation: Myanmar 2019; reserves: Laos 2024, Myanmar 2019) - the page takes Laos' newest year for the whole card and marks a number of another year. Exports = the WTO's merchandise exports (TX.VAL.MRCH.CD.WT, 2025 for all six): the national-accounts series for Laos stops in 2016. |
+| 35 | Average household size in Laos (hand-read fact for the Population tab) | United Nations, Population Division: Database on Household Size and Composition 2022 `https://www.un.org/development/desa/pd/data/household-size-and-composition` (workbook `undesa_pd_2022_hh-size-composition.xlsx`, rows "Lao People's Dem. Republic") | when a new edition appears | ✅ Read 2026-10-03: 4.7 people (MICS / Lao Social Indicator Survey II, 2017), 5.3 (census 2015). The World Bank API has no household size; household consumption (NE.CON.PRVT.CD) stops in 2016 and is shown as old. |
 
 Checked and rejected (2026-10-01, Lao rubber and land prices): Facebook / TikTok / WhatsApp (no free read API, and forbidden
 by [CONSTRAINT]); Selina Wamucii "Natural Rubber Price in Lao" (a January 2023 export unit value under a current-month title);
@@ -252,7 +254,7 @@ Trading Economics / Investing.com (terms forbid scraping).
 - Filters: on the rates, gold and cost-of-living pages (and above the daily chart of the border-market card) the
   range / period buttons sit directly above the chart they control; a period that controls several charts is
   repeated above each of them.
-- Acceptance: `node tests/all.js` (22 screens x Thai / Lao x dark / light x 380 / 1440 px = 176; states.js opens the
+- Acceptance: `node tests/all.js` (22 screens x Thai / Lao x dark / light x 380 / 1440 px = 176 - 23 screens = 184 since the Compare tab of 2026-10-04; states.js opens the
   wages tab with all 17 rows, without exchange rates and "100 days later" when the decided rises are in force, the
   fuel card in three states, the policy tab with the live files, with a newer report and without the files).
 - Tests made stricter the same day: a tile or card whose content is wider than the box itself is reported (a
@@ -308,13 +310,58 @@ from the one the audit proposed (marked "checked:" below).
   revenue 21.2%), the fall-back without the hand-read facts, the reported-share wording and the entry forms
   refusing a far price.
 
-**P1 - important (not started; waits for the owner's go)**
-P1-1 one resolver per indicator + "why the numbers differ" · P1-2 forecast line spliced across two sources ·
-P1-3 nominal / real / PPP labels · P1-4 age of the data, "IMF estimate" label, edition stored · P1-5 read
-bol.gov.la directly, rename the "market" rate · P1-6 "Compare" tab (Laos and five neighbours) · P1-7 missing
-indicators (first report which open sources exist) · P1-8 "market size" wording + consumption, PPP income,
-poverty · P1-9 kip signal: "not enough cases" below 20 · P1-10 data registry proposal + validation of the economy
-files (tests/calc.js was started under P0 and is to be extended here).
+**P1 - important (done 2026-10-04, after the owner's "go"; P1-7 is a report, P1-10's registry a proposal)**
+- P1-1 Same indicator, different numbers. Now: one answer per indicator in `js/pages/eco-latest.js`
+  (`latestInflation`, `latestReserves`, `publicDebt`, `growthNow`, `debtServiceNow`), used by the overview, plan,
+  debt, inflation and policy tabs and by the cost-of-living page. Where sources disagree for the same year the tile
+  shows the range and names how many sources (growth 2025: 4.5-4.8%, public debt 2025: 80.6-87.1%), and a
+  "why the numbers differ" card says what each source counts. Source values are untouched. A test stops any
+  other page from reading `cpi_yoy` or `FI.RES.TOTL.MO` itself.
+- P1-2 Forecast line spliced across two sources. Now `buildSeries()` carries the last real value forward with the
+  IMF's own path: forecast = last actual x IMF(year) / IMF(last actual year); the subtitle says so. Rates (%) are
+  joined as they are. Unit test with the audit's numbers: 18.303, 17.822, 18.959 -> 19.47.
+- P1-3 Nominal and real. The GDP tab names "current prices" / "constant prices" on tiles and chart, shows GDP at
+  constant 2015 dollars next to current dollars with a note computed from the series (2022: dollars -18%,
+  production +2.7%, kip 9,698 -> 14,035 per dollar) and a tile for GDP per person at purchasing power (new World
+  Bank indicators NY.GDP.MKTP.KD, NY.GDP.PCAP.PP.CD; existing ids unchanged).
+- P1-4 Freshness. `freshness()` gives the "latest" tick only to a number that is not late (yearly: at most 12
+  months behind, monthly: 3); otherwise it says "N months behind" (reserves 2024, FDI 2024: no tick). An IMF value
+  before the forecast years is drawn as "IMF estimate". The fetchers store what a source says about itself -
+  IMF: edition (2026-04) and update day, World Bank: last update, plus the day we read it - and the card footers
+  show it (economy.json, invest.json, population.json, compare.json).
+- P1-5 Official rate from a mirror; "market" rate from a generic API. `fetch-bol.js` now reads the central bank's
+  own page (source #1), keeps the mirror as backup and cross-check, and the Settings page names the route.
+  The API rate is called "reference mid rate (API)" in 22 texts, has its own label ("reference", same orange) and
+  its source name says so.
+  checked: on a weekend the bank's page is empty, so the fetcher asks the page's own date form for the working
+  day before; the page refuses clients that call themselves "curl" but serves the project's named reader.
+- P1-6 Compare tab (12th tab of the economy page): 11 cards for Laos and five neighbours, same code, same source,
+  same year; every row names its year, a number of another year is marked and left out of the rank (source #34).
+  The neighbours card of the Population tab is unchanged; its World Bank reader is reused.
+- P1-7 Missing indicators: report only, as the audit asks ("first report to the owner"):
+  `docs/audit-p1-7-missing-indicators-th.md`. Found: the Bank of the Lao PDR publishes workbooks it reports to the
+  IMF - money and credit (monthly to July 2026), bank interest rates (monthly), bank soundness (quarterly), the
+  balance of payments, and FDI net flows by sector AND by country (yearly to 2025; China 38% of the 2025 inflow -
+  the number the World Bank quotes). Trade by partner and product: UN Comtrade (Laos' own reports stop in 2023 and
+  leave out most electricity; partners' reports reach 2025). Not found as open, traceable data: mining output,
+  monthly tourist arrivals, the currency of the debt (PDF only). Nothing of this is built yet.
+- P1-8 "Domestic market 7.87 million people" is now "population ..., and a head count does not tell spending
+  power". New section "what people can spend": GNI per person at PPP (2025), household consumption (2016 - the
+  newest the World Bank has, marked as old), poverty rate at the national line and at $3.00 a day (2024), average
+  household size (source #35, marked as old).
+- P1-9 Kip signal accuracy from two cases. Below 20 checked hints the page writes "not enough cases" (how many of
+  20) and no percentage anywhere; the window is 90 days instead of 30 (30 days can never hold much more than 20
+  working days); next to a percentage stands the naive guess "the same direction every day". The hint file is
+  unchanged.
+- P1-10 Validation and tests now; registry proposed only (`docs/proposal-data-registry-th.md`, three steps).
+  `scripts/check-data.js` checks the economy files too: years and months in order and possible, values inside
+  what their unit allows, sources that exist, the 14 indicators kept in two files equal in both, every hand-read
+  fact with a source and every section with the day it was checked. It runs in both workflows.
+  `tests/data-check.js` damages a copy of the data in 29 ways: all caught. `tests/calc.js`: 42 checks (target
+  status, forecast line, resolvers, real rate, unit conversions, the Compare tab's year rule, hint accuracy).
+  Formulas that were written twice now live in `js/calc.js` and `scripts/lib/units.js` (output byte-identical).
+- Tests: `node tests/all.js` = calc 42, own-prices 14, bol-route 22, data-check 31, 184 screens, 238+ page
+  states, menu 16, install 37, offline label; `tests/live.js` has 9 more checks for this group.
 
 **P2 - valuable / P3 - nice to have (not started)**: as listed in the audit (gold premium like for like, kip line
 wording, wage multiples of the same year only, numbers out of i18n sentences, chart read-outs, three charts,

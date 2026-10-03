@@ -18,10 +18,13 @@ const AGENT = "lao-kip-gold-dashboard (personal, non-commercial)";
 const MAX_CERT_BYTES = 20000;
 const MAX_PAGE_BYTES = 5e6;
 
-// GET with the given trusted certificates; resolves with the bytes, rejects with the network / certificate error
-function get(url, ca, headers, timeoutMs) {
+// GET - or POST when a body is given (a form that the page itself offers, e.g. "show the rates of another day") -
+// with the given trusted certificates; resolves with the bytes, rejects with the network / certificate error
+function get(url, ca, headers, timeoutMs, body = null) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { ca, headers: { "User-Agent": AGENT, ...headers }, timeout: timeoutMs }, (res) => {
+    const form = body === null ? {} : { "Content-Type": "application/x-www-form-urlencoded", "Content-Length": Buffer.byteLength(body) };
+    const options = { ca, method: body === null ? "GET" : "POST", headers: { "User-Agent": AGENT, ...form, ...headers }, timeout: timeoutMs };
+    const req = https.request(url, options, (res) => {
       if (res.statusCode !== 200) {
         res.resume();
         reject(new Error(`HTTP ${res.statusCode} from ${url}`));
@@ -39,6 +42,7 @@ function get(url, ca, headers, timeoutMs) {
     });
     req.on("timeout", () => req.destroy(new Error(`no answer in ${timeoutMs / 1000} s from ${url}`)));
     req.on("error", reject);
+    req.end(body === null ? undefined : body);
   });
 }
 
@@ -106,22 +110,32 @@ function downloadCertificate(url, timeoutMs) {
   });
 }
 
+// The intermediate certificate found for a host, kept while this program runs: a script that asks the same server
+// several times (one page per day) repairs the chain once, not once per request.
+const repairedHosts = new Map(); // host -> { pem, from }
+
 // Download an https address; when the only problem is the missing intermediate certificate, fetch it and try again.
+// body: text of a form to POST ("date=02-10-2026"), or null for a plain GET.
 // Returns { buffer, repaired } - repaired: the address of the certificate that had to be added, or null.
-async function fetchBufferAia(url, headers = {}, timeoutMs = 20000) {
+async function fetchBufferAia(url, headers = {}, timeoutMs = 20000, body = null) {
   const roots = tls.rootCertificates; // the roots that ship with Node: the same on every computer
+  const host = new URL(url).hostname;
+  const known = repairedHosts.get(host);
+  if (known) return { buffer: await get(url, [...roots, known.pem], headers, timeoutMs, body), repaired: known.from };
   try {
-    return { buffer: await get(url, roots, headers, timeoutMs), repaired: null };
+    return { buffer: await get(url, roots, headers, timeoutMs, body), repaired: null };
   } catch (err) {
     if (err.code !== "UNABLE_TO_VERIFY_LEAF_SIGNATURE") throw err;
   }
-  const from = await issuerAddress(new URL(url).hostname, timeoutMs);
+  const from = await issuerAddress(host, timeoutMs);
   const pem = await downloadCertificate(from, timeoutMs);
-  return { buffer: await get(url, [...roots, pem], headers, timeoutMs), repaired: from };
+  const buffer = await get(url, [...roots, pem], headers, timeoutMs, body);
+  repairedHosts.set(host, { pem, from }); // only after the fully verified connection worked
+  return { buffer, repaired: from };
 }
 // The same for a page of text: { text, repaired }
-async function fetchTextAia(url, headers = {}, timeoutMs = 20000) {
-  const { buffer, repaired } = await fetchBufferAia(url, headers, timeoutMs);
+async function fetchTextAia(url, headers = {}, timeoutMs = 20000, body = null) {
+  const { buffer, repaired } = await fetchBufferAia(url, headers, timeoutMs, body);
   return { text: buffer.toString("utf8"), repaired };
 }
 

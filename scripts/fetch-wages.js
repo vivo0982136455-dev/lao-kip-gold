@@ -3,7 +3,7 @@
 //   ilo_min   ILO (ILOSTAT): statutory monthly minimum wage by year, in US dollars and in dollars of equal buying
 //             power (PPP) - the same method for every country, but one or two years behind
 //   ilo_avg   ILO (ILOSTAT): average monthly earnings of employees, in US dollars - the newest year each country has
-//   fx        market rates of the US dollar, to turn today's legal minimum wages into dollars and kip
+//   fx        reference mid rates (API) of the US dollar, to turn today's legal minimum wages into dollars and kip
 // The minimum wages in force TODAY are not in this file: they are read by hand from each government's notice and
 // kept in data/invest-static.json ("wages"), with the date of the check.
 // Writes data/wages.json (loaded only on the Economy > Wages tab).
@@ -38,7 +38,7 @@ const USD_IS_LCU = new Set(["KHM"]); // the minimum wage is set in US dollars an
 
 const SOURCES = {
   ilo: { source_name: "ILO (ILOSTAT): statutory minimum wage; average monthly earnings of employees", source_url: "https://ilostat.ilo.org/topics/wages/", license: "ILO - CC BY 4.0" },
-  fx: { source_name: "Market mid rate (open.er-api.com / ExchangeRate-API)", source_url: "https://www.exchangerate-api.com", license: "Free API - attribution: Rates By Exchange Rate API" },
+  fx: { source_name: "Reference mid rate (API: open.er-api.com / ExchangeRate-API)", source_url: "https://www.exchangerate-api.com", license: "Free API - attribution: Rates By Exchange Rate API" },
 };
 
 // One ILO indicator as rows of { area, type, year, value, ... }

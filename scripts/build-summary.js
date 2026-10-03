@@ -12,11 +12,8 @@ const DAYS_KEPT = 100; // charts show up to 90 days; keep a few extra
 const SOURCES = ["bol", "gold-world", "silver-world", "gold-thai", "fx-market", "fuel-thai", "gold-lbb", "bcel", "bcel-deposit", "gold-lao-manual", "silver-lao-manual", "rubber-lao-manual"];
 const OUT_FILE = path.join(DATA_DIR, "summary.json");
 
-// Gold units
-const GRAMS_PER_BAHT = 15.244; // Thai baht-weight (Thai association prices)
-const GRAMS_PER_LAO_BAHT = 15; // Lao "baht" (LBB sells 15 g and 7.5 g bars = 1 and ½ baht)
-const GRAMS_PER_TROY_OZ = 31.1035;
-const TROY_OZ_PER_KG = 1000 / GRAMS_PER_TROY_OZ; // 32.1507
+// Weights and conversions: scripts/lib/units.js (tested in tests/calc.js)
+const { mid, goldLakPerBaht, silverLakPerKg, lakPerLaoBaht } = require("./lib/units");
 
 // ---------- Day helpers (all days are Asia/Vientiane, UTC+7, no daylight saving) ----------
 
@@ -196,7 +193,7 @@ function main() {
       kind: "official",
       unit: `LAK per ${cur}`,
       inputs: [`bol.${cur}_LAK_buy`, `bol.${cur}_LAK_sell`],
-      formula: (buy, sell) => (buy + sell) / 2,
+      formula: mid,
     });
   }
 
@@ -205,7 +202,7 @@ function main() {
     kind: "market",
     unit: "LAK per baht-weight",
     inputs: ["gold-world.XAU_USD", "fx-market.USD_LAK"],
-    formula: (xau, usdLak) => xau * (GRAMS_PER_BAHT / GRAMS_PER_TROY_OZ) * usdLak,
+    formula: goldLakPerBaht,
   });
 
   // World silver in LAK per kg = XAG/USD × 32.1507 × USD→LAK (market). PML's shop price is per kg too.
@@ -213,7 +210,7 @@ function main() {
     kind: "market",
     unit: "LAK per kg",
     inputs: ["silver-world.XAG_USD", "fx-market.USD_LAK"],
-    formula: (xag, usdLak) => xag * TROY_OZ_PER_KG * usdLak,
+    formula: silverLakPerKg,
   });
 
   // Thai fuel in LAK per litre (× THB→LAK market) - compared with fuel prices in Laos
@@ -242,7 +239,7 @@ function main() {
       kind: "bank",
       unit: "LAK per baht (15 g)",
       inputs: [`gold-lbb.${side}_g`],
-      formula: (perGram) => perGram * GRAMS_PER_LAO_BAHT,
+      formula: lakPerLaoBaht,
     });
   }
 
@@ -252,7 +249,7 @@ function main() {
       kind: "bank",
       unit: `LAK per ${cur}`,
       inputs: [`bcel.${cur}_LAK_buy`, `bcel.${cur}_LAK_sell`],
-      formula: (buy, sell) => (buy + sell) / 2,
+      formula: mid,
     });
   }
 

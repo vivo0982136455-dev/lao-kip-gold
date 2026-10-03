@@ -1,11 +1,16 @@
 // The rules and formulas of the site, tested with fixed numbers (no browser, no download).
 //   - when a plan target gets a status, and when a number is only a "baseline" (js/pages/eco-common.js)
-//   - which of two numbers is "the newest the app has"
+//   - which of two numbers is "the newest the app has", and the one answer per indicator that every tab uses
+//     (js/pages/eco-latest.js): newest inflation, reserves, public debt counted three ways, growth
+//   - the forecast line of a level: the last real value carried on with the IMF's path of change, never the
+//     IMF's own level glued to the World Bank's last value
+//   - how far behind a number is
 //   - the checks on the owner's own prices: the bot (scripts/fetch-own-prices.js) and the page
 //     (js/pages/own-entry.js) must use the same limits and clean a text in the same way
 //   - the 7z reader (scripts/lib/sevenzip.js) and the reading of UNCTAD's table (scripts/fetch-invest.js)
 // Usage: node tests/calc.js
 const assert = require("node:assert/strict");
+const fs = require("fs");
 const path = require("path");
 const { pathToFileURL } = require("url");
 
@@ -31,6 +36,7 @@ const test = (name, fn) => {
 
 (async () => {
   const eco = await page("pages/eco-common.js");
+  const now = await page("pages/eco-latest.js");
   const own = await page("pages/own-entry.js");
   const bot = require(path.join(ROOT, "scripts", "fetch-own-prices.js"));
   const { unpack7z, crc32 } = require(path.join(ROOT, "scripts", "lib", "sevenzip.js"));
@@ -58,8 +64,7 @@ const test = (name, fn) => {
     }
   });
   test("target: a number from inside the plan is judged (a year, or a month of it)", () => {
-    const now = new Date();
-    const month = `${year}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    const month = `${year}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`;
     assert.equal(targetStatus(7.7, 5, "<=", { when: { month }, from: year }), "far");
     assert.equal(targetStatus(6.1, 6, ">=", { when: { year }, from: year }), "met");
   });
@@ -91,12 +96,256 @@ const test = (name, fn) => {
       stat: { checked: "2026-10-01", facts: { checked: "2026-10-02", reserves_wb: { usd_bn: 4.3, months: 3.8, months_bol: 5.3, month: "2026-04", source: "wb_lem_2606" } } },
       invest: { indicators: { "wb.FI.RES.TOTL.MO": { values: [[2023, 2.169], [2024, 2.394]], stale: false } } },
     };
-    const r = eco.reservesMonths(e);
+    const r = now.reservesMonths(e);
     assert.deepEqual([r.value, r.bol, r.when.month, r.checked, r.source], [3.8, 5.3, "2026-04", "2026-10-02", "wb_lem_2606"]);
     delete e.stat.facts.reserves_wb;
-    const s = eco.reservesMonths(e);
+    const s = now.reservesMonths(e);
     assert.deepEqual([s.value, s.bol, s.when.year], [2.394, null, 2024]);
-    assert.equal(eco.reservesMonths({ stat: { facts: {} }, invest: { indicators: {} } }), null);
+    assert.equal(now.reservesMonths({ stat: { facts: {} }, invest: { indicators: {} } }), null);
+  });
+
+  // ---------- one answer per indicator (eco-latest.js) ----------
+  const imfMonths = [["2026-06", 7.4], ["2026-07", 7.6], ["2026-08", 7.7]];
+  const base = () => ({
+    economy: {
+      sources: { imf_sdmx: { source_name: "IMF Data" }, worldbank: { source_name: "World Bank" }, imf: { source_name: "IMF WEO", edition: "2026-04" } },
+      monthly: { cpi_yoy: { source: "imf_sdmx", values: imfMonths, stale: false } },
+      indicators: {
+        "imf.GGXWDG_NGDP": { values: [[year - 2, 94.7], [year - 1, 80.6], [year, 74.6], [year + 1, 68.6]], stale: false },
+        "wb.NY.GDP.MKTP.KD.ZG": { values: [[year - 2, 4.13], [year - 1, 4.538]], stale: false },
+        "imf.NGDP_RPCH": { values: [[year - 1, 4.772], [year, 4.013]], stale: false },
+      },
+    },
+    invest: { indicators: { "wb.FI.RES.TOTL.CD": { values: [[year - 2, 2.213]], stale: false } }, sources: {} },
+    stat: { facts: { debt_mof: { pct: 84, year: year - 1, source: "wb_lem_2606" }, debt_peak: { now: 87.1, now_year: year - 1, source: "wb_lem_2606" }, growth_drivers: { growth: 4.8, year: year - 1, source: "wb_lem_2606" } } },
+    bank: null,
+  });
+  const bankFile = {
+    sources: { bol_inflation: { source_name: "BOL inflation" }, bol_reserves: { source_name: "BOL reserves" } },
+    inflation: { rows: [["2026-07", 7.6], ["2026-08", 7.7], ["2026-09", 7.8]], stale: false },
+    reserves: { rows: [["2026-06", 4070.9], ["2026-07", 3772.6]], includes_swap_since: "2020-07", stale: false },
+  };
+  test("inflation: the newest month of the IMF - or of the central bank, when it has a newer one", () => {
+    const e = base();
+    let i = now.latestInflation(e);
+    assert.deepEqual([i.value, i.when.month, i.src], [7.7, "2026-08", "IMF"]);
+    e.bank = bankFile;
+    i = now.latestInflation(e);
+    assert.deepEqual([i.value, i.when.month, i.src], [7.8, "2026-09", "BOL"]);
+    assert.deepEqual(i.series.values.map((v) => v[0]), ["2026-06", "2026-07", "2026-08", "2026-09"]); // no month twice
+    assert.equal(i.series.imfLast, "2026-08");
+    e.bank = { ...bankFile, inflation: { rows: [["2026-07", 7.6]], stale: false } }; // nothing newer than the IMF
+    assert.equal(now.latestInflation(e).src, "IMF");
+    assert.equal(now.latestInflation({ economy: { monthly: {} } }), null);
+  });
+  test("reserves in dollars: the month of the central bank, else the yearly World Bank series", () => {
+    const e = base();
+    let r = now.latestReserves(e).usd;
+    assert.deepEqual([r.value, r.when.year, r.src], [2.213, year - 2, "World Bank"]);
+    e.bank = bankFile;
+    r = now.latestReserves(e).usd;
+    assert.deepEqual([Math.round(r.value * 1000), r.when.month, r.src, r.swap], [3773, "2026-07", "BOL", "2020-07"]);
+  });
+  test("public debt: three ways of counting the same year, shown as a range", () => {
+    const d = now.publicDebt(base());
+    assert.equal(d.year, year - 1);
+    assert.deepEqual(d.list.map((x) => [x.who, x.value]), [["imf", 80.6], ["mof", 84], ["wb", 87.1]]);
+    assert.equal(now.rangeText(d), "80.6–87.1%");
+    const one = base();
+    delete one.stat.facts.debt_mof;
+    delete one.stat.facts.debt_peak;
+    assert.equal(now.rangeText(now.publicDebt(one)), "80.6%"); // one source: one number, no range
+    const older = base();
+    older.stat.facts.debt_peak.now_year = year - 2; // a source that is a year behind is not mixed into the range
+    assert.deepEqual(now.publicDebt(older).list.map((x) => x.who), ["imf", "mof"]);
+  });
+  test("growth: database, report and IMF for the same finished year; never the forecast year of the IMF", () => {
+    const g = now.growthNow(base());
+    assert.equal(g.year, year - 1);
+    assert.deepEqual(g.list.map((x) => [x.who, x.value]), [["wdi", 4.538], ["lem", 4.8], ["imf", 4.772]]);
+    assert.equal(now.rangeText(g), "4.5–4.8%");
+  });
+  test("no page reads the raw inflation or reserves series itself: only eco-latest.js does (audit P1-1)", () => {
+    const dir = path.join(ROOT, "js", "pages");
+    // the Settings page lists the IMF's monthly series as a SOURCE (is it up to date?), not as "the newest inflation"
+    const allowed = { "settings.js": /economy\.monthly\.cpi_yoy/ };
+    const found = [];
+    for (const name of fs.readdirSync(dir)) {
+      if (!name.endsWith(".js") || name === "eco-latest.js") continue;
+      fs.readFileSync(path.join(dir, name), "utf8").split("\n").forEach((line, i) => {
+        // "tha_cpi_yoy" is another indicator (Thailand's inflation)
+        if (/(?<![a-z_])cpi_yoy|FI\.RES\.TOTL\.MO/.test(line) && !(allowed[name] && allowed[name].test(line))) found.push(`${name}:${i + 1}`);
+      });
+    }
+    assert.deepEqual(found, []);
+  });
+
+  // ---------- forecast line (audit P1-2) ----------
+  const gdp = (extra = {}) => ({
+    economy: {
+      indicators: {
+        "wb.GDP": { values: [[2024, 16.503], [2025, 18.303]], unit: "USD bn", source: "worldbank", stale: false },
+        "imf.GDP": { values: [[2024, 15.792], [2025, 17.822], [2026, 18.959], [2027, 20.087]], unit: "USD bn", source: "imf", stale: false },
+        "wb.RATE": { values: [[2024, 4.1], [2025, 4.5]], unit: "%", source: "worldbank", stale: false },
+        "imf.RATE": { values: [[2025, 4.8], [2026, 4.0], [2027, 3.9]], unit: "%", source: "imf", stale: false },
+        ...extra,
+      },
+    },
+  });
+  test("forecast of a level: last real value x IMF(year) / IMF(last real year) - 18.303, 17.822, 18.959 -> 19.47", () => {
+    const s = eco.buildSeries(gdp(), { actual: "wb.GDP", forecast: "imf.GDP" }, 2024);
+    assert.deepEqual(s.years, [2024, 2025, 2026, 2027]);
+    assert.equal(s.rebased, true);
+    assert.equal(s.forecast[2].toFixed(2), "19.47");
+    assert.equal(s.forecast[2], Math.round(((18.303 * 18.959) / 17.822) * 1000) / 1000);
+    assert.equal(s.forecast[3], Math.round(((18.303 * 20.087) / 17.822) * 1000) / 1000);
+    assert.equal(s.forecast[1], 18.303); // the dashed line starts at the last real point
+    assert.deepEqual(s.forecastOnly.slice(0, 2), [null, null]);
+    // the first forecast year grows as the IMF says (+6.4%), not by the jump between the two sources (+3.6%)
+    assert.equal(((s.forecast[2] / 18.303 - 1) * 100).toFixed(1), ((18.959 / 17.822 - 1) * 100).toFixed(1));
+  });
+  test("forecast of a rate (%): joined as it is, no rebasing", () => {
+    const s = eco.buildSeries(gdp(), { actual: "wb.RATE", forecast: "imf.RATE" }, 2024);
+    assert.equal(s.rebased, false);
+    assert.deepEqual(s.forecast, [null, 4.5, 4.0, 3.9]);
+  });
+  test("forecast of a level without an IMF value for the last real year: no forecast line", () => {
+    const s = eco.buildSeries(gdp({ "imf.GDP": { values: [[2026, 18.959], [2027, 20.087]], unit: "USD bn", source: "imf" } }), { actual: "wb.GDP", forecast: "imf.GDP" }, 2024);
+    assert.equal(s.forecast, null);
+    assert.equal(s.rebased, false);
+    assert.deepEqual(s.sources, ["worldbank"]);
+  });
+  test("an IMF-only series is an estimate before this year and a forecast from this year on", () => {
+    const s = eco.buildSeries({ economy: { indicators: { "imf.D": { values: [[year - 2, 94.7], [year - 1, 80.6], [year, 74.6], [year + 1, 68.6]], unit: "% of GDP", source: "imf" } } } }, { forecast: "imf.D" }, year - 2);
+    assert.equal(s.isEstimate, true);
+    assert.equal(s.lastActual, year - 1);
+    assert.deepEqual(s.forecastOnly, [null, null, 74.6, 68.6]);
+  });
+
+  // ---------- how far behind a number is (audit P1-4) ----------
+  test("months behind: a year ends in December; the running year and month count as 0", () => {
+    const today = new Date(Date.now() + 7 * 3600000); // Vientiane
+    const month = today.getUTCMonth() + 1;
+    assert.equal(eco.monthsBehind({ year }), 0);
+    assert.equal(eco.monthsBehind({ year: year - 1 }), month);
+    assert.equal(eco.monthsBehind({ year: year - 2 }), 12 + month);
+    assert.equal(eco.monthsBehind({ month: `${year}-${String(month).padStart(2, "0")}` }), 0);
+    assert.equal(eco.monthsBehind({ month: `${year - 1}-${String(month).padStart(2, "0")}` }), 12);
+    assert.equal(eco.monthsBehind({}), 0);
+    assert.deepEqual(eco.FRESH_MONTHS, { year: 12, month: 3 });
+  });
+
+  // ---------- real rates and unit conversions (audit P1-10) ----------
+  const calc = await page("calc.js");
+  const units = require(path.join(ROOT, "scripts", "lib", "units.js"));
+  const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} is not ${b}`);
+  test("real rate: (1 + rate) / (1 + inflation) - 1, not the simple difference", () => {
+    close(calc.realRate(5, 25), -16); // the difference would say -20
+    close(calc.realRate(7, 7), 0);
+    close(calc.realRate(0, 0), 0);
+    close(calc.realRate(10, 0), 10);
+    close(calc.realRate(6.86, 7.8), ((1.0686 / 1.078) - 1) * 100); // a 12-month kip deposit against September's inflation
+    assert.ok(calc.realRate(6.86, 7.8) < 0 && calc.realRate(6.86, 7.8) > 6.86 - 7.8); // negative, and a little less negative than the difference
+    close(calc.realRate(3, -1), (1.03 / 0.99 - 1) * 100); // falling prices add to the rate
+  });
+  test("rubber: US cents per pound -> US dollars per kilogram", () => {
+    close(calc.usdPerKg(100), 2.20462);
+    close(calc.usdPerKg(0), 0);
+    close(calc.usdPerKg(88.5), 1.9510887);
+    assert.equal(calc.LB_PER_KG, 2.20462);
+  });
+  test("gold and silver: dollars per troy ounce -> kip per baht-weight / per kilogram", () => {
+    assert.deepEqual([units.GRAMS_PER_BAHT, units.GRAMS_PER_LAO_BAHT, units.GRAMS_PER_TROY_OZ], [15.244, 15, 31.1035]);
+    assert.equal(units.TROY_OZ_PER_KG.toFixed(4), "32.1507"); // the number the notes of the gold page name
+    // one ounce at $3,110.35 = $100 a gram = $1,524.40 per Thai baht-weight; at 22,000 kip per dollar
+    close(units.goldLakPerBaht(3110.35, 22000), 100 * 15.244 * 22000, 1e-3);
+    // silver at $31.1035 an ounce = $1 a gram = $1,000 a kilogram
+    close(units.silverLakPerKg(31.1035, 22000), 1000 * 22000, 1e-3);
+    assert.equal(units.lakPerLaoBaht(3000000), 45000000); // Lao Bullion Bank: per gram -> per Lao baht (15 g)
+    assert.equal(units.mid(22361, 22584), 22472.5);
+  });
+  test("money amounts: millions of dollars are written as millions below a billion, as billions above", () => {
+    const t = { unit_usd_bn: "bn", unit_usd_m: "m" };
+    assert.equal(eco.usdText(988.46, t), "988.5 m");
+    assert.equal(eco.usdText(1404.78, t), "1.40 bn");
+    assert.deepEqual(eco.usdParts(15392.6, t), { num: "15.39", unit: "bn" });
+    assert.equal(eco.pctText(4.538), "4.5%");
+    assert.equal(eco.pctText(66.6, 0), "67%");
+  });
+
+  // ---------- accuracy of the kip hint (audit P1-9) ----------
+  const fc = await page("pages/forecast.js");
+  test("kip hint: fewer than 20 checked hints give no percentage; with enough, the naive guess is counted next to it", () => {
+    const today = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); // Vientiane
+    const dayBack = (n) => new Date(Date.parse(today + "T00:00:00Z") - n * 86400000).toISOString().slice(0, 10);
+    // the THB side of every test hint: said "up", really "flat" -> always wrong, and "flat every day" always right
+    const hint = (n, said, real) => ({ target_date: dayBack(n), status: "resolved", hint: { usd: said, thb: "up" }, actual: { usd: real, thb: "flat" }, correct: { usd: said === real, thb: false } });
+    assert.equal(fc.MIN_CASES, 20);
+    let a = fc.hintAccuracy({ hints: [hint(1, "up", "up"), hint(2, "down", "down")] });
+    assert.deepEqual([a.usd.total, a.usd.correct, a.usd.enough], [2, 2, false]); // "100%" must never be shown from this
+    const many = [];
+    const add = (count, said, real) => {
+      for (let i = 0; i < count; i++) many.push(hint(many.length + 1, said, real));
+    };
+    add(12, "up", "up"); // 15 days went up: the hint said so 12 times
+    add(3, "down", "up");
+    add(4, "down", "down"); // 10 days went down: the hint said so 4 times
+    add(6, "up", "down");
+    many.push(hint(200, "up", "up")); // checked long ago: outside the 90 days
+    many.push({ target_date: today, status: "pending", hint: { usd: "up", thb: "up" } });
+    many.push({ target_date: dayBack(40), status: "no_publication", hint: { usd: "up", thb: "up" } });
+    a = fc.hintAccuracy({ hints: many });
+    assert.deepEqual([a.usd.total, a.usd.correct, a.usd.naive, a.usd.enough], [25, 16, 15, true]); // 64% against 60% for "up every day"
+    assert.deepEqual([a.thb.total, a.thb.correct, a.thb.naive], [25, 0, 25]);
+    a = fc.hintAccuracy(null);
+    assert.deepEqual([a.usd.total, a.usd.enough], [0, false]);
+  });
+
+  // ---------- Laos next to its neighbours: one row = one year (audit P1-6) ----------
+  const cmp = await page("pages/eco-compare.js");
+  const SIX = ["LAO", "THA", "VNM", "KHM", "MMR", "CHN"];
+  test("compare: the row's year is the newest finished year Laos has; another country's year is never mixed in silently", () => {
+    const ind = { rows: { LAO: [[2023, 2.1], [2024, 2.4]], THA: [[2024, 7.5], [2025, 8.0]], VNM: [[2024, 2.4]], KHM: [[2023, 7.0], [2025, 7.9]], MMR: [[2019, 3.3]], CHN: [] } };
+    const row = cmp.compareRow(ind, SIX, 2025);
+    assert.equal(row.year, 2024);
+    assert.deepEqual(row.cells.map((c) => [c.iso, c.value, c.year, c.same]), [
+      ["LAO", 2.4, 2024, true],
+      ["THA", 7.5, 2024, true], // not its newer 2025
+      ["VNM", 2.4, 2024, true],
+      ["KHM", 7.0, 2023, false], // no 2024: the newest earlier year, marked - never the later 2025
+      ["MMR", 3.3, 2019, false],
+      ["CHN", null, null, false],
+    ]);
+    // a rank is counted only among the countries of the row's year: Laos and Viet Nam share the last place of 3
+    assert.deepEqual(cmp.rankOf(row), { rank: 2, of: 3 });
+  });
+  test("compare: a year that is not finished (an IMF forecast) is never the row's year", () => {
+    const ind = { rows: { LAO: [[year - 1, 80.6], [year, 74.6], [year + 1, 68.6]], THA: [[year - 1, 64.7], [year, 66.8]] } };
+    const row = cmp.compareRow(ind, ["LAO", "THA"]);
+    assert.equal(row.year, year - 1);
+    assert.deepEqual(row.cells.map((c) => c.value), [80.6, 64.7]);
+    assert.deepEqual(cmp.rankOf(row), { rank: 1, of: 2 });
+    assert.deepEqual(cmp.compareRow({ rows: { THA: [[2025, 1]] } }, ["LAO", "THA"]), { year: null, cells: [] }); // nothing for Laos: no card
+    assert.equal(cmp.rankOf({ cells: [{ iso: "LAO", value: 1, year: 2025, same: true }] }), null); // nobody to compare with
+  });
+  test("compare (bot): one IMF answer for six countries is split by country, forecast years left out", () => {
+    const { readImf, byCountry } = require(path.join(ROOT, "scripts", "fetch-compare.js"));
+    const answer = {
+      structure: {
+        dimensions: {
+          series: [{ id: "COUNTRY", values: [{ id: "CHN" }, { id: "LAO" }] }, { id: "INDICATOR", values: [{ id: "GGXWDG_NGDP" }] }, { id: "FREQUENCY", values: [{ id: "A" }] }],
+          observation: [{ id: "TIME_PERIOD", values: [{ id: "2024" }, { id: "2025" }, { id: "2026" }] }],
+        },
+        attributes: { dataSet: [] },
+      },
+      dataSets: [{ attributes: [], series: { "1:0:0": { observations: { 0: ["94.68"], 1: ["80.62"], 2: ["74.62"] } }, "0:0:0": { observations: { 0: ["90.42"], 1: ["99.24"], 2: [null] } } } }],
+    };
+    const r = readImf(answer, "GGXWDG_NGDP", 2025);
+    assert.deepEqual(r.rows.filter((x) => x.iso === "LAO").map((x) => [x.year, x.value]), [[2024, 94.68], [2025, 80.62]]);
+    const rows = byCountry(r.rows);
+    assert.deepEqual(rows.CHN, [[2024, 90.42], [2025, 99.24]]);
+    assert.deepEqual(rows.THA, []); // a country the answer does not hold: an empty list, not a missing key
+    assert.throws(() => readImf({ structure: { dimensions: {} } }, "X", 2025), /Unexpected IMF/);
   });
 
   // ---------- the owner's own prices: bot and page ----------

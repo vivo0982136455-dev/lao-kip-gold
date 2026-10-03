@@ -32,7 +32,7 @@
 
 const path = require("path");
 const { DATA_DIR, fetchJson, readJson, writeIfChanged, parseCsv } = require("./lib/common");
-const { fromWorldBank, fromImf, fromImfSdmx } = require("./fetch-economy");
+const { fromWorldBank, fromImf, fromImfSdmx, stampSources, noteSource } = require("./fetch-economy");
 const { unpack7z } = require("./lib/sevenzip");
 
 const OUT_FILE = path.join(DATA_DIR, "invest.json");
@@ -52,6 +52,10 @@ const SOURCES = {
 // Yearly indicators ("unit" is the meaning after "scale")
 const INDICATORS = {
   "wb.NY.GDP.PCAP.CD": { source: "worldbank", code: "NY.GDP.PCAP.CD", unit: "USD per person" },
+  // the same economy without the effect of prices and of the exchange rate (audit 2026-10-02, P1-3):
+  // GDP at the prices and the exchange rate of 2015, and GDP per person at purchasing-power parity
+  "wb.NY.GDP.MKTP.KD": { source: "worldbank", code: "NY.GDP.MKTP.KD", unit: "USD bn", scale: 1e-9 }, // constant 2015 US$
+  "wb.NY.GDP.PCAP.PP.CD": { source: "worldbank", code: "NY.GDP.PCAP.PP.CD", unit: "intl$ per person" }, // PPP, current international $
   "wb.NV.AGR.TOTL.ZS": { source: "worldbank", code: "NV.AGR.TOTL.ZS", unit: "% of GDP" },
   "wb.NV.IND.TOTL.ZS": { source: "worldbank", code: "NV.IND.TOTL.ZS", unit: "% of GDP" },
   "wb.NV.IND.MANF.ZS": { source: "worldbank", code: "NV.IND.MANF.ZS", unit: "% of GDP" },
@@ -249,6 +253,7 @@ async function main() {
   const old = readJson(OUT_FILE, { indicators: {}, parts: {}, monthly: {} });
   const now = new Date().toISOString();
   const out = { sources: SOURCES, indicators: {}, parts: {}, monthly: {} };
+  const seen = {}; // what each source said about itself in this run (edition, last update)
   let failed = 0;
   let total = 0;
 
@@ -256,8 +261,10 @@ async function main() {
     total++;
     const before = old.indicators && old.indicators[id];
     try {
-      const { values, source_updated } = def.source === "worldbank" ? await fromWorldBank(def) : await fromImf(def);
+      const answer = def.source === "worldbank" ? await fromWorldBank(def) : await fromImf(def);
+      const { values, source_updated } = answer;
       if (!values.length) throw new Error("no values");
+      noteSource(seen, def.source, answer);
       out.indicators[id] = okEntry(before, { source: def.source, code: def.code, unit: def.unit, values, source_updated }, now);
       console.log(`[OK]   ${id}: ${values.length} years (to ${values[values.length - 1][0]})`);
     } catch (err) {
@@ -272,6 +279,7 @@ async function main() {
   total++;
   try {
     out.parts.debt_creditors = okEntry(parts.debt_creditors, { source: "wb_ids", ...(await debtCreditors()) }, now);
+    noteSource(seen, "wb_ids");
     const d = out.parts.debt_creditors;
     console.log(`[OK]   debt_creditors: ${d.year}, total ${d.total} USD m, ${d.list.length} creditors (top: ${d.list[0][0]} ${d.list[0][1]})`);
   } catch (err) {
@@ -294,6 +302,7 @@ async function main() {
   total++;
   try {
     out.parts.fdi_positions = okEntry(parts.fdi_positions, { source: "imf_dip", ...(await fdiPositions()) }, now);
+    noteSource(seen, "imf_dip");
     const f = out.parts.fdi_positions;
     console.log(`[OK]   fdi_positions: ${f.year}, total ${f.total} USD m, ${f.list.length} countries (top: ${f.list[0][1]} ${f.list[0][2]})`);
   } catch (err) {
@@ -305,6 +314,7 @@ async function main() {
   total++;
   try {
     out.parts.fdi_total = okEntry(parts.fdi_total, { source: "unctad", ...(await fdiTotal()) }, now);
+    noteSource(seen, "unctad");
     const f = out.parts.fdi_total;
     console.log(`[OK]   fdi_total: ${f.year}, stock ${f.total} USD m (${f.values.length} years)`);
   } catch (err) {
@@ -317,6 +327,7 @@ async function main() {
   total++;
   try {
     out.parts.rubber_china = okEntry(parts.rubber_china, { source: "comtrade", ...(await rubberChina(parts.rubber_china && parts.rubber_china.years)) }, now);
+    noteSource(seen, "comtrade");
     const y = out.parts.rubber_china.years;
     console.log(`[OK]   rubber_china: ${y.length} years (to ${y[y.length - 1][0]}: ${y[y.length - 1][1]} USD/kg, ${y[y.length - 1][2]} t)`);
   } catch (err) {
@@ -332,12 +343,16 @@ async function main() {
     const [series] = await fromImfSdmx("IMF.RES,PCPS/G001.PRUBB.USD.M", RUBBER_FIRST_MONTH);
     if (!series || series.values.length < 24) throw new Error("fewer than 24 months returned");
     out.monthly.rubber_usd = okEntry(oldRubber, { source: "imf_pcps", unit: "US cents per pound", values: series.values }, now);
+    noteSource(seen, "imf_pcps");
     console.log(`[OK]   monthly.rubber_usd: ${series.values.length} months (to ${series.values[series.values.length - 1][0]})`);
   } catch (err) {
     failed++;
     console.error(`[FAIL] monthly.rubber_usd: ${err.message}`);
     out.monthly.rubber_usd = failEntry(oldRubber, { source: "imf_pcps", unit: "US cents per pound", values: [] }, err, now);
   }
+
+  // edition / last update / day of reading of every source that answered (the page shows them under each card)
+  out.sources = stampSources(SOURCES, old.sources, seen, now.slice(0, 10));
 
   // One entry per line: small diffs in git, still readable
   const block = (obj) => "{\n" + Object.entries(obj).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(",\n") + "\n }";

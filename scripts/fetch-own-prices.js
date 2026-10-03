@@ -120,7 +120,7 @@ function loadReferences() {
   const kinds = (daily && daily.thai_border && daily.thai_border.kinds) || {};
   const items = (thai && thai.items) || {};
 
-  // kip per baht by day: Bank of the Lao PDR (middle of buying and selling), else the market rate
+  // kip per baht by day: Bank of the Lao PDR (middle of buying and selling), else the reference mid rate (API)
   const sides = new Map(); // day -> { buy, sell }
   for (const r of readJson(path.join(HISTORY_DIR, "bol.json"), [])) {
     if (r.metric !== "THB_LAK_buy" && r.metric !== "THB_LAK_sell") continue;

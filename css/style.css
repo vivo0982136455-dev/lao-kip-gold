@@ -20,6 +20,7 @@
   /* One colour per KIND of number - same in cards and charts */
   --kind-official: #3987e5; /* blue   = BOL / official statistics */
   --kind-market: #d95926; /* orange = market */
+  --kind-reference: var(--kind-market); /* a reference mid rate from a general API: not official, not a quote in Laos - same orange in every theme */
   --kind-estimated: #199e70; /* aqua   = our estimate */
   --kind-shop: #9085e9; /* violet = shop price typed in by owner */
   --kind-bank: #d85fae; /* pink   = commercial bank / bullion bank (LBB, BCEL) - validated for colour-blind separation */
@@ -220,6 +221,7 @@ select {
 }
 [data-kind="official"] { --kind-color: var(--kind-official); }
 [data-kind="market"] { --kind-color: var(--kind-market); }
+[data-kind="reference"] { --kind-color: var(--kind-reference); }
 [data-kind="estimated"] { --kind-color: var(--kind-estimated); }
 [data-kind="shop"] { --kind-color: var(--kind-shop); }
 [data-kind="own"] { --kind-color: var(--kind-shop); } /* typed in by the owner about his own sales (same violet as shop prices) */
@@ -382,6 +384,7 @@ details table { margin-top: 6px; }
 .status-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; font-size: 0.76rem; color: var(--muted); }
 .card > h3 { font-size: 0.92rem; font-weight: 600; margin-bottom: 8px; }
 .error-text { color: var(--bad-text); font-size: 0.74rem; white-space: normal; }
+.status-route { color: var(--text-2); font-size: 0.76rem; font-weight: 400; margin-top: 2px; }
 
 /* Link or label that looks like a button */
 .btn {
@@ -497,10 +500,17 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 .tabpanel > .section-title { margin: 12px 0 0; }
 .tabpanel > .facts-card { margin-bottom: 0; }
 .tab-intro { font-size: 0.84rem; }
+.cmp-year { white-space: nowrap; }
+.cmp-year-off { color: var(--warn-text); font-weight: 600; } /* a number from another year than the card's: marked, never silent */
+.stats-foot { margin: 8px 2px 0; } /* note + sources under a row of tiles that is not inside a card */
+.stats-foot .card-foot { border-top: 0; margin-top: 2px; padding-top: 0; }
 .fresh { display: inline-flex; flex-wrap: wrap; gap: 2px 6px; font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
 .stat .fresh { display: flex; }
 .fresh-ok { color: var(--text-2); }
 .fresh-old { color: var(--warn-text); font-weight: 600; }
+.fresh-behind { color: var(--warn-text); } /* the newest the source has, but months behind today */
+.differ-topic { margin: 14px 0 6px; font-size: 0.88rem; font-weight: 650; color: var(--text); }
+.differ-card .watch-list { font-size: 0.82rem; }
 .fresh-stale { color: var(--bad-text); font-weight: 600; }
 .status { display: inline-block; font-size: 0.72rem; font-weight: 600; border-radius: 999px; padding: 1px 8px; margin-top: 4px; white-space: nowrap; }
 .status-met { color: var(--up); background: var(--up-bg); }

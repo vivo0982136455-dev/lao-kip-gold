@@ -8,7 +8,7 @@ const VIENTIANE_OFFSET_MS = 7 * 3600000;
 function decimalsFor(value, unit) {
   if (unit.startsWith("LAK")) return Math.abs(value) >= 1000 ? 0 : 2;
   if (unit.startsWith("%")) return 1;
-  if (unit === "USD m" || unit === "USD per person" || unit === "USD per month" || unit === "tonnes") return 0;
+  if (unit === "USD m" || unit === "USD per person" || unit === "intl$ per person" || unit === "USD per month" || unit === "tonnes") return 0;
   if (unit === "months") return 1;
   if (unit === "ratio") return 4;
   if (unit === "index") return 1; // start of the period = 100

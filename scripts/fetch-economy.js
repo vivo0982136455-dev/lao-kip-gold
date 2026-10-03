@@ -13,6 +13,11 @@
 //   IMF SDMX WEO (2026-10-01): GET .../IMF.RES,WEO/LAO.NGDP_RPCH.A -> same shape as the monthly series below, with
 //                      TIME_PERIOD ids "1980" ... "2031" and values like "4.771627"; NGDPD is in US dollars (not bn);
 //                      the world total is country "G001"
+//                      Which EDITION the numbers are (2026-10-02): structure.attributes.dataSet[] holds
+//                      { id: "PUBLICATION_DATE", values: [{ id: "2026-04-14T13:00:00Z" }] } and "UPDATE_DATE" the same
+//                      way; dataSets[0].attributes[i] is the index into values. The attribute that would say up to
+//                      which year the numbers are actual data ("LATEST_ACTUAL_ANNUAL_DATA") is empty for Laos, so
+//                      the page calls every IMF number of a past year an estimate.
 //   IMF SDMX (JSON): { structure: { dimensions: { series: [..., {id:"COICOP_1999", values:[{id:"CP01", name:"Food ..."}]}],
 //                      observation: [{ id:"TIME_PERIOD", values:[{id:"2026-M08"}, ...] }] } },
 //                      dataSets: [ { series: { "0:0:3:0:0": { observations: { "0": ["7.7", ...] } } } } ] }
@@ -96,6 +101,22 @@ async function fromWorldBank(def) {
 const WEO_AREA = { WEOWORLD: "G001" }; // DataMapper name -> SDMX country code (G001 = world)
 const WEO_SCALE = { NGDPD: 1e-9 }; // SDMX gives US dollars; the unit here is USD bn (as DataMapper gives it)
 
+// Which edition of the World Economic Outlook an SDMX answer is: { edition: "2026-04" (month of publication),
+// updated: "2026-04-15" } - null when the answer does not say
+function weoEdition(data) {
+  const attrs = data.structure && data.structure.attributes && data.structure.attributes.dataSet;
+  const picked = data.dataSets && data.dataSets[0] && data.dataSets[0].attributes;
+  const day = (id) => {
+    if (!Array.isArray(attrs) || !Array.isArray(picked)) return null;
+    const i = attrs.findIndex((a) => a.id === id);
+    const v = i >= 0 && picked[i] !== null && picked[i] !== undefined && attrs[i].values ? attrs[i].values[picked[i]] : null;
+    const text = v ? String(v.id || v.name || "") : "";
+    return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : null;
+  };
+  const published = day("PUBLICATION_DATE");
+  return { edition: published ? published.slice(0, 7) : null, updated: day("UPDATE_DATE") };
+}
+
 // IMF World Economic Outlook from the SDMX service (the road that works from GitHub's servers)
 async function fromImfWeo(def) {
   const area = def.area || "LAO";
@@ -111,7 +132,8 @@ async function fromImfWeo(def) {
     .filter(([year, v]) => Number.isInteger(year) && year >= FIRST_YEAR && v !== null && v !== "")
     .map(([year, v]) => [year, round(parseAnyNumber(v, def.code) * (WEO_SCALE[def.code] || 1) * (def.scale || 1))])
     .sort((a, b) => a[0] - b[0]);
-  return { values, source_updated: null };
+  const { edition, updated } = weoEdition(data);
+  return { values, source_updated: updated, edition };
 }
 
 // The same numbers from the DataMapper API (second road; rounded by the IMF to 1-3 decimals)
@@ -123,7 +145,30 @@ async function fromImfDataMapper(def) {
   const values = Object.entries(lao)
     .filter(([year, v]) => Number(year) >= FIRST_YEAR && v !== null)
     .map(([year, v]) => [Number(year), round(parseAnyNumber(v, def.code) * (def.scale || 1))]);
-  return { values, source_updated: null };
+  return { values, source_updated: null, edition: null }; // this road does not say which edition it serves
+}
+
+// What the sources said about themselves in this run, kept in the "sources" block for the footers of the page:
+//   edition   IMF: the month the World Economic Outlook was published ("2026-04")
+//   updated   the day the source last changed its data (World Bank: "lastupdated" of its database)
+//   retrieved the day we read it
+// seen: { sourceId: { edition?, updated? } } for every source that answered in this run. A source that did not
+// answer keeps what was stored before, so the footer never claims a reading that did not happen.
+function stampSources(sources, oldSources, seen, today) {
+  const out = {};
+  for (const [id, src] of Object.entries(sources)) {
+    const before = (oldSources && oldSources[id]) || {};
+    const now = seen[id] ? { edition: seen[id].edition || before.edition, updated: seen[id].updated || before.updated, retrieved: today } : before;
+    out[id] = { ...src };
+    for (const k of ["edition", "updated", "retrieved"]) if (now[k]) out[id][k] = now[k];
+  }
+  return out;
+}
+// Remember what one answer said about its source (the newest "updated" day wins)
+function noteSource(seen, id, { source_updated: updated, edition } = {}) {
+  const s = seen[id] || (seen[id] = {});
+  if (edition) s.edition = edition;
+  if (updated && (!s.updated || updated > s.updated)) s.updated = updated;
 }
 
 async function fromImf(def) {
@@ -198,13 +243,16 @@ async function main() {
   const oldMonthly = old.monthly || {};
   const now = new Date().toISOString();
   const out = { sources: SOURCES, indicators: {}, monthly: {} };
+  const seen = {}; // what each source said about itself in this run (edition, last update)
   let failed = 0;
 
   for (const [id, def] of Object.entries(INDICATORS)) {
     const before = old.indicators[id];
     try {
-      const { values, source_updated } = def.source === "worldbank" ? await fromWorldBank(def) : await fromImf(def);
+      const answer = def.source === "worldbank" ? await fromWorldBank(def) : await fromImf(def);
+      const { values, source_updated } = answer;
       if (!values.length) throw new Error("no values");
+      noteSource(seen, def.source, answer);
       const same = before && JSON.stringify(before.values) === JSON.stringify(values);
       out.indicators[id] = {
         source: def.source,
@@ -232,6 +280,7 @@ async function main() {
     try {
       const [series] = await fromImfSdmx(def.key);
       if (!series || series.values.length < 12) throw new Error("fewer than 12 months returned");
+      noteSource(seen, "imf_sdmx");
       out.monthly[id] = monthlyEntry(oldMonthly[id], fields, series.values, now);
       console.log(`[OK]   monthly.${id}: ${series.values.length} months (to ${series.values[series.values.length - 1][0]})`);
     } catch (err) {
@@ -268,6 +317,11 @@ async function main() {
       : monthlyFailure(oldMonthly[id], { source: "bol", unit: `LAK per ${cur}` }, new Error("no BOL history"), now);
   }
 
+  // edition / last update / day of reading of every source that answered (the page shows them under each card)
+  out.sources = stampSources(SOURCES, old.sources, seen, now.slice(0, 10));
+  const imf = out.sources.imf;
+  console.log(`[OK]   sources: World Bank updated ${out.sources.worldbank.updated || "?"} · IMF WEO edition ${imf.edition || "?"} (updated ${imf.updated || "?"})`);
+
   // One series per line: small file for phones, still readable in git
   const block = (obj) => "{\n" + Object.entries(obj).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(",\n") + "\n }";
   const text = `{\n "sources": ${JSON.stringify(out.sources)},\n "indicators": ${block(out.indicators)},\n "monthly": ${block(out.monthly)}\n}\n`;
@@ -280,4 +334,4 @@ async function main() {
 if (require.main === module) main();
 
 // shared with fetch-invest.js
-module.exports = { fromWorldBank, fromImf, fromImfSdmx, IMF_SDMX };
+module.exports = { fromWorldBank, fromImf, fromImfSdmx, IMF_SDMX, stampSources, noteSource, weoEdition };

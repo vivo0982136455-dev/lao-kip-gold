@@ -17,6 +17,7 @@ import { el, card, cardHead, pctPill, table, sourceLink } from "../ui.js";
 import { chartCard, dayRange, valuesFor } from "../charts.js";
 import { formatNumber, formatDate } from "../format.js";
 import { lazyJson } from "../lazy.js";
+import { usdPerKg as perKg } from "../calc.js"; // US cents per pound -> USD per kg
 import {
   lastOf, pct, indicator, freshness, sourcesFoot, invTile, barTable, ready, fill, monthText, monthShort, staticSource, choice, whole, PROVINCES,
 } from "./eco-common.js";
@@ -24,8 +25,6 @@ import { aseanView, worldView, laoProductionChart } from "./eco-rubber-world.js"
 import { buyersView, countryPricesCard } from "./eco-rubber-borders.js";
 import { rubberEntryCard, rubberEntriesCard, rubberByProvince, RUBBER_TYPES } from "./own-entry.js";
 
-const LB_PER_KG = 2.20462;
-const perKg = (centsPerLb) => (centsPerLb * LB_PER_KG) / 100; // US cents per pound -> USD per kg
 const round2 = (v) => Math.round(v * 100) / 100;
 const THAI = [
   ["rubber_cuplump", "inv_rub_cuplump", "--cat-1"],

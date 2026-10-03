@@ -2,7 +2,8 @@
 // Weekly. All free, no key.
 //   indicators   World Bank API, Laos, yearly since 2000: population, growth, age groups, towns, births per woman,
 //                life expectancy, people of working age per dependant, migration, labour force, work by sector,
-//                money sent home by workers abroad
+//                money sent home by workers abroad; and what people can spend: income per person at purchasing
+//                power, household consumption, poverty rates
 //   projections  World Bank "Population estimates and projections" (source 40): population and age groups to 2050
 //   neighbours   the newest value of the main numbers for Laos, Thailand, Viet Nam, Cambodia, Myanmar and China
 //   provinces    Lao Statistics Bureau / UNFPA population by province, sex and age group (newest projection year),
@@ -26,6 +27,7 @@
 const path = require("path");
 const { DATA_DIR, fetchJson, fetchText, parseCsv, readJson, writeIfChanged } = require("./lib/common");
 const { okEntry, failEntry } = require("./lib/parts");
+const { stampSources, noteSource } = require("./fetch-economy");
 
 const OUT_FILE = path.join(DATA_DIR, "population.json");
 const TIMEOUT_MS = 60000;
@@ -61,6 +63,13 @@ const INDICATORS = {
   remit_usd: { code: "BX.TRF.PWKR.CD.DT", unit: "USD m", scale: 1e-6 },
   remit_gdp: { code: "BX.TRF.PWKR.DT.GD.ZS", unit: "% of GDP" },
   density: { code: "EN.POP.DNST", unit: "people per sq km" },
+  // what people can spend - a head count is not a market (audit 2026-10-02, P1-8). Checked 2026-10-03: income per
+  // person 2025, poverty 2024, household consumption only up to 2016 (shown with that year, marked as old).
+  gni_ppp: { code: "NY.GNP.PCAP.PP.CD", unit: "intl$ per person" },
+  consumption: { code: "NE.CON.PRVT.CD", unit: "USD bn", scale: 1e-9 },
+  consumption_gdp: { code: "NE.CON.PRVT.ZS", unit: "% of GDP" },
+  poverty_national: { code: "SI.POV.NAHC", unit: "% of people" },
+  poverty_3usd: { code: "SI.POV.DDAY", unit: "% of people" },
 };
 const PROJECTED = { pop: "SP.POP.TOTL", young: "SP.POP.0014.TO.ZS", working: "SP.POP.1564.TO.ZS", old: "SP.POP.65UP.TO.ZS" };
 const NEIGHBOURS = ["LAO", "THA", "VNM", "KHM", "MMR", "CHN"];
@@ -164,6 +173,7 @@ async function main() {
   const old = readJson(OUT_FILE, { indicators: {} });
   const now = new Date().toISOString();
   const out = { sources: SOURCES, indicators: {} };
+  const seen = {}; // what each source said about itself in this run -> the footers of the page (see stampSources)
   let failed = 0;
 
   for (const [id, def] of Object.entries(INDICATORS)) {
@@ -173,6 +183,7 @@ async function main() {
       const values = series(r.rows, def.scale || 1);
       if (!values.length) throw new Error("no values");
       out.indicators[id] = okEntry(before, { source: "worldbank", code: def.code, unit: def.unit, values, source_updated: r.updated }, now);
+      noteSource(seen, "worldbank", { source_updated: r.updated });
       console.log(`[OK]   ${id}: ${values.length} years (to ${values[values.length - 1][0]}: ${values[values.length - 1][1]})`);
     } catch (err) {
       failed++;
@@ -190,6 +201,7 @@ async function main() {
   for (const [id, fallback, run, describe] of parts) {
     try {
       out[id] = okEntry(old[id], await run(), now);
+      noteSource(seen, out[id].source, out[id]);
       console.log(`[OK]   ${id}: ${describe(out[id])}`);
     } catch (err) {
       failed++;
@@ -197,6 +209,8 @@ async function main() {
       out[id] = failEntry(old[id], fallback, err, now);
     }
   }
+
+  out.sources = stampSources(SOURCES, old.sources, seen, now.slice(0, 10));
 
   // One series per line: small file for phones, still readable in git
   const block = (obj) => "{\n" + Object.entries(obj).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(",\n") + "\n }";
@@ -210,4 +224,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { main, provinces, PROVINCE_BY_CODE };
+module.exports = { main, provinces, PROVINCE_BY_CODE, worldBank };

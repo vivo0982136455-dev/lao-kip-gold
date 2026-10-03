@@ -1,7 +1,8 @@
 # Lao economy data (World Bank, IMF yearly + monthly CPI / gold), investor data (debt by creditor, FDI by country and
 # UNCTAD's total for all investors, rubber), WFP prices of everyday goods, Thai food + rubber prices, the official land price decisions per province,
 # the world rubber numbers (who sells, who buys, who grows it, world prices), who buys Lao rubber at which border
-# price (UN Comtrade, Viet Nam Customs), the population numbers (World Bank, Lao Statistics Bureau / UNFPA), the
+# price (UN Comtrade, Viet Nam Customs), the population numbers (World Bank, Lao Statistics Bureau / UNFPA), Laos
+# next to its five neighbours on the main numbers (World Bank, IMF: the same indicator for six countries), the
 # central bank's own numbers (Bank of the Lao PDR: policy rate, reserve requirement, reserves, inflation), wages
 # (ILO + exchange rates) and a look whether the World Bank has published a newer Lao Economic Monitor.
 # Weekly: IMF and WFP publish on different days each month, weekly keeps us at most ~7 days behind.
@@ -23,9 +24,11 @@ on:
       - "scripts/fetch-rubber-world.js"
       - "scripts/fetch-rubber-borders.js"
       - "scripts/fetch-population.js"
+      - "scripts/fetch-compare.js"
       - "scripts/fetch-bol-policy.js"
       - "scripts/fetch-wages.js"
       - "scripts/fetch-report-watch.js"
+      - "scripts/check-data.js"
       - "scripts/lib/**"
 
 permissions:
@@ -93,6 +96,13 @@ jobs:
         timeout-minutes: 10
         run: node scripts/fetch-population.js
 
+      # Laos next to Thailand, Viet Nam, Cambodia, Myanmar and China: one request per indicator for the six countries
+      # (World Bank; public debt from the IMF's World Economic Outlook). An indicator that fails keeps last week's rows.
+      - name: Fetch the comparison with the neighbours
+        if: always()
+        timeout-minutes: 15
+        run: node scripts/fetch-compare.js
+
       # The central bank's policy rate and reserve requirement (every change with its date), its foreign-exchange
       # reserves by month and this year's inflation: three small pages and one small workbook of bol.gov.la (the
       # server forgets its intermediate certificate, scripts/lib/aia.js completes the chain)
@@ -113,6 +123,12 @@ jobs:
         if: always()
         timeout-minutes: 3
         run: node scripts/fetch-report-watch.js
+
+      # The health check the 30-minute job runs too: every series in order and inside what its unit allows, every
+      # hand-read fact with a source that exists. A problem turns this run red; the data is still committed below.
+      - name: Check data files
+        if: always()
+        run: node scripts/check-data.js
 
       - name: Commit changes
         if: always()
