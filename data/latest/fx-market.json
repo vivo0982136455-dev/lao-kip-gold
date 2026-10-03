@@ -1,9 +1,10 @@
 {
   "source": "fx-market",
-  "source_name": "Market mid rate (open.er-api.com / ExchangeRate-API)",
+  "source_name": "Reference mid rate (API: open.er-api.com / ExchangeRate-API)",
   "source_url": "https://www.exchangerate-api.com",
   "license": "Free API - attribution: Rates By Exchange Rate API, https://www.exchangerate-api.com",
   "kind": "market",
+  "shown_as": "reference",
   "stale": false,
   "last_success_at": "2026-10-03T01:29:53.998Z",
   "last_error": null,

@@ -1,9 +1,18 @@
 {
   "source": "bol",
   "source_name": "Bank of the Lao PDR (official rate)",
-  "source_url": "https://www.bol.gov.la/ExchangRate.php",
-  "license": "CC BY 4.0 - data mirror by AllRatesToday, https://allratestoday.com",
+  "source_url": "https://www.bol.gov.la/en/ExchangRate",
+  "license": "Public page of the Bank of the Lao PDR · backup and cross-check: data mirror by AllRatesToday (CC BY 4.0), https://allratestoday.com",
   "kind": "official",
+  "route": "direct",
+  "route_note": null,
+  "cross_check": {
+    "against": "mirror",
+    "mirror_date": "2026-10-02",
+    "same_day": true,
+    "agree": true,
+    "max_diff_pct": 0
+  },
   "stale": false,
   "last_success_at": "2026-10-02T22:38:05.635Z",
   "last_error": null,
