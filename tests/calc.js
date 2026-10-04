@@ -56,6 +56,22 @@ const test = (name, fn) => {
     assert.equal(targetStatus(null, 5, "<="), "none");
     assert.equal(targetStatus(undefined, 5, "<="), "none");
   });
+  test("target of 0 (a budget in balance): near and far are counted in points, not in percent of the target", () => {
+    assert.equal(eco.NEAR_POINTS, 0.5);
+    assert.equal(targetStatus(0, 0, ">="), "met");
+    assert.equal(targetStatus(1.6, 0, ">="), "met");
+    assert.equal(targetStatus(-0.1, 0, ">="), "near"); // was "far": 0.1 / 0 = Infinity
+    assert.equal(targetStatus(-0.5, 0, ">="), "near");
+    assert.equal(targetStatus(-0.6, 0, ">="), "far");
+    assert.equal(targetStatus(-8, 0, ">="), "far");
+    assert.equal(targetStatus(0.4, 0, "<="), "near");
+    assert.equal(targetStatus(0.51, 0, "<="), "far");
+    assert.equal(targetStatus(-0.2, 0, ">=", { when: { year }, from: year }), "near"); // judged inside the plan
+    assert.equal(targetStatus(-0.2, 0, ">=", { when: { year: year - 1 }, from: year }), "baseline"); // not before it
+    // a target that is not 0 keeps the share of the target, however small the target is
+    assert.equal(targetStatus(0.95, 1, ">="), "near");
+    assert.equal(targetStatus(0.6, 1, ">="), "far"); // 0.4 points away, but 40% of the target
+  });
   test("target: a number from before the plan starts is the baseline, never met / near / far", () => {
     const thisMonth = `${year}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`;
     for (const value of [0, 4.5, 6, 21.2, 99]) {
@@ -247,6 +263,14 @@ const test = (name, fn) => {
     close(calc.realRate(6.86, 7.8), ((1.0686 / 1.078) - 1) * 100); // a 12-month kip deposit against September's inflation
     assert.ok(calc.realRate(6.86, 7.8) < 0 && calc.realRate(6.86, 7.8) > 6.86 - 7.8); // negative, and a little less negative than the difference
     close(calc.realRate(3, -1), (1.03 / 0.99 - 1) * 100); // falling prices add to the rate
+    // the policy rate uses the same function (audit 2026-10-02, P3-5): 7% against 7.8% is -0.74%, not -0.8 points;
+    // and at the inflation of early 2023 the plain difference was off by more than five points
+    close(calc.realRate(7, 7.8), (1.07 / 1.078 - 1) * 100);
+    assert.equal(calc.realRate(7, 7.8).toFixed(1), "-0.7");
+    assert.ok(Math.abs(calc.realRate(7.5, 41.3) - (7.5 - 41.3)) > 5);
+    // no page works a real rate out by itself: the policy tab calls the same function as the deposit cards
+    const policySrc = fs.readFileSync(path.join(ROOT, "js", "pages", "eco-policy.js"), "utf8");
+    assert.ok(/realRate\(rateThen, last\[1\]\)/.test(policySrc) && !/rateThen\s*-\s*last\[1\]/.test(policySrc));
   });
   test("rubber: US cents per pound -> US dollars per kilogram", () => {
     close(calc.usdPerKg(100), 2.20462);
@@ -405,6 +429,58 @@ const test = (name, fn) => {
   test("hand-read facts: the days they were checked are shown as a range, not as the newest day alone", () => {
     assert.deepEqual(sourcesPage.checkedDays({ checked: "2026-10-01", a: { checked: "2026-10-04" }, b: [{ checked: "2026-10-02" }], c: { checked: "soon" } }), ["2026-10-01", "2026-10-04"]);
     assert.equal(sourcesPage.checkedDays({ a: 1 }), null);
+  });
+
+  // ---------- the index and the search box of the economy page (audit P3-2) ----------
+  const index = await page("pages/eco-index.js");
+  // the texts of a language: the file of every page and the file of the economy page, as that page puts them together
+  const texts = (lang) => Object.assign({}, ...["app", "economy"].map((f) => JSON.parse(fs.readFileSync(path.join(ROOT, "i18n", lang, f + ".json"), "utf8"))));
+  test("economy index: a title in a list - the number of the day is left out or becomes …", () => {
+    assert.equal(index.plainTitle("พื้นที่ปลูกยางของลาว รายแขวง (ปี {year})"), "พื้นที่ปลูกยางของลาว รายแขวง");
+    assert.equal(index.plainTitle("พีระมิดอายุ ปี {year}"), "พีระมิดอายุ ปี …");
+    assert.equal(index.plainTitle("10 อันดับประเทศ{flow}ยางธรรมชาติ"), "10 อันดับประเทศ…ยางธรรมชาติ");
+    assert.equal(index.plainTitle("หนี้สาธารณะต่อ GDP"), "หนี้สาธารณะต่อ GDP");
+    assert.equal(index.plainTitle("ราคายางโลกรายเดือน (USD/กก.)"), "ราคายางโลกรายเดือน (USD/กก.)"); // a bracket without a number stays
+  });
+  test("economy index: a heading of the page is recognised by its text, with what the page adds to it", () => {
+    assert.ok(index.isHeading("พีระมิดอายุ ปี 2024", "พีระมิดอายุ ปี {year}"));
+    assert.ok(index.isHeading("โครงสร้างเศรษฐกิจ (ปี 2025)", "โครงสร้างเศรษฐกิจ"));
+    assert.ok(index.isHeading("ราคารายวัน 90 วันทำการล่าสุด · ยางก้อนถ้วย", "ราคารายวัน {n} วันทำการล่าสุด"));
+    assert.ok(index.isHeading("  หนี้สาธารณะ ", "หนี้สาธารณะ"));
+    assert.ok(!index.isHeading("หนี้สาธารณะต่อ GDP", "หนี้สาธารณะ")); // a longer title is another title
+    assert.ok(!index.isHeading("ราคา (a+b)", "ราคา (a.b)")); // the signs of a text are read as they are
+    assert.ok(!index.isHeading("anything", ""));
+  });
+  test("economy index: twelve tabs, the rubber tab with six views, every listed text exists in Thai and in Lao", () => {
+    assert.equal(Object.keys(index.TAB_HEADS).length, 12);
+    assert.deepEqual(Object.keys(index.TAB_HEADS.rubber), ["market", "buyers", "lao", "asean", "world", "mine"]);
+    for (const lang of ["th", "lo"]) {
+      const heads = index.allHeads(texts(lang));
+      assert.ok(heads.length > 100, `${lang}: ${heads.length} headings`);
+      for (const h of heads) assert.ok(h.title, `${lang}: no text for "${h.key}" (${h.tab})`);
+      for (const tab of Object.keys(index.TAB_HEADS)) assert.ok(texts(lang)["inv_tab_" + tab], `${lang}: no name for the tab ${tab}`);
+    }
+    assert.equal(index.textOf(texts("th"), "provinces.Louangphabang"), "หลวงพระบาง");
+    assert.equal(index.textOf(texts("th"), "no_such_text"), "");
+  });
+  test("economy search: every word typed must be in the name of a tab, a card or a view; capitals do not matter", () => {
+    const t = texts("th");
+    const debt = index.find(t, "หนี้");
+    assert.ok(debt.tabs.includes("debt") && debt.heads.some((h) => h.tab === "debt") && debt.heads.some((h) => h.tab === "compare"));
+    assert.ok(debt.heads.every((h) => h.title.includes("หนี้")));
+    assert.deepEqual(index.find(t, "   "), { tabs: [], heads: [] });
+    assert.deepEqual(index.find(t, "zzzz"), { tabs: [], heads: [] });
+    assert.deepEqual(index.find(t, "GDP"), index.find(t, "gdp"));
+    assert.ok(index.find(t, "gdp").tabs.includes("gdp"));
+    // two words: both must be there, in any order
+    const two = index.find(t, "ราคา ยาง");
+    assert.ok(two.heads.length > 3 && two.heads.length < index.find(t, "ยาง").heads.length);
+    assert.ok(two.heads.every((h) => ["ราคา", "ยาง"].every((w) => `${h.title} ${index.viewName(t, h.tab, h.view) || ""}`.includes(w))));
+    // the name of a view finds what is inside the view
+    assert.ok(index.find(t, t.rw_view_world).heads.every((h) => h.tab === "rubber" && h.view === "world"));
+    // Lao
+    const lo = index.find(texts("lo"), "ໜີ້");
+    assert.ok(lo.tabs.includes("debt") && lo.heads.length === debt.heads.length);
   });
 
   // ---------- accuracy of the kip hint (audit P1-9) ----------

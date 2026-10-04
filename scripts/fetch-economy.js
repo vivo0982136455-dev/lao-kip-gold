@@ -83,8 +83,7 @@ const INDICATORS = {
   "imf.PCPIPCH": { source: "imf", code: "PCPIPCH", unit: "%" },
   "imf.BCA_NGDPD": { source: "imf", code: "BCA_NGDPD", unit: "% of GDP" },
   "imf.GGXWDG_NGDP": { source: "imf", code: "GGXWDG_NGDP", unit: "% of GDP" },
-  // for comparison with Laos (Cost of living page): Thailand and the world average
-  "imf.PCPIPCH.THA": { source: "imf", code: "PCPIPCH", area: "THA", unit: "%" },
+  // for comparison with Laos (Cost of living page): the world average (Thailand is compared month by month: tha_cpi_yoy)
   "imf.PCPIPCH.WORLD": { source: "imf", code: "PCPIPCH", area: "WEOWORLD", unit: "%" },
 };
 
@@ -339,4 +338,4 @@ async function main() {
 if (require.main === module) main();
 
 // shared with fetch-invest.js
-module.exports = { fromWorldBank, fromImf, fromImfSdmx, IMF_SDMX, stampSources, noteSource, weoEdition };
+module.exports = { fromWorldBank, fromImf, fromImfSdmx, IMF_SDMX, stampSources, noteSource, weoEdition, INDICATORS, MONTHLY };

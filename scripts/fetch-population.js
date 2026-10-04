@@ -47,7 +47,6 @@ const INDICATORS = {
   young: { code: "SP.POP.0014.TO.ZS", unit: "% of people" },
   working: { code: "SP.POP.1564.TO.ZS", unit: "% of people" },
   old: { code: "SP.POP.65UP.TO.ZS", unit: "% of people" },
-  dependency: { code: "SP.POP.DPND", unit: "per 100 of working age" },
   urban: { code: "SP.URB.TOTL.IN.ZS", unit: "% of people" },
   urban_pop: { code: "SP.URB.TOTL", unit: "people" },
   fertility: { code: "SP.DYN.TFRT.IN", unit: "births per woman" },
@@ -59,10 +58,8 @@ const INDICATORS = {
   emp_ind: { code: "SL.IND.EMPL.ZS", unit: "% of workers" },
   emp_srv: { code: "SL.SRV.EMPL.ZS", unit: "% of workers" },
   wage_workers: { code: "SL.EMP.WORK.ZS", unit: "% of workers" },
-  unemployment: { code: "SL.UEM.TOTL.ZS", unit: "% of labour force" },
   remit_usd: { code: "BX.TRF.PWKR.CD.DT", unit: "USD m", scale: 1e-6 },
   remit_gdp: { code: "BX.TRF.PWKR.DT.GD.ZS", unit: "% of GDP" },
-  density: { code: "EN.POP.DNST", unit: "people per sq km" },
   // what people can spend - a head count is not a market (audit 2026-10-02, P1-8). Checked 2026-10-03: income per
   // person 2025, poverty 2024, household consumption only up to 2016 (shown with that year, marked as old).
   gni_ppp: { code: "NY.GNP.PCAP.PP.CD", unit: "intl$ per person" },
@@ -224,4 +221,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { main, provinces, PROVINCE_BY_CODE, worldBank };
+module.exports = { main, provinces, PROVINCE_BY_CODE, worldBank, INDICATORS };

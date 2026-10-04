@@ -6,7 +6,7 @@
 //   budgetSection     - monthly budget: the same shopping basket in Laos (WFP) and Bangkok (Thai ministry)
 // Everything shows the past or today's prices; nothing here is a forecast or financial advice.
 
-import { el, card, cardHead, cardFoot, sourceLink, sectionTitle, table, emptyState, pctPill, outLink } from "../ui.js";
+import { el, card, cardHead, cardFoot, sourceLink, sectionTitle, table, pctPill, outLink } from "../ui.js";
 import { formatNumber, formatPct, formatDate, todayVientiane, addDays } from "../format.js";
 import { chartCard } from "../charts.js";
 import { realRate } from "../calc.js";

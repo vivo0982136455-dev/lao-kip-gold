@@ -44,6 +44,19 @@ const IS_OPEN = `(() => { const r = document.getElementById("sidebar").getBoundi
       await sleep(150);
       return page.eval(STATE);
     };
+    // A slow connection, and the reader chooses another page before the texts have arrived: nothing may break,
+    // and the page that is drawn in the end is the one of the address. (Seen 2026-10-04: an exception.)
+    site.mode = "slow";
+    site.delay = 1200;
+    await page.goto(BASE + "?early=1#/overview", 0); // back as soon as the scripts have run: the texts are still loading
+    const early = await page.eval(`const drawn = document.getElementById("page-title").textContent !== ""; location.hash = "#/rates"; return drawn;`);
+    await page.until(`document.getElementById("page-title").textContent !== ""`, 15000);
+    site.mode = "ok";
+    await sleep(300);
+    const late = await page.eval(`return { title: document.getElementById("page-title").textContent, hash: location.hash, cards: document.querySelectorAll("#view .card").length };`);
+    const thrown = page.errors.filter((e) => /exception/.test(e));
+    check("another page chosen before the texts arrived: no error, and that page is drawn", !early && !thrown.length && late.hash === "#/rates" && late.title === "อัตราแลกเปลี่ยน" && late.cards > 0, JSON.stringify({ drawn_before: early, ...late, errors: thrown.map((e) => e.slice(0, 120)) }));
+    page.errors.length = 0;
     for (const lang of ["th", "lo"]) {
       await page.goto(BASE + "#/overview", 300);
       await page.eval(`localStorage.setItem("lang", "${lang}"); localStorage.setItem("theme", "dark");`);

@@ -20,7 +20,11 @@ const PAGES = ["overview", "rates", "gold", "living", "economy", "forecast", "se
       for (const p of PAGES) await page.goto(BASE + "#/" + p, 900); // online once: everything saved
       site.mode = "down";
       for (const p of PAGES) {
-        await page.goto(BASE + "?x=" + lang + "#/" + p, 1200);
+        // drawn = the title is there. A fixed pause was too short when the worker needed its 4 seconds to give up on
+        // the network (seen 2026-10-04: the first page measured before it was drawn).
+        await page.goto(BASE + "?x=" + lang + "#/" + p, 200);
+        await page.until(`document.getElementById("page-title").textContent !== "" && !document.querySelector("#view .skeleton")`, 12000);
+        await sleep(700);
         const r = await page.eval(`const bar = document.querySelector(".topbar"); const h1 = bar.querySelector("h1"); const up = document.getElementById("topbar-updated"); return { chip: !!document.querySelector(".offline-chip"), barH: Math.round(bar.getBoundingClientRect().height), h1: h1.textContent, h1H: Math.round(h1.getBoundingClientRect().height), h1W: Math.round(h1.getBoundingClientRect().width), upH: Math.round(up.getBoundingClientRect().height), upW: Math.round(up.getBoundingClientRect().width), overflow: document.documentElement.scrollWidth - innerWidth };`);
         const ok = r.chip && r.overflow <= 0;
         if (!ok) bad++;
@@ -43,7 +47,12 @@ const PAGES = ["overview", "rates", "gold", "living", "economy", "forecast", "se
     await page.eval(`document.querySelector(".install-card").scrollIntoView({ block: "center" });`);
     await sleep(300);
     await page.shot(path.join(SHOTS, "pwa-settings-app-380.png"));
-    console.log("console lines:", page.errors.filter((e) => !/Failed to load resource|net::ERR/.test(e)).join(" || ") || "none unexpected");
+    const unexpected = page.errors.filter((e) => !/Failed to load resource|net::ERR/.test(e));
+    console.log("console lines:", unexpected.join(" || ") || "none unexpected");
+    if (unexpected.some((e) => /exception/.test(e))) {
+      bad++;
+      console.log("FAIL an exception was thrown on a page");
+    }
   } catch (e) {
     bad++;
     console.log("FAIL run", e.stack || e);

@@ -16,7 +16,6 @@ const run = () => {
   return { status: r.status, out: r.stdout + r.stderr };
 };
 const file = (name) => path.join(dir, name);
-const read = (name) => JSON.parse(fs.readFileSync(file(name), "utf8"));
 
 let passed = 0;
 const failed = [];
@@ -52,7 +51,7 @@ const DAMAGE = [
   ["a country the comparison does not list", "compare.json", (d) => (d.indicators.gdp.rows.XXX = [[2025, 1]]), /compare\.json gdp: XXX is not in the list of countries/],
   ["years out of order in the comparison", "compare.json", (d) => d.indicators.debt.rows.THA.reverse(), /compare\.json debt THA: .*not in order/],
   ["two copies of one number that drifted apart (Laos' GDP in the comparison)", "compare.json", (d) => (lastOf(d.indicators.gdp.rows.LAO)[1] += 1.5), /worldbank:NY.GDP.MKTP.CD .*two copies of one number differ/],
-  ["the population in millions that no longer fits the population in people", "population.json", (d) => (lastOf(d.indicators.pop.values)[1] = 7100000), /worldbank:SP.POP.TOTL .*two copies of one number differ/],
+  ["two copies in different units that drifted apart (foreign investment in USD m and in USD bn)", "economy.json", (d) => (lastOf(d.indicators["wb.BX.KLT.DINV.CD.WD"].values)[1] *= 1.5), /worldbank:BX\.KLT\.DINV\.CD\.WD .*two copies of one number differ/],
   ["a fact whose source is not in the list", "invest-static.json", (d) => (d.facts.debt_mof.source = "wb_lem_9999"), /facts\.debt_mof: source "wb_lem_9999" is not in the list of sources/],
   ["a fact without any source", "invest-static.json", (d) => delete d.facts.reserves_wb.source, /facts\.reserves_wb: a fact without a source/],
   ["a policy fact without any source", "invest-static.json", (d) => delete d.policy.areas[0].items[0].source, /policy\.[a-z]+\.[a-z_]+: a fact without a source/],

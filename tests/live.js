@@ -147,8 +147,11 @@ const CHECK = `
     check("live: method page - how every number is worked out", sections === 11 && !methodPage.badText.length && !methodPage.placeholders.length, sections + " sections " + JSON.stringify(methodPage));
     await open({}, "settings", "sources");
     await page.until(`document.querySelectorAll("#view .src-group").length > 0`, 20000);
-    const allSources = await page.eval(`const g = [...document.querySelectorAll("#view .src-group")]; return { groups: g.length, sources: document.querySelectorAll("#view .src-item").length, failed: g.filter((x) => x.querySelector(".badge-bad")).map((x) => x.querySelector(".src-group-title").textContent.slice(0, 30)), dated: [...document.querySelectorAll("#view .src-meta")].filter((x) => /\\d/.test(x.textContent)).length };`);
-    check("live: settings - every source of every data file, with its dates, nothing failed", allSources.groups === 15 && allSources.sources >= 75 && allSources.failed.length === 0 && allSources.dated >= 60, JSON.stringify(allSources));
+    // A source that is down today is a fact about the world, not a fault of the page: the page must mark exactly the
+    // files in which a download failed (asked of its own module, on the files the live site serves) - and the
+    // names of those files are printed here, so a failing source is seen.
+    const allSources = await page.eval(`const m = await import(new URL("js/pages/sources.js", document.baseURI).href); const bad = await Promise.all(m.SOURCE_FILES.map(([name]) => fetch("data/" + name, { cache: "no-store" }).then((res) => res.json()).then((d) => m.sourcesOf(d).some((s) => s.failed > 0)).catch(() => true))); const g = [...document.querySelectorAll("#view .src-group")]; const marked = g.slice(0, bad.length).map((x) => !!x.querySelector("summary .badge-bad")); return { groups: g.length, sources: document.querySelectorAll("#view .src-item").length, failed_today: m.SOURCE_FILES.map(([name]) => name).filter((name, i) => bad[i]), marked_as_the_data_says: marked.length === bad.length && marked.every((x, i) => x === bad[i]), dated: [...document.querySelectorAll("#view .src-meta")].filter((x) => /\\d/.test(x.textContent)).length };`);
+    check("live: settings - every source of every data file, with its dates; a failed download is marked, and only that", allSources.groups === 15 && allSources.sources >= 75 && allSources.marked_as_the_data_says && allSources.dated >= 60, JSON.stringify(allSources));
     // P2-1: the gold premium is like for like; the multiplier of the estimate is named as such
     await open({}, "gold", "premium");
     const premium = await page.eval(`return [...document.querySelectorAll('#view .card[data-kind="estimated"] .row')].map((x) => x.innerText.replace(/\\s+/g, " ")).slice(-2);`);
@@ -186,6 +189,32 @@ const CHECK = `
     await open({ eco_tab: "rubber", eco_rubber_view: "asean" }, "economy", "prices");
     const priceRows = await page.eval(`const tb = document.querySelector("#view .card table"); return tb ? tb.querySelectorAll("tbody tr").length : 0;`);
     check("live: rubber price of every country - Laos, ASEAN, China, world", priceRows >= 14, priceRows + " rows");
+    // ---------- audit group P3 ----------
+    // P3-7: the texts are two files - the first screen waits for the one of every page only; the file of the economy
+    // page is asked for afterwards (in the background, to be saved), and by the economy page itself when it is opened
+    await open({}, "overview", "words1");
+    await sleep(6000);
+    const order = await page.eval(`const of = (name) => performance.getEntriesByType("resource").find((x) => x.name.split("?")[0].endsWith(name)); const app = of("i18n/th/app.json"); const eco = of("i18n/th/economy.json"); return { old_file: !!of("i18n/th.json"), app_arrived: app ? Math.round(app.responseEnd) : null, economy_asked: eco ? Math.round(eco.startTime) : null };`);
+    await open({ eco_tab: "debt" }, "economy", "words2");
+    const ecoWords = await page.eval(`return performance.getEntriesByType("resource").map((x) => x.name.split("?")[0]).filter((u) => u.includes("/i18n/")).map((u) => u.slice(u.indexOf("/i18n/") + 6));`);
+    check("live: the first screen waits for the texts of every page only; the economy texts come after it", !order.old_file && order.app_arrived > 0 && order.economy_asked >= order.app_arrived && ecoWords.includes("th/app.json") && ecoWords.includes("th/economy.json"), JSON.stringify({ ...order, ecoWords }));
+    // P3-2: the index of the twelve tabs, the search box, and a result that leads to its card
+    const idx = await page.eval(`document.querySelector(".tab-index-btn").click(); await new Promise((r) => setTimeout(r, 300)); const items = () => [...document.querySelectorAll("#tab-index .tab-index-item")]; const out = { index: items().length, current: items().filter((b) => b.getAttribute("aria-current") === "true").map((b) => b.querySelector("strong").textContent) }; const box = document.getElementById("tab-search"); box.value = "ทุนสำรอง"; box.dispatchEvent(new Event("input", { bubbles: true })); await new Promise((r) => setTimeout(r, 300)); out.found = items().map((b) => b.querySelector("strong").textContent + " @ " + b.querySelector(".tab-index-sub").textContent); return out;`);
+    check("live: economy page - an index of the twelve tabs, and a search over tabs, cards and tiles", idx.index === 12 && idx.current.join() === "หนี้สาธารณะ" && idx.found.length >= 2 && idx.found.every((x) => x.includes("ทุนสำรอง")), JSON.stringify(idx).slice(0, 300));
+    await page.eval(`document.querySelector("#tab-index .tab-index-item").click();`);
+    await page.until(`!!document.querySelector("#tabpanel .found")`, 15000);
+    await sleep(400);
+    const landed = await page.eval(`const f = document.querySelector("#tabpanel .found"); return { tab: localStorage.getItem("eco_tab"), heading: f ? (f.querySelector("h3, .stat-label") || f).textContent : null, top: f ? Math.round(f.getBoundingClientRect().top) : null };`);
+    check("live: a search result opens its tab and shows the card it was looking for", !!landed.heading && landed.heading.includes("ทุนสำรอง") && landed.top >= 0 && landed.top < 400, JSON.stringify(landed));
+    // P3-5: the policy rate after inflation, by the formula of the deposit cards (a percentage, not "points")
+    await open({ eco_tab: "policy" }, "economy", "real");
+    const realNote = await page.eval(`return [...document.querySelectorAll("#view .watch-list li")].map((x) => x.textContent).find((x) => x.includes("ดอกเบี้ยหลังหักเงินเฟ้อ")) || "";`);
+    check("live: policy tab - the policy rate after inflation by the same formula as a deposit", /→ ดอกเบี้ยหลังหักเงินเฟ้อ [+−]?\d+\.\d% ต่อปี/.test(realNote), realNote.slice(0, 170));
+    // P3-1: notes and sources at 0.8rem, and the darker grey of the light theme
+    await open({ theme: "light" }, "overview", "light");
+    const look = await page.eval(`const rem = parseFloat(getComputedStyle(document.documentElement).fontSize); const size = (sel) => { const x = document.querySelector(sel); return x ? Math.round((parseFloat(getComputedStyle(x).fontSize) / rem) * 100) / 100 : null; }; return { muted: getComputedStyle(document.documentElement).getPropertyValue("--muted").trim(), foot: size("#view .card-foot"), updated: size("#topbar-updated") };`);
+    check("live: sources and dates at 0.8rem, the darker grey in the light theme", look.muted === "#6b6964" && look.foot >= 0.8 && look.updated >= 0.8, JSON.stringify(look));
+    await page.eval(`localStorage.setItem("theme", "dark");`);
     // one menu button on phones: the "more" tab of the bottom bar (no second button in the top bar)
     const menu = await page.eval(`return { top: !!document.getElementById("menu-btn"), more: !!document.getElementById("more-btn") };`);
     check("live: one menu button (bottom bar), none in the top bar", !menu.top && menu.more, JSON.stringify(menu));

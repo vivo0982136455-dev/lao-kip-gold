@@ -1,14 +1,34 @@
-// Every screen of the site x Thai / Lao x dark / light x phone 380 / desktop 1440, in a real Edge (headless).
+// Every screen of the site x Thai / Lao x dark / light x phone 380 / tablet 768 / desktop 1440, in a real Edge (headless).
+// 768 px is the layout in between (audit 2026-10-02, P3-3): two columns of cards and four tiles in a row (from 640 px),
+// but still the phone's bottom bar and no side menu (up to 899 px).
 // Checks: no sideways scroll, nothing sticking out of the screen or out of its own tile / card, no "undefined" / "NaN" / unfilled {placeholder},
 // every chart drawn, no console errors. Saves pictures of the screens for a look by eye.
-// Usage: node tests/screens.js [quick]      quick = Thai dark phone only (24 screens instead of 192)
+// Usage: node tests/screens.js [quick] [th|lo] [dark|light] [380|768|1440]
+//   no word = everything (288 screens) · quick = Thai dark phone only (24 screens)
+//   a language, a theme or a width = only that one, e.g. "node tests/screens.js 768 dark" (48 screens)
 const fs = require("fs");
 const path = require("path");
 const { ROOT, SHOTS, launch, startSite, sleep } = require("./browser.js");
 
 const PORT = 8096;
 const BASE = `http://127.0.0.1:${PORT}/`;
-const quick = process.argv.includes("quick");
+const args = process.argv.slice(2);
+const quick = args.includes("quick");
+const LANGS = ["th", "lo"];
+const THEMES = ["dark", "light"];
+const WIDTHS = [380, 768, 1440];
+// the words on the command line that name a language, a theme or a width; none of a kind = all of that kind
+const only = (all) => {
+  const named = all.filter((x) => args.includes(String(x)));
+  return named.length ? named : all;
+};
+const unknown = args.filter((a) => a !== "quick" && ![...LANGS, ...THEMES, ...WIDTHS.map(String)].includes(a));
+if (unknown.length) {
+  console.log(`Unknown word: ${unknown.join(", ")}. Usage: node tests/screens.js [quick] [th|lo] [dark|light] [380|768|1440]`);
+  process.exit(2);
+}
+const PHONE_BELOW = 700; // narrower than this: a phone (touch, no scroll bar that takes room)
+const BOTTOM_BAR_BELOW = 900; // narrower than this the site shows the bottom bar (css/style.css)
 
 // screen id -> [page, localStorage values]
 const SCREENS = [
@@ -58,7 +78,7 @@ const CHECK = `
 `;
 
 async function shots(page, name, width) {
-  const sliceH = width < 700 ? 1700 : 1300;
+  const sliceH = width < PHONE_BELOW ? 1700 : 1300;
   const total = await page.eval(`return document.documentElement.scrollHeight;`);
   const n = Math.min(Math.ceil(total / sliceH), 7);
   for (let i = 0; i < n; i++) {
@@ -77,10 +97,11 @@ async function shots(page, name, width) {
     const page = await browser.newPage({ width: 380, height: 820 });
     let n = 0;
     const combos = [];
-    for (const lang of quick ? ["th"] : ["th", "lo"]) for (const theme of quick ? ["dark"] : ["dark", "light"]) for (const width of quick ? [380] : [380, 1440]) combos.push([lang, theme, width]);
+    for (const lang of quick ? ["th"] : only(LANGS)) for (const theme of quick ? ["dark"] : only(THEMES)) for (const width of quick ? [380] : only(WIDTHS)) combos.push([lang, theme, width]);
     await page.goto(BASE + "#/overview", 500);
     for (const [lang, theme, width] of combos) {
-      await page.size(width, width < 700 ? 820 : 900, width < 700);
+      // a tablet is a touch device like a phone (no scroll bar that takes 15 px of the width), only taller
+      await page.size(width, width < PHONE_BELOW ? 820 : width < BOTTOM_BAR_BELOW ? 1024 : 900, width < BOTTOM_BAR_BELOW);
       for (const [id, route, store] of SCREENS) {
         const values = { lang, theme, range: "30", ...store };
         await page.eval(`const v = ${JSON.stringify(values)}; for (const k of Object.keys(v)) localStorage.setItem(k, v[k]);`);

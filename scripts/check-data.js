@@ -242,9 +242,9 @@ if (population) {
 }
 
 // The same indicator (same code of the same source) is kept in more than one file - Laos' GDP in economy.json and
-// in compare.json, the population in invest.json and in population.json ... Until one registry replaces these
+// in compare.json, the workers' remittances in invest.json and in population.json ... Until one registry replaces these
 // copies (docs/proposal-data-registry-th.md), the copies must not drift apart: for every year both files have,
-// the numbers must be the same (units may differ by thousands: people / million, USD m / USD bn).
+// the numbers must be the same (units may differ by thousands: USD m / USD bn).
 {
   const copies = new Map(); // code -> [{ where, values: Map(year -> value) }]
   const note = (code, where, rows) => {
@@ -254,7 +254,7 @@ if (population) {
   };
   for (const name of ["economy.json", "invest.json", "population.json"]) {
     const data = readJson(path.join(DATA_DIR, name), null);
-    // economy.json also holds other areas under the same code (id "imf.PCPIPCH.THA", "imf.PCPIPCH.WORLD"): Laos'
+    // economy.json also holds other areas under the same code (id "wb.PA.NUS.FCRF.THA", "imf.PCPIPCH.WORLD"): Laos'
     // own series is the one whose id ends with the code itself
     for (const [id, ind] of Object.entries((data && data.indicators) || {})) if (!ind.code || name === "population.json" || id.endsWith("." + ind.code)) note(`${ind.source}:${ind.code || id}`, `${name} ${id}`, ind.values);
   }

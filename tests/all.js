@@ -1,10 +1,12 @@
-// Run every local test, one after the other (about 35 minutes). Usage: node tests/all.js [quick]
-// quick = the short screen check (24 screens) instead of all 192.
-// First the tests without a browser (a few seconds): the rules and formulas (calc.js), the two word files
+// Run every local test, one after the other (about 50 minutes). Usage: node tests/all.js [quick]
+// quick = the short screen check (24 screens) instead of all 288 (three widths: 380, 768, 1440).
+// First the lint (scripts/lint.js: syntax, imports, names that nothing declares, dead code, text sizes and contrast,
+// series no page reads), then the tests without a browser (a few seconds): the rules and formulas (calc.js), the word files
 // (words.js: same keys and placeholders in Thai and Lao, no year typed into a sentence), the checks on answers of
 // the price form, run on a sample sheet (own-prices.js), the two routes of the official exchange rate, run on
 // saved pages (bol-route.js), and the data checker, run on a copy of the data that is damaged on purpose
-// (data-check.js), and the download helper against a server that never finishes its error page (download.js).
+// (data-check.js), the download helper against a server that never finishes its error page (download.js), and the
+// Thai price script against a server that hangs: it must end by itself and mark what it could not ask (thai-prices.js).
 // Then the browser tests - with security.js among them: what the page may load (its policy, the hashes of the
 // files from the CDNs), which needs the network.
 // Every test has a time limit: a browser that hangs (seen once, 2026-10-02) fails the test instead of blocking the
@@ -14,7 +16,7 @@ const path = require("path");
 
 const quick = process.argv.includes("quick");
 // [file, arguments, limit in minutes]
-const TESTS = [["calc.js", [], 2], ["words.js", [], 2], ["own-prices.js", [], 2], ["bol-route.js", [], 3], ["data-check.js", [], 3], ["download.js", [], 2], ["screens.js", quick ? ["quick"] : [], quick ? 8 : 40], ["states.js", [], 30], ["menu.js", [], 6], ["security.js", [], 12], ["install.js", [], 10], ["offline-label.js", [], 8]];
+const TESTS = [["../scripts/lint.js", [], 3], ["calc.js", [], 2], ["words.js", [], 2], ["own-prices.js", [], 2], ["bol-route.js", [], 3], ["data-check.js", [], 3], ["download.js", [], 2], ["thai-prices.js", [], 3], ["screens.js", quick ? ["quick"] : [], quick ? 8 : 60], ["states.js", [], 30], ["menu.js", [], 6], ["security.js", [], 12], ["install.js", [], 10], ["offline-label.js", [], 8]];
 const failed = [];
 for (const [file, args, minutes] of TESTS) {
   console.log("\n=== " + file + " " + args.join(" ") + " ===");

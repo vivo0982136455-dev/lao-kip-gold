@@ -6,7 +6,7 @@
 import { el, card, cardHead } from "../ui.js";
 import { LB_PER_KG } from "../calc.js";
 import { NEAR_ZERO } from "../charts.js";
-import { fill, FRESH_MONTHS, OLD_AFTER, NEAR_GAP } from "./eco-common.js";
+import { fill, FRESH_MONTHS, OLD_AFTER, NEAR_GAP, NEAR_POINTS } from "./eco-common.js";
 import { MIN_CASES, HINT_WINDOW_DAYS } from "./forecast.js";
 
 // [title key, [sentence keys]]
@@ -36,6 +36,7 @@ export function methodValues(summary) {
     old_years: OLD_AFTER.years,
     old_months: OLD_AFTER.months,
     near: Math.round(NEAR_GAP * 100),
+    near_points: NEAR_POINTS,
     min: MIN_CASES,
     window: HINT_WINDOW_DAYS,
     near_zero: Math.round(NEAR_ZERO * 100),

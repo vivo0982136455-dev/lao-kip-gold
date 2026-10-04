@@ -320,6 +320,7 @@ module.exports = {
   DATA_DIR,
   LATEST_DIR,
   HISTORY_DIR,
+  RETRY_WAIT_MS,
   fetchText,
   fetchJson,
   parseNumber,

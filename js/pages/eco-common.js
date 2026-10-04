@@ -64,6 +64,15 @@ export function choice(e, key, items, fallback) {
   }
   return { current, bar };
 }
+// Set a choice from outside its row of buttons (the search of the economy page opens one view of a tab)
+export function pick(key, id) {
+  picked.set(key, String(id));
+  try {
+    localStorage.setItem("eco_" + key, String(id));
+  } catch {
+    /* private mode */
+  }
+}
 
 // Yearly indicator from economy.json or invest.json
 export function indicator(e, id) {
@@ -251,6 +260,9 @@ export function statusBadge(t, status) {
 }
 
 export const NEAR_GAP = 0.1; // "near" = not more than 10% of the target away from it
+// ... and for a target of 0 (a budget in balance), where a share of the target does not exist: not more than half
+// a point of the target's own unit away (0.5% of GDP - what 10% of an inflation target of 5% comes to as well)
+export const NEAR_POINTS = 0.5;
 // Compare an actual value with a target. op: ">=" (at least) or "<=" (at most).
 // period = { when: { year } | { month }, from: first year of the plan } (optional). With it, only a number from
 // inside the plan is judged: an earlier one is the "baseline" (where the plan starts from, not a result), and a
@@ -263,8 +275,11 @@ export function targetStatus(actual, target, op, period) {
   }
   const ok = op === ">=" ? actual >= target : actual <= target;
   if (ok) return "met";
-  const gap = Math.abs(actual - target) / Math.abs(target);
-  return gap <= NEAR_GAP ? "near" : "far";
+  // A target of 0 has no "percent of the target": the division gave Infinity, so a deficit of 0.1% of GDP was as
+  // "far" as one of 8% (audit 2026-10-02, P3-4). The distance is then counted in points.
+  const miss = Math.abs(actual - target);
+  const near = target === 0 ? miss <= NEAR_POINTS : miss / Math.abs(target) <= NEAR_GAP;
+  return near ? "near" : "far";
 }
 
 // Are the lazily loaded files there? If not, show a placeholder (loading) or a message (failed) and return false.
@@ -324,11 +339,6 @@ const FIRST_YEAR = 2010;
 const SOURCE_LABEL = { worldbank: "World Bank", imf: "IMF" };
 export const unitName = unitText; // unit in words (i18n unit_names)
 export const sourceLabel = (id) => SOURCE_LABEL[id] || id;
-
-// "4.5%" or "18.30 พันล้าน USD"
-export function valueWithUnit(v, unit, t) {
-  return unit.startsWith("%") ? `${formatNumber(v, unit)}%` : `${formatNumber(v, unit)} ${unitName(unit, t)}`;
-}
 
 // A rate (%, % of GDP ...) can be compared across sources as it is; a level (dollars, people) cannot
 const isRate = (unit) => String(unit || "").startsWith("%");

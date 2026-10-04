@@ -10,7 +10,7 @@
 //   7) Deposit rates      - BCEL rates for every term, and the LAK rate after inflation
 // Everything is calculated here from stored files. It shows the PAST, it is not a forecast or advice.
 
-import { el, card, cardHead, sectionTitle, statTile, table, emptyState, pctPill, sourceLink, outLink } from "../ui.js";
+import { el, card, cardHead, sectionTitle, statTile, emptyState, pctPill, sourceLink, outLink } from "../ui.js";
 import { formatNumber, formatPct } from "../format.js";
 import { chartCard, mountCharts } from "../charts.js";
 import { lazyJson } from "../lazy.js";

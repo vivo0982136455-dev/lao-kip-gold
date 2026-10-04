@@ -187,7 +187,12 @@
     "sg_wage_mom": {
       "source_name": "Singapore, Ministry of Manpower: Local Qualifying Salary (Progressive Wage Model)",
       "source_url": "https://www.mom.gov.sg/employment-practices/progressive-wage-model/local-qualifying-salary",
-      "published": null
+      "published": "2026-07-01"
+    },
+    "sg_lqs_cos2026": {
+      "source_name": "Singapore, Ministry of Manpower: Factsheet - Lower-wage workers policy announcements at COS 2026 (raising of the Local Qualifying Salary)",
+      "source_url": "https://www.mom.gov.sg/-/media/mom/documents/press-releases/2026/factsheet-on-lower-wage-workers-03032026.pdf",
+      "published": "2026-03-03"
     },
     "bn_wage_order": {
       "source_name": "Brunei Darussalam, Attorney General's Chambers: Employment (Minimum Wage) Order - Amendment 2025",
@@ -450,7 +455,7 @@
     "advice": { "source": "wb_lem_2606", "items": ["fuel", "transfers", "revenue", "debt", "money", "business", "energy"] }
   },
   "wages": {
-    "_about": "Statutory minimum wages in force, read by hand from each government's notice (or from the news agency that reports it), for the Wages tab: the 11 members of ASEAN, China, Japan, South Korea, Australia, the United States, Israel. steps = [day it starts, amount, (monthly amount named by the law itself)] in the country's currency per 'per' (hour | day | month); the page uses the last step whose day has come and names the next one. Without a monthly amount from the law, the page multiplies: an hour x 'hours_per_month' (40 hours x 52 weeks / 12 - the ILO's own conversion), a day x 'days_per_month'. Australia's monthly amount = its weekly amount (A$1,004.90 for 38 hours) x 52 / 12. kind: national = one rate for the whole country; top = the highest regional rate (the capital or the richest region), 'low' = the lowest regional rate when the same notice names it; sector = only the sectors named in the law; average = Japan publishes the weighted average of its 47 prefectures; none = no general minimum wage. Notes per country are in i18n (wg_note_<iso>); numbers named in a note are fields of the country here (low, prev, lqs, proposal, hours, weekly). thailand = the daily rates of Notification No. 14 in the industrial provinces, the provinces along the Lao border, and the lowest rate.",
+    "_about": "Statutory minimum wages in force, read by hand from each government's notice (or from the news agency that reports it), for the Wages tab: the 11 members of ASEAN, China, Japan, South Korea, Australia, the United States, Israel. steps = [day it starts, amount, (monthly amount named by the law itself)] in the country's currency per 'per' (hour | day | month); the page uses the last step whose day has come and names the next one. Without a monthly amount from the law, the page multiplies: an hour x 'hours_per_month' (40 hours x 52 weeks / 12 - the ILO's own conversion), a day x 'days_per_month'. Australia's monthly amount = its weekly amount (A$1,004.90 for 38 hours) x 52 / 12. kind: national = one rate for the whole country; top = the highest regional rate (the capital or the richest region), 'low' = the lowest regional rate when the same notice names it; sector = only the sectors named in the law; average = Japan publishes the weighted average of its 47 prefectures; none = no general minimum wage. Notes per country are in i18n (wg_note_<iso>); numbers named in a note are fields of the country here (low, prev, lqs, proposal, hours, weekly). lqs_from = the day Singapore's amount came into force, as the ministry's factsheet of the announcement names it (the second entry of that country's 'sources'); the ministry's page carries the same day as its own 'Last Updated' line, which is the 'published' of that source - two different things that happen to fall on one day. thailand = the daily rates of Notification No. 14 in the industrial provinces, the provinces along the Lao border, and the lowest rate.",
     "checked": "2026-10-02",
     "convert": { "hours_per_month": 173.33, "days_per_month": 26 },
     "countries": [
@@ -462,7 +467,7 @@
       { "iso": "MYS", "currency": "MYR", "kind": "national", "per": "month", "steps": [["2025-02-01", 1700]], "source": "my_wage_376" },
       { "iso": "IDN", "currency": "IDR", "kind": "top", "per": "month", "steps": [["2026-01-01", 5729876]], "source": "id_wage_jakarta" },
       { "iso": "PHL", "currency": "PHP", "kind": "top", "per": "day", "steps": [["2026-09-26", 755]], "source": "ph_wage_nwpc" },
-      { "iso": "SGP", "currency": "SGD", "kind": "none", "per": "month", "steps": [], "lqs": 1800, "lqs_from": "2026-07-01", "source": "sg_wage_mom" },
+      { "iso": "SGP", "currency": "SGD", "kind": "none", "per": "month", "steps": [], "lqs": 1800, "lqs_from": "2026-07-01", "source": "sg_wage_mom", "sources": ["sg_wage_mom", "sg_lqs_cos2026"], "checked": "2026-10-04" },
       { "iso": "BRN", "currency": "BND", "kind": "sector", "per": "month", "steps": [["2025-04-01", 500]], "source": "bn_wage_order" },
       { "iso": "TLS", "currency": "USD", "kind": "national", "per": "month", "steps": [["2012", 115]], "proposal": 154, "proposal_month": "2026-05", "source": "tl_wage_tatoli" },
       { "iso": "CHN", "currency": "CNY", "kind": "top", "per": "month", "steps": [["2025-07-01", 2740]], "source": "cn_wage_mohrss" },

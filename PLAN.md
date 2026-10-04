@@ -436,9 +436,59 @@ all eleven were right, two had to be done differently from the way the audit pro
   Bank's 6-8% of GDP for the group of net importers that includes Laos) with the Brent price. Numbers only.
 - Tests: see README "ทดสอบ" for the counts of this state.
 
-**P3 - nice to have (not started; waits for the owner's go)**: text sizes and contrast, tab index + search on
-phones, 768 px test, target 0 in points, one real-rate function, unused indicators, i18n split + lint, Singapore's
-date.
+**P3 - nice to have: DONE 2026-10-04 (the owner said "Go" after P2).** Every finding was checked against the code
+first: all eight were right; two were larger than the audit said (P3-6: seven unused series, not four; P3-8: the
+date is right, but the file did not hold its evidence).
+- P3-1 Text and contrast (`css/style.css`). Notes, sources and dates - 25 rules - are `var(--fs-sm)` = 0.8rem; only
+  16 kinds of short label stay smaller (pills, chips, table heads, units: the list is `SMALL_OK` in
+  `scripts/lint.js`). Light theme `--muted` #7a7873 -> #6b6964 (page 4.08 -> 5.07:1, card 4.30 -> 5.34:1), `--flat`
+  with it (3.83 -> 4.69:1 on its tint); dark theme `--flat` and `--ok` were just under (4.46, 4.38 -> 4.86, 4.82);
+  a selected table row switches its small text to `--text-2`. Lowest pair of the site now 4.53:1; the lint keeps
+  it there. Measured on a phone before and after (48 screens): pages 3.9% longer; one table ("newest rubber
+  prices in every country") became 11 px too wide - its local price now wraps between the number and its unit,
+  each in one piece (`.nobr`).
+- P3-2 Index and search (`js/pages/economy.js`, new `js/pages/eco-index.js`). Above the tab bar: a search box and
+  a button "all topics (12)". The index lists every tab with what it holds (the rubber tab: its six views). The
+  search finds tabs, cards, sections and tiles by the words of their titles (every word typed must be there);
+  a result opens its tab - and its view -, scrolls to the heading and marks the card for a moment. The index is
+  a list of text keys per tab (180 headings), collected from the real page in both languages; `tests/states.js`
+  fails when a tab shows a heading the index does not list, `tests/words.js` when a listed key has no text or the
+  code of its tab does not name it any more. Lao texts: one word for the foreign-exchange reserves
+  ("ຄັງສຳຮອງ", the word of Decree 140/GOV of 2021; 15 texts said "ທຶນສຳຮອງ").
+- P3-3 `tests/screens.js`: 380 / 768 / 1440 px (288 screens; a language, a theme or a width can be named). The
+  first run at 768 px: 96 screens, no problem.
+- P3-4 `targetStatus`: a target of 0 (the budget not in deficit) is compared in points - near = not more than
+  `NEAR_POINTS` (0.5) away; before, 0.1 / 0 = Infinity made every miss "far". The two sentences that explain the
+  rule (plan tab, method page) name the limit from the code.
+- P3-5 The policy tab's "rate against inflation" uses `realRate()` of `js/calc.js` like the deposit cards (7%
+  against 7.8% = -0.7%, not -0.8 points); the method page said so already.
+- P3-6 Series nobody reads are no longer fetched: `dependency`, `unemployment`, `density` (population),
+  manufacturing growth, the yearly government debt stock and the population in millions (invest), the IMF's
+  yearly inflation of Thailand (economy). `scripts/lint.js` checks that a page names every series a fetcher
+  stores. Same number in two files: 13 indicators (was 14).
+- P3-7 Texts in two files per language: `i18n/<lang>/app.json` (560 texts, first screen) and
+  `i18n/<lang>/economy.json` (849 texts that only the economy page names; loaded by `js/pages/economy.js` when the
+  page is opened; `js/app.js` also asks for it in the background once the first screen is drawn, so that the
+  service worker has a copy for a time without a connection). The first screen waits for a third of the texts it
+  loaded before (76 KB instead of 232 KB, before compression). `tests/words.js` keeps the two files apart
+  (a text another page can reach must be in app.json; a text in app.json must be used outside the economy page).
+  New `scripts/lint.js` (no packages, first step of `tests/all.js`): syntax of every script, imports (file and
+  name exist, none unused), names used without a declaration, dead top-level code and unused exports, style
+  tokens, text sizes, contrast, fetched series, preload list, workflow scripts - with its own tokenizer and 18
+  pieces of code with a known answer. It found: two unused imports, two unused helpers, three unused style
+  tokens, two texts nothing names (`menu_open`, `eco_gdp`) - all removed.
+- P3-8 Singapore's Local Qualifying Salary: 1 July 2026 IS the day in force (the ministry's factsheet of
+  3 March 2026: "From 1 July 2026, the Government will raise the LQS from $1,600 to $1,800"); the ministry's page
+  carries the same day as its "Last Updated" line. `data/invest-static.json` now holds both: the page's own day
+  as the source's `published`, and the factsheet as a second source of the entry.
+- Found on the way, fixed and tested: (1) `fetch-thai-prices.js` ends by itself after 11 minutes (a hanging API
+  had the workflow step killed at 15; oldest prices are asked first; `tests/thai-prices.js`). (2) `js/app.js`: a
+  page chosen before the texts had arrived threw an exception (`tests/menu.js`). (3) Two tests of the Settings
+  source list assumed that no source is down in the real data; they now ask the page's own module which files
+  must be marked (`tests/states.js`, `tests/live.js`). (4) `tests/offline-label.js` waits for the page to be
+  drawn instead of a fixed pause, and fails on an exception.
+- Still the owner's to decide: P0-3 a / b, which P1-7 indicators to build, the data registry a / b / c, hosting
+  the OCR files on the site or not.
 
 ### Phase 8 — Install as an app (2026-10-01, owner agreed)
 - `manifest.webmanifest` (name, colours, icons 192 / 512 / maskable 512, 4 shortcuts) + `icons/` drawn by
@@ -473,7 +523,7 @@ date.
 
 ## [FORMAT] — UI & language
 - Bilingual: Thai (default) and Lao, toggle button, choice remembered in localStorage.
-  All UI text in `/i18n/th.json` and `/i18n/lo.json` — no hard-coded strings in HTML/JS.
+  All UI text in `/i18n/th/*.json` and `/i18n/lo/*.json` — no hard-coded strings in HTML/JS.
 - Fonts: Noto Sans Thai + Noto Sans Lao (Google Fonts) with system fallbacks.
 - Number format: thousands separators; LAK without decimals; USD/THB with 2 decimals.
 - Footer disclaimer (TH/LO): data is for information only, not financial advice; estimates may be wrong.

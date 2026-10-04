@@ -58,6 +58,11 @@ const CHECK = `
   try {
     const page = await browser.newPage({ width: 380, height: 820 });
     await page.s("Network.setBlockedURLs", { urls: ["*docs.google.com*", "*google.com/forms*"] });
+    // Every request goes to the test server, around the service worker: after ONE slow answer the worker hands out
+    // the copies it saved for 30 seconds (sw.js) - and in this test a saved copy can be the file an earlier state
+    // had changed on purpose. Seen 2026-10-04: five states in a row judged with the data of the state before.
+    // (What the worker does is tested in install.js and offline-label.js.)
+    await page.s("Network.setBypassServiceWorker", { bypass: true });
     let n = 0;
     const open = async (lang, store, hash = "economy") => {
       await page.eval(`const v = ${JSON.stringify({ lang, theme: "dark", ...store })}; for (const k of Object.keys(v)) localStorage.setItem(k, v[k]);`);
@@ -576,16 +581,25 @@ const CHECK = `
       // settings: every source of every file; a part that failed and a file that does not load are said so (P2-8)
       const groupsInfo = `return [...document.querySelectorAll("#view .src-group")].map((g) => ({ title: g.querySelector(".src-group-title").textContent.slice(0, 30), badge: g.querySelector(".badge").className, items: g.querySelectorAll(".src-item").length, errors: [...g.querySelectorAll(".error-text")].map((x) => x.textContent.slice(0, 200)) }));`;
       const sourcesReady = () => page.until(`document.querySelectorAll("#view .src-group").length > 0`, 15000);
+      // Which files have a failed download right now? Asked of the page's own module on the files as they are served
+      // (a source that is down in the real data is a fact about the world, not a fault of the page): one answer per
+      // file of SOURCE_FILES, true = a part of it failed or the file does not load.
+      const failedFiles = `const m = await import(new URL("js/pages/sources.js", document.baseURI).href); return { names: m.SOURCE_FILES.map(([name]) => name), bad: await Promise.all(m.SOURCE_FILES.map(([name]) => fetch("data/" + name, { cache: "no-store" }).then((res) => res.json()).then((d) => m.sourcesOf(d).some((s) => s.failed > 0)).catch(() => true))) };`;
+      const badgeOf = (g) => (g.badge.includes("badge-bad") ? "bad" : g.badge.includes("badge-ok") ? "ok" : "other");
       await open(lang, {}, "settings");
       await sourcesReady();
       r = await page.eval(CHECK);
       let groups = await page.eval(groupsInfo);
-      need(r, groups.length === 15 && groups.every((g) => g.items > 0) && groups.slice(0, 14).every((g) => g.badge.includes("badge-ok")), "sources list: " + JSON.stringify(groups.map((g) => [g.items, g.badge])));
+      let expected = await page.eval(failedFiles);
+      const fileCount = expected.names.length;
+      // every data file is a group, marked as failed exactly when one of its downloads failed - and then it says why
+      need(r, fileCount === 14 && groups.length === fileCount + 1 && groups.every((g) => g.items > 0) && groups.slice(0, fileCount).every((g, i) => badgeOf(g) === (expected.bad[i] ? "bad" : "ok") && (g.errors.length > 0) === expected.bad[i]) && badgeOf(groups[fileCount]) === "other", "sources list: " + JSON.stringify(groups.map((g, i) => [expected.names[i] || "hand-read", g.items, g.badge, expected.bad[i], g.errors.length])));
+      const downNow = expected.names.filter((name, i) => expected.bad[i]);
       await page.eval(`for (const d of document.querySelectorAll("#view details")) d.open = true;`);
       await sleep(300);
       const opened = await page.eval(CHECK);
       need(opened, true, "");
-      report(`${lang} settings: all sources, every group opened`, { ...opened, badText: [...r.badText, ...opened.badText] }, lang === "th" ? `${groups.length} groups, ${groups.reduce((n, g) => n + g.items, 0)} sources` : "");
+      report(`${lang} settings: all sources, every group opened`, { ...opened, badText: [...r.badText, ...opened.badText] }, lang === "th" ? `${groups.length} groups, ${groups.reduce((sum, g) => sum + g.items, 0)} sources${downNow.length ? " · a download failed in the real data of: " + downNow.join(", ") : ""}` : "");
       const wagesFile = readJson("wages.json");
       serve("wages.json", { ...wagesFile, ilo_avg: { ...wagesFile.ilo_avg, stale: true, last_error: { message: "HTTP 502 from the test", at: "2026-10-04T00:00:00Z" } } });
       serve("land.json", "{ this is not JSON");
@@ -594,8 +608,19 @@ const CHECK = `
       r = await page.eval(CHECK);
       groups = await page.eval(groupsInfo);
       const failing = groups.filter((g) => g.badge.includes("badge-bad"));
-      need(r, failing.length === 2 && failing.some((g) => g.errors.some((x) => x.includes("HTTP 502 from the test"))) && failing.some((g) => g.errors.some((x) => x.includes(w.failed))), "sources list with failures: " + JSON.stringify(failing));
-      report(`${lang} settings: a failed part and a file that does not load`, r, lang === "th" ? JSON.stringify(failing.map((g) => g.errors)) : "");
+      const before = expected.bad;
+      expected = await page.eval(failedFiles);
+      const at = (name) => expected.names.indexOf(name);
+      // the two files the test broke are marked and say why; every other file is marked as it was before
+      need(
+        r,
+        expected.bad[at("wages.json")] && expected.bad[at("land.json")] &&
+          groups.slice(0, fileCount).every((g, i) => badgeOf(g) === (expected.bad[i] ? "bad" : "ok")) &&
+          expected.names.every((name, i) => name === "wages.json" || name === "land.json" || expected.bad[i] === before[i]) &&
+          groups[at("wages.json")].errors.some((x) => x.includes("HTTP 502 from the test")) && groups[at("land.json")].errors.some((x) => x.includes(w.failed)),
+        "sources list with failures: " + JSON.stringify(failing)
+      );
+      report(`${lang} settings: a failed part and a file that does not load`, r, lang === "th" ? JSON.stringify([groups[at("wages.json")].errors, groups[at("land.json")].errors]).slice(0, 300) : "");
       site.override.clear();
 
       // wages: a multiple of Laos only from the same year; an older file without the yearly series (P2-3)
@@ -695,6 +720,104 @@ const CHECK = `
       const fuel = await page.eval(`const c = [...document.querySelectorAll("#view .chart-card")].find((x) => x.textContent.includes("Brent")); return c ? c.querySelectorAll(".readout-row").length : 0;`);
       need(r, fuel === 3, "fuel trend chart: " + fuel + " lines");
       report(`${lang} living: diesel in kip, in dollars, crude oil`, r, lang === "th" ? fuel + " lines" : "");
+    }
+
+    // ---------- 2o. audit group P3: the index of the economy tabs and the search box (P3-2) ----------
+    // (phone width; the index itself is read from js/pages/eco-index.js by the page's own module)
+    const FIND = { th: { debt: "หนี้", reserves: "ทุนสำรอง", top: "10 อันดับ", none: "ไม่พบ" }, lo: { debt: "ໜີ້", reserves: "ຄັງສຳຮອງ", top: "10 ອັນດັບ", none: "ບໍ່ພົບ" } };
+    const typeIn = async (q) => {
+      await page.eval(`const b = document.getElementById("tab-search"); b.focus(); b.value = ${JSON.stringify(q)}; b.dispatchEvent(new Event("input", { bubbles: true }));`);
+      await sleep(150);
+    };
+    const indexInfo = `const box = document.getElementById("tab-index"); return { hidden: box.hidden, expanded: document.querySelector(".tab-index-btn").getAttribute("aria-expanded"), count: (box.querySelector(".tab-index-count") || {}).textContent || "", items: [...box.querySelectorAll(".tab-index-item")].map((b) => ({ title: b.querySelector("strong").textContent, under: (b.querySelector(".tab-index-sub") || {}).textContent || "", current: b.getAttribute("aria-current") === "true" })) };`;
+    const TABS_AND_VIEWS = [...["overview", "compare", "population", "wages", "gdp", "plan", "policy", "fdi", "debt", "inflation"].map((tab) => [tab, null]), ...["market", "buyers", "lao", "asean", "world", "mine"].map((v) => ["rubber", v]), ["land", null]];
+    for (const lang of ["th", "lo"]) {
+      const w = FIND[lang];
+      await open(lang, { eco_tab: "debt" });
+      let info = await page.eval(indexInfo);
+      let r = await page.eval(CHECK);
+      need(r, info.hidden && info.expanded === "false" && !info.items.length, "the index is open before anything was tapped: " + JSON.stringify(info).slice(0, 200));
+      // the index: all twelve tabs, each with what it holds; the open tab is marked
+      await page.eval(`document.querySelector(".tab-index-btn").click();`);
+      await sleep(150);
+      info = await page.eval(indexInfo);
+      r = await page.eval(CHECK);
+      need(r, !info.hidden && info.expanded === "true" && info.items.length === 12 && info.items.every((x) => x.title && x.under) && info.items.filter((x) => x.current).length === 1, "index: " + JSON.stringify(info).slice(0, 500));
+      report(`${lang} economy: the index of the twelve tabs`, r, lang === "th" ? info.items.map((x) => x.title).join(" · ") : "");
+      // a tab chosen in the index: the tab opens and the index closes
+      await page.eval(`[...document.querySelectorAll("#tab-index .tab-index-item")][7].click();`);
+      await sleep(500);
+      info = await page.eval(indexInfo);
+      const chosen = await page.eval(`return { tab: localStorage.getItem("eco_tab"), selected: document.querySelector('.tabbar [aria-selected="true"]').id };`);
+      r = await page.eval(CHECK);
+      need(r, info.hidden && chosen.tab === "fdi" && chosen.selected === "tab-fdi", "a tab chosen in the index: " + JSON.stringify([chosen, info.hidden]));
+      report(`${lang} economy: a tab chosen in the index`, r);
+      // search: one word finds the tab and the cards and tiles that carry it
+      await typeIn(w.debt);
+      info = await page.eval(indexInfo);
+      r = await page.eval(CHECK);
+      need(r, !info.hidden && info.items.length >= 6 && info.items.every((x) => `${x.title} ${x.under}`.includes(w.debt)) && /\d/.test(info.count), "search for a word: " + JSON.stringify(info).slice(0, 500));
+      report(`${lang} economy: search finds tabs, cards and tiles`, r, lang === "th" ? `"${w.debt}": ${info.count} · ${info.items.slice(0, 4).map((x) => x.title).join(" | ")}` : "");
+      // a word that is the label of a tile
+      await typeIn(w.reserves);
+      info = await page.eval(indexInfo);
+      need(r, info.items.length >= 2 && info.items.every((x) => x.title.includes(w.reserves)), "search for the label of a tile: " + JSON.stringify(info).slice(0, 400));
+      // nothing found: said in words, no list
+      await typeIn("qqqqzz");
+      info = await page.eval(indexInfo);
+      r = await page.eval(CHECK);
+      need(r, !info.hidden && !info.items.length && info.count.includes(w.none), "nothing found: " + JSON.stringify(info).slice(0, 300));
+      report(`${lang} economy: search finds nothing`, r, lang === "th" ? info.count : "");
+      // a result in another tab and another view: the tab and the view open, the heading comes into view and its
+      // card is marked for a moment; the box is empty again
+      await typeIn(w.top);
+      info = await page.eval(indexInfo);
+      const pickAt = info.items.findIndex((x) => x.title.includes(w.top));
+      await page.eval(`[...document.querySelectorAll("#tab-index .tab-index-item")][${pickAt}].click();`);
+      await page.until(`!!document.querySelector("#tabpanel .found")`, 12000);
+      await sleep(400); // the files of the tab that are still arriving redraw it: the card keeps its mark and its place
+      const landed = await page.eval(`const f = document.querySelector("#tabpanel .found"); const h = f && f.querySelector("h3, .stat-label"); const top = h ? Math.round(h.getBoundingClientRect().top) : null; return { tab: localStorage.getItem("eco_tab"), view: localStorage.getItem("eco_rubber_view"), selected: document.querySelector('.tabbar [aria-selected="true"]').id, heading: h ? h.textContent : null, top, screen: innerHeight, box: document.getElementById("tab-search").value, hidden: document.getElementById("tab-index").hidden };`);
+      r = await page.eval(CHECK);
+      need(r, pickAt >= 0 && landed.tab === "rubber" && landed.view === "world" && landed.selected === "tab-rubber" && landed.heading && landed.heading.includes(w.top) && landed.top >= 0 && landed.top < landed.screen / 2 && landed.box === "" && landed.hidden, "a result opened: " + JSON.stringify(landed));
+      report(`${lang} economy: a search result opens its tab and view and shows the card`, r, lang === "th" ? JSON.stringify(landed) : "");
+      await sleep(2700);
+      const still = await page.eval(`return document.querySelectorAll(".found").length;`);
+      // Escape empties the box and closes the list
+      await typeIn(w.debt);
+      await page.eval(`document.getElementById("tab-search").dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));`);
+      await sleep(150);
+      info = await page.eval(indexInfo);
+      const boxNow = await page.eval(`return document.getElementById("tab-search").value;`);
+      r = await page.eval(CHECK);
+      need(r, still === 0 && info.hidden && boxNow === "", "the mark stays, or Escape does not close the list: " + JSON.stringify({ still, hidden: info.hidden, boxNow }));
+      report(`${lang} economy: the mark goes away, Escape closes the list`, r);
+      // every heading and every tile label a tab shows is in the index of that tab (a card added without its line
+      // in js/pages/eco-index.js fails here) - whatever today's data makes of the page
+      const missing = [];
+      let seen = 0;
+      for (const [tab, v] of TABS_AND_VIEWS) {
+        await open(lang, { eco_tab: tab, ...(v ? { eco_rubber_view: v } : {}) });
+        const got = await page.eval(`const m = await import(new URL("js/pages/eco-index.js", document.baseURI).href); const t = Object.assign({}, ...(await Promise.all(["app", "economy"].map((f) => fetch("i18n/${lang}/" + f + ".json").then((res) => res.json()))))); const texts = m.allHeads(t).filter((h) => h.tab === ${JSON.stringify(tab)} && h.view === ${JSON.stringify(v)}).map((h) => m.textOf(t, h.key)); const heads = [...document.querySelectorAll("#tabpanel h2, #tabpanel h3, #tabpanel .stat-label")].map((h) => h.textContent.trim()); return { heads: heads.length, missing: heads.filter((text) => !texts.some((x) => m.isHeading(text, x))) };`);
+        seen += got.heads;
+        for (const text of got.missing) missing.push(`${tab}${v ? "/" + v : ""}: ${text}`);
+      }
+      r = await page.eval(CHECK);
+      need(r, seen > 150 && !missing.length, `headings the index does not list (${seen} seen): ` + missing.join(" | "));
+      report(`${lang} economy: every heading and tile label on the page is in the index`, r, lang === "th" ? `${seen} headings in ${TABS_AND_VIEWS.length} tabs and views` : "");
+      // P3-7: the texts of the economy page are a file of their own. It does not load: the page says so in the words
+      // every page has, and draws nothing without its words (no card, no "undefined").
+      site.override.set(`/i18n/${lang}/economy.json`, "{ this is not JSON");
+      await page.goto(`${BASE}?t=${++n}#/economy`, 1500);
+      const noWords = await page.eval(`return { text: document.getElementById("view").innerText.trim(), cards: document.querySelectorAll("#view .card").length, tabs: document.querySelectorAll(".tabbar button").length };`);
+      site.override.clear();
+      const appWords = JSON.parse(fs.readFileSync(path.join(ROOT, "i18n", lang, "app.json"), "utf8"));
+      states++;
+      if (noWords.cards === 0 && noWords.tabs === 0 && noWords.text === appWords.load_error) {
+        if (lang === "th") console.log("ok   th economy: its texts do not load  " + noWords.text);
+      } else {
+        bad++;
+        console.log(`FAIL ${lang} economy: its texts do not load\n       ` + JSON.stringify(noWords).slice(0, 300));
+      }
     }
 
     // ---------- 3. the entry forms, opened and filled in (never saved) ----------

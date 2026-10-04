@@ -67,7 +67,9 @@ jobs:
         if: always()
         run: node scripts/fetch-prices.js
 
-      # The Thai ministry price API is slow (~25 s per item); if it hangs, stop after 15 minutes and keep last week's prices
+      # The Thai ministry price API is slow (~25 s per item). When it hangs, the script ends by itself after 11 minutes:
+      # the items it could not ask keep last week's prices and are marked (tests/thai-prices.js). The 15 minutes here
+      # are the last resort only - a step that is stopped turns the run red.
       - name: Fetch Thai food and rubber prices (Ministry of Commerce)
         if: always()
         timeout-minutes: 15

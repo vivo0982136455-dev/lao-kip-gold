@@ -14,7 +14,7 @@ import { el, card, cardHead } from "../ui.js";
 import { formatNumber } from "../format.js";
 import {
   THIS_YEAR, indicator, latest, valueIn, pctText, freshness, sourcesFoot, statusBadge, targetStatus, fill,
-  ready, staticSource, monthText, newest, policyItem, buildSeries, NEAR_GAP, planYears, whole,
+  ready, staticSource, monthText, newest, policyItem, buildSeries, NEAR_GAP, NEAR_POINTS, planYears, whole,
 } from "./eco-common.js";
 import { latestInflation, latestReserves, publicDebt, growthNow } from "./eco-latest.js";
 
@@ -212,7 +212,7 @@ export function planTab(panel, e) {
   const parts = SUMMARY.filter((s) => counts[s] || ALWAYS.includes(s)).map((s) => `${t["inv_status_" + s]} ${counts[s]}`);
   c.append(el("p", "note", `${fill(t.inv_plan_summary, { total: plan.targets.length })} ${parts.join(" · ")}`));
   const byTarget = plan.targets.find((x) => x.by);
-  c.append(el("p", "note", fill(t.inv_plan_how, { from, to: plan.period[1], span: plan.period[1] - from + 1, near: Math.round(NEAR_GAP * 100), by: byTarget ? byTarget.by : plan.period[1] })));
+  c.append(el("p", "note", fill(t.inv_plan_how, { from, to: plan.period[1], span: plan.period[1] - from + 1, near: Math.round(NEAR_GAP * 100), near_points: NEAR_POINTS, by: byTarget ? byTarget.by : plan.period[1] })));
   const reserves = plan.targets.find((x) => x.id === "reserves");
   if (twoWays && reserves) c.append(el("p", "note", fill(t.inv_plan_two_ways, { target: reserves.target })));
   if (plan.projects) c.append(el("p", "note", fill(t.inv_plan_projects, plan.projects)));

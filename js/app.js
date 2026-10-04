@@ -17,7 +17,7 @@ import * as forecast from "./pages/forecast.js";
 import * as settings from "./pages/settings.js";
 import * as method from "./pages/method.js";
 
-// Menu: grouped into sections. "title" and "group" are keys in i18n/*.json
+// Menu: grouped into sections. "title" and "group" are keys of the texts (i18n/<lang>/app.json)
 const ROUTES = [
   { path: "overview", title: "page_overview", icon: "dashboard", group: "nav_group_main", page: overview },
   { path: "rates", title: "page_rates", icon: "exchange", group: "nav_group_markets", page: rates },
@@ -240,8 +240,18 @@ function render() {
 async function setLang(lang) {
   state.lang = lang;
   save("lang", lang);
-  state.t = await getJson(`i18n/${lang}.json`);
+  state.t = await getJson(`i18n/${lang}/app.json`);
   render();
+  saveEconomyTexts();
+}
+// The texts of the economy page are a file of their own, loaded by that page when it is opened (the first screen
+// does not wait for them). A moment after a screen is drawn the file is asked for here as well - not to show
+// anything, but so that the service worker keeps a copy: whoever opens the economy page without a connection
+// later finds its words, also right after an update of the app. Unchanged file = a short "not modified" answer.
+function saveEconomyTexts() {
+  const ask = () => fetch(`i18n/${state.lang}/economy.json`, { cache: "no-cache" }).catch(() => {});
+  if ("requestIdleCallback" in window) requestIdleCallback(ask, { timeout: 5000 });
+  else setTimeout(ask, 2000);
 }
 function setTheme(theme) {
   state.theme = theme;
@@ -335,8 +345,10 @@ async function start() {
   applyTheme();
 
   // Load texts and all data at the same time (faster). Economy / forecast are optional.
+  // The texts: app.json = the shell and every page but the economy page, whose own texts (two thirds of all) are
+  // loaded by that page when it is opened (js/pages/economy.js) - the first screen does not wait for them.
   const [texts, summary, eco, hints] = await Promise.allSettled([
-    getJson(`i18n/${state.lang}.json`),
+    getJson(`i18n/${state.lang}/app.json`),
     getSummary(),
     getJson("data/economy.json"),
     getJson("data/forecast/hints.json"),
@@ -356,6 +368,7 @@ async function start() {
   openMenu(false);
   render();
   retryWhileOffline();
+  saveEconomyTexts();
 }
 
 menuClose.addEventListener("click", () => openMenu(false));
@@ -370,7 +383,8 @@ window.addEventListener("chartjs-ready", () => {
 window.addEventListener("hashchange", () => {
   openMenu(false);
   window.scrollTo(0, 0);
-  render();
+  // before the texts have arrived there is nothing to draw with: start() draws the page of the address it then finds
+  if (state.t) render();
 });
 // Install as an app + offline copy (js/pwa.js). The Settings page shows the install state: redraw it when that changes.
 onInstallChange(() => {

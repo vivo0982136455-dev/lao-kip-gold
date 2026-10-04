@@ -62,7 +62,6 @@ const INDICATORS = {
   "wb.NV.SRV.TOTL.ZS": { source: "worldbank", code: "NV.SRV.TOTL.ZS", unit: "% of GDP" },
   "wb.NV.AGR.TOTL.KD.ZG": { source: "worldbank", code: "NV.AGR.TOTL.KD.ZG", unit: "%" },
   "wb.NV.IND.TOTL.KD.ZG": { source: "worldbank", code: "NV.IND.TOTL.KD.ZG", unit: "%" },
-  "wb.NV.IND.MANF.KD.ZG": { source: "worldbank", code: "NV.IND.MANF.KD.ZG", unit: "%" },
   "wb.NV.SRV.TOTL.KD.ZG": { source: "worldbank", code: "NV.SRV.TOTL.KD.ZG", unit: "%" },
   "wb.TX.VAL.MRCH.CD.WT": { source: "worldbank", code: "TX.VAL.MRCH.CD.WT", unit: "USD bn", scale: 1e-9 },
   "wb.TM.VAL.MRCH.CD.WT": { source: "worldbank", code: "TM.VAL.MRCH.CD.WT", unit: "USD bn", scale: 1e-9 },
@@ -71,11 +70,9 @@ const INDICATORS = {
   "wb.DT.DOD.DECT.CD": { source: "worldbank", code: "DT.DOD.DECT.CD", unit: "USD bn", scale: 1e-9 },
   "wb.DT.DOD.DECT.GN.ZS": { source: "worldbank", code: "DT.DOD.DECT.GN.ZS", unit: "% of GNI" },
   "wb.DT.TDS.DECT.EX.ZS": { source: "worldbank", code: "DT.TDS.DECT.EX.ZS", unit: "% of exports" },
-  "wb.DT.DOD.DPPG.CD": { source: "worldbank", code: "DT.DOD.DPPG.CD", unit: "USD bn", scale: 1e-9 },
   "wb.FI.RES.TOTL.CD": { source: "worldbank", code: "FI.RES.TOTL.CD", unit: "USD bn", scale: 1e-9 },
   "wb.FI.RES.TOTL.MO": { source: "worldbank", code: "FI.RES.TOTL.MO", unit: "months" },
   "wb.GC.REV.XGRT.GD.ZS": { source: "worldbank", code: "GC.REV.XGRT.GD.ZS", unit: "% of GDP" },
-  "wb.SP.POP.TOTL": { source: "worldbank", code: "SP.POP.TOTL", unit: "million", scale: 1e-6 },
   "imf.NGDPDPC": { source: "imf", code: "NGDPDPC", unit: "USD per person" },
   "imf.GGXCNL_NGDP": { source: "imf", code: "GGXCNL_NGDP", unit: "% of GDP" },
 };
@@ -368,4 +365,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { main, rubberChina, fdiTotalFromCsv };
+module.exports = { main, rubberChina, fdiTotalFromCsv, INDICATORS };

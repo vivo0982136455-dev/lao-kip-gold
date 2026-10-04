@@ -28,10 +28,14 @@ const check = (name, ok, detail = "") => {
     const libFiles = saved["lkg-libs-1"] || [];
     console.log("   site files saved:", siteFiles.length, "| lib files saved:", libFiles.length);
     console.log("   libs:", libFiles.map((u) => u.slice(0, 70)).join("\n         "));
-    for (const need of ["", "css/style.css", "js/app.js", "js/pwa.js", "js/charts.js", "js/pages/settings.js", "js/pages/eco-rubber.js", "i18n/th.json", "data/summary.json", "data/economy.json", "data/forecast/hints.json"]) {
+    for (const need of ["", "css/style.css", "js/app.js", "js/pwa.js", "js/charts.js", "js/pages/settings.js", "js/pages/eco-rubber.js", "i18n/th/app.json", "i18n/th/economy.json", "data/summary.json", "data/economy.json", "data/forecast/hints.json"]) {
       check("saved after first visit: " + (need || "(page)"), siteFiles.includes(need));
     }
     check("no file saved twice because of ?query", siteFiles.every((u) => !u.includes("?")));
+    // the texts are two files (audit P3-7): the first screen waits for app.json only; the file of the economy page is
+    // asked for afterwards, in the background, so that it is saved for a time without a connection (the list above)
+    const order = await page.eval(`const of = (name) => performance.getEntriesByType("resource").find((x) => x.name.split("?")[0].endsWith(name)); const app = of("i18n/th/app.json"); const eco = of("i18n/th/economy.json"); return { app_arrived: app ? Math.round(app.responseEnd) : null, economy_asked: eco ? Math.round(eco.startTime) : null };`);
+    check("first visit: the texts of the economy page are asked for after the first screen has its own", order.app_arrived > 0 && order.economy_asked >= order.app_arrived, JSON.stringify(order) + " ms");
     check("chart library saved", libFiles.some((u) => u.includes("chart.umd")));
     check("font style sheet saved", libFiles.some((u) => u.startsWith("https://fonts.googleapis.com/")));
     check("font files saved", libFiles.some((u) => u.startsWith("https://fonts.gstatic.com/")));
@@ -78,6 +82,8 @@ const check = (name, ok, detail = "") => {
     // ---------- 5. no connection ----------
     await page.goto(BASE + "#/overview", 1500); // visit a few pages online first (their lazy data gets saved)
     await page.goto(BASE + "#/economy", 2500);
+    const words = await page.eval(`const c = await caches.open("lkg-site-1"); return (await c.keys()).map((x) => x.url.replace(${JSON.stringify(BASE)}, "")).filter((u) => u.startsWith("i18n/"));`);
+    check("the economy page was opened: its texts are saved too", words.includes("i18n/th/app.json") && words.includes("i18n/th/economy.json"), words.join(", "));
     site.mode = "down";
     site.hits.length = 0;
     await page.goto(BASE + "?offline=1#/overview", 2500);
@@ -90,8 +96,8 @@ const check = (name, ok, detail = "") => {
     const offGold = await page.eval(`return { cards: document.querySelectorAll(".card").length, text: document.getElementById("view").innerText.slice(0, 80) };`);
     check("offline: another page opens", offGold.cards > 2, JSON.stringify(offGold));
     await page.goto(BASE + "?offline=1#/economy", 2000);
-    const offEco = await page.eval(`return { cards: document.querySelectorAll(".card").length, text: document.getElementById("view").innerText.slice(0, 80) };`);
-    check("offline: economy page (lazy data saved earlier) opens", offEco.cards > 2, JSON.stringify(offEco));
+    const offEco = await page.eval(`const all = document.getElementById("view").innerText; return { cards: document.querySelectorAll(".card").length, tabs: [...document.querySelectorAll(".tabbar button")].filter((b) => b.textContent.trim()).length, undefinedText: /undefined/.test(all), text: all.slice(0, 80) };`);
+    check("offline: economy page (lazy data and its own texts saved earlier) opens with all its words", offEco.cards > 2 && offEco.tabs === 12 && !offEco.undefinedText, JSON.stringify(offEco));
 
     // ---------- 6. the connection comes back: the numbers refresh by themselves ----------
     site.mode = "ok";

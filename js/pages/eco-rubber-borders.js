@@ -359,10 +359,19 @@ export function countryPricesCard(r) {
   if (!daily && !b) return null;
   const fx = daily && daily.fx && daily.fx.rates ? daily.fx.rates : {};
   const rows = [];
+  // "10.66 ริงกิต/กก." -> the number and the unit, each in one piece: on a phone the cell wraps between the two and
+  // never inside the unit (a Thai or Lao word has no spaces: the browser cut "ริงกิต" in two)
+  const priceCell = (text) => {
+    const at = text.indexOf(" ");
+    if (at < 0) return text;
+    const cell = el("span");
+    cell.append(el("span", "nobr", text.slice(0, at)), " ", el("span", "nobr", text.slice(at + 1)));
+    return cell;
+  };
   const add = (iso, kindText, localText, usdPerKg, when, stale) => {
     const name = el("span", "", countryName(t, w && w.names, iso));
     name.append(el("span", "sub-line", kindText));
-    rows.push([name, localText, usd2(usdPerKg), freshness(t, { ...when, stale, compact: true })]);
+    rows.push([name, priceCell(localText), usd2(usdPerKg), freshness(t, { ...when, stale, compact: true })]);
   };
 
   // Laos: the owner's own newest price, then the two borders

@@ -15,6 +15,7 @@ import { chartCard } from "../charts.js";
 import { lazyJson } from "../lazy.js";
 import { lastOf, monthText, monthShort, dayFull as dayText, freshness, sourcesFoot, invTile, fill, staticSource, ready, whole, planYears, sourceWords } from "./eco-common.js";
 import { todayVientiane } from "../format.js";
+import { realRate } from "../calc.js";
 import { inflationSeries } from "./eco-latest.js";
 
 const isDay = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -213,9 +214,11 @@ function rateChart(e, live) {
   const peak = live.history.reduce((a, b) => (b[1] > a[1] ? b : a));
   const sincePeak = live.history.filter(([day]) => day > peak[0]);
   const cuts = sincePeak.filter(([, rate], i) => rate < (i ? sincePeak[i - 1][1] : peak[1])).length;
-  const real = rateThen - last[1];
+  // the same formula as for a deposit (calc.js): (1 + rate) / (1 + inflation) - 1, not the plain difference
+  const real = realRate(rateThen, last[1]);
+  const realText = Math.abs(real).toFixed(1);
   const ul = el("ul", "watch-list");
-  ul.append(el("li", "", fill(t.pol_chart_note_real, { rate: rateThen, inflation: last[1].toFixed(1), month: monthText(last[0], t), real: `${real < 0 ? "−" : "+"}${Math.abs(real).toFixed(1)}` })));
+  ul.append(el("li", "", fill(t.pol_chart_note_real, { rate: rateThen, inflation: last[1].toFixed(1), month: monthText(last[0], t), real: `${Number(realText) === 0 ? "" : real < 0 ? "−" : "+"}${realText}` })));
   const atPeak = inflation.get(peak[0].slice(0, 7)); // inflation in the month of the highest rate
   ul.append(el("li", "", fill(t.pol_chart_note_path, { peak: peak[1], peak_date: dayText(peak[0], t), peak_inflation: atPeak === undefined ? "—" : atPeak.toFixed(1), cuts, now: live.rate.rate, date: dayText(live.rate.date, t) })));
   if (inf.from === "bol") ul.append(el("li", "", fill(t.pol_chart_note_bol, { month: monthText(last[0], t), imf_month: monthText(inf.imfLast, t) })));

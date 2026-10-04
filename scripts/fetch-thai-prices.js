@@ -17,12 +17,20 @@ const path = require("path");
 const { DATA_DIR, fetchJson, readJson, writeIfChanged } = require("./lib/common");
 
 const OUT_FILE = path.join(DATA_DIR, "thai-prices.json");
-const API = "https://dataapi.moc.go.th/gis-product-prices";
+const API = process.env.THAI_PRICES_URL || "https://dataapi.moc.go.th/gis-product-prices";
 const WINDOW_DAYS = 21; // days asked per run
-const REQUEST_TIMEOUT_MS = 45000;
+const REQUEST_TIMEOUT_MS = Number(process.env.THAI_PRICES_TIMEOUT_MS) || 45000;
+// The workflow stops this step after 15 minutes, and a step that is stopped has not written its file: nothing
+// would then tell the page that this week's download failed. So the script ends by itself: after RUN_LIMIT_MS no
+// further item is asked, and the items that were not asked are written as failed, with the prices they had.
+// The longest a run can take = this limit + one request with its second try (about 1.5 minutes).
+// Seen 2026-10-04 on GitHub's servers: nine of twelve items hung, twelve x 93 seconds is more than 15 minutes -
+// the file was written in the very second the step was stopped, and the run was red.
+const RUN_LIMIT_MS = Number(process.env.THAI_PRICES_RUN_LIMIT_MS) || 11 * 60000;
 const DAYS_KEPT = 62; // daily prices kept in the file
 const MONTHS_KEPT = 26; // monthly averages kept (rubber items keep more, see ITEMS)
 const SECOND_TRY_BEFORE_MS = 8 * 60000; // failed items get a second try if the first pass took less than this
+const SECOND_TRY_WAIT_MS = Number(process.env.THAI_PRICES_SECOND_TRY_WAIT_MS) || 15000; // ... after this pause
 
 // Our item id (same ids as the WFP Lao prices) -> MOC product, and what to divide by to get the same unit
 const ITEMS = {
@@ -133,26 +141,42 @@ async function main() {
       return false;
     }
   }
+  const timeLeft = () => Date.now() - startedAt < RUN_LIMIT_MS;
+  // an item the run had no time for: it keeps its prices and is marked, like an item whose download failed
+  const notAsked = (key) => {
+    console.error(`[FAIL] thai-prices ${key}: not asked - the time of this run is used up`);
+    out.items[key] = { ...(old.items[key] || { moc_id: ITEMS[key].id, unit: ITEMS[key].unit, monthly: [] }), stale: true, last_error: { message: "Not asked in this run: the source answered too slowly and the time limit of the run was reached", at: now } };
+  };
+  // The items whose stored prices are oldest are asked first: when the server is slow and the time runs out, it
+  // is then not the same items that are left out week after week (items of the same day keep their order).
+  const newest = (key) => (old.items[key] && old.items[key].latest ? old.items[key].latest.date : "");
+  const order = [...todo].sort((a, b) => (newest(a) < newest(b) ? -1 : newest(a) > newest(b) ? 1 : 0));
   // one at a time (the server fails when asked in parallel); the server sometimes answers
   // "HTTP 500" for a while, so failed items get one more try at the end if there is time left
   let failedKeys = [];
-  for (const key of todo) if (!(await fetchOne(key))) failedKeys.push(key);
-  if (failedKeys.length && Date.now() - startedAt < SECOND_TRY_BEFORE_MS) {
-    console.log(`       thai-prices: trying ${failedKeys.join(", ")} again in 15 s`);
-    await new Promise((r) => setTimeout(r, 15000));
+  const skipped = [];
+  for (const key of order) {
+    if (!timeLeft()) {
+      notAsked(key);
+      skipped.push(key);
+    } else if (!(await fetchOne(key))) failedKeys.push(key);
+  }
+  if (failedKeys.length && timeLeft() && Date.now() - startedAt < SECOND_TRY_BEFORE_MS) {
+    console.log(`       thai-prices: trying ${failedKeys.join(", ")} again in ${SECOND_TRY_WAIT_MS / 1000} s`);
+    await new Promise((r) => setTimeout(r, SECOND_TRY_WAIT_MS));
     const again = [];
-    for (const key of failedKeys) if (!(await fetchOne(key))) again.push(key);
+    for (const key of failedKeys) if (!timeLeft() || !(await fetchOne(key))) again.push(key); // out of time: it stays as failed
     failedKeys = again;
   }
-  const failed = failedKeys.length;
+  const failed = failedKeys.length + skipped.length;
   // the day the source last answered (for at least one item); a run without any answer keeps the old day
   const retrieved = failed < todo.length ? now.slice(0, 10) : old.source && old.source.retrieved;
   if (retrieved) out.source = { ...SOURCE, retrieved };
   const text = writePrices(out);
-  console.log(`Done: ${failed} failed. Wrote data/thai-prices.json (${(text.length / 1024).toFixed(0)} KB)`);
+  console.log(`Done: ${failed} failed${skipped.length ? ` (${skipped.length} of them not asked: time limit)` : ""}. Wrote data/thai-prices.json (${(text.length / 1024).toFixed(0)} KB) after ${Math.round((Date.now() - startedAt) / 1000)} s`);
   if (failed === todo.length) process.exitCode = 1;
 }
 
 if (require.main === module) main();
 
-module.exports = { ITEMS, API, OUT_FILE, SOURCE, writePrices, round2 };
+module.exports = { ITEMS, API, OUT_FILE, SOURCE, writePrices, round2, RUN_LIMIT_MS, REQUEST_TIMEOUT_MS };
