@@ -6,7 +6,7 @@
 //   budgetSection     - monthly budget: the same shopping basket in Laos (WFP) and Bangkok (Thai ministry)
 // Everything shows the past or today's prices; nothing here is a forecast or financial advice.
 
-import { el, card, cardHead, cardFoot, sourceLink, sectionTitle, table, emptyState, pctPill } from "../ui.js";
+import { el, card, cardHead, cardFoot, sourceLink, sectionTitle, table, emptyState, pctPill, outLink } from "../ui.js";
 import { formatNumber, formatPct, formatDate, todayVientiane, addDays } from "../format.js";
 import { chartCard } from "../charts.js";
 import { realRate } from "../calc.js";
@@ -235,11 +235,7 @@ function officialFuelCard(ctx) {
   const from = el("p", "note fuel-notice");
   if (now.from === "notice" && now.notice) {
     from.append(fill(t.fuel_off_notice, { no: now.notice.no, date: dayFull(now.notice.date, t), from: dayFull(now.date, t) }), " · ");
-    const a = el("a", "", t.fuel_off_open);
-    a.href = now.notice.url;
-    a.target = "_blank";
-    a.rel = "noopener";
-    from.append(a);
+    from.append(outLink(t.fuel_off_open, now.notice.url));
   } else from.append(fill(t.fuel_off_company, { date: dayFull(now.date, t) }));
   c.append(from);
 
@@ -280,11 +276,7 @@ function officialFuelCard(ctx) {
   if (cap.waiting) {
     const warn = el("div", "alert");
     const text = el("div", "", fill(t.fuel_off_waiting, { count: cap.waiting.count, no: cap.waiting.no, date: dayFull(cap.waiting.date, t) }) + " ");
-    const a = el("a", "", t.fuel_off_waiting_open);
-    a.href = cap.waiting.url;
-    a.target = "_blank";
-    a.rel = "noopener";
-    text.append(a);
+    text.append(outLink(t.fuel_off_waiting_open, cap.waiting.url));
     warn.append(el("span", "", "⚠"), text);
     c.append(warn);
   }
@@ -414,28 +406,37 @@ function thaiFuelCard(ctx) {
   return c;
 }
 
-// Lao diesel vs world oil on one scale: both = 100 at the start of the period
+// Lao diesel vs world oil on one scale: every line = 100 at the start of the period.
+// Diesel is priced in kip and crude oil in dollars: a line in kip against a line in dollars mixes the oil price with
+// the fall of the kip. So the Lao diesel price is drawn a second time in dollars (the month's price ÷ the month's
+// average BOL rate): kip line against dollar line = the kip, dollar line against crude oil = the oil price, taxes
+// and transport (audit 2026-10-02, P2-6).
 function fuelTrendChart(ctx, prices, years) {
   const { t, economy: eco } = ctx;
   const diesel = prices.fuel_estimate && prices.fuel_estimate.values && prices.fuel_estimate.values.diesel;
   const brent = eco.monthly && eco.monthly.brent_usd && eco.monthly.brent_usd.values;
   if (!diesel || !diesel.length || !brent || !brent.length) return null;
+  const usd = new Map((eco.monthly.bol_usd_mid && eco.monthly.bol_usd_mid.values) || []);
+  const dieselUsd = diesel.filter(([m]) => usd.has(m)).map(([m, v]) => [m, v / usd.get(m)]);
   const last = [lastOf(diesel)[0], lastOf(brent)[0]].sort().pop();
   const months = [];
   for (let m = addMonths(last, -12 * years + 1); m <= last; m = addMonths(m, 1)) months.push(m);
-  const index = (series) => {
-    const map = new Map(series);
-    const base = months.map((m) => map.get(m)).find((v) => v !== undefined);
-    return months.map((m) => (map.has(m) && base ? Math.round((map.get(m) / base) * 1000) / 10 : null));
-  };
+  const maps = { kip: new Map(diesel), usd: new Map(dieselUsd), brent: new Map(brent) };
+  // every line = 100 in the SAME month (the first month of the period in which all of them have a value):
+  // lines that start from different months could not be compared
+  const lines = dieselUsd.length > 1 && months.some((m) => maps.usd.has(m)) ? ["kip", "usd", "brent"] : ["kip", "brent"];
+  const base = months.find((m) => lines.every((k) => maps[k].has(m)));
+  if (!base) return null;
+  const index = (k) => months.map((m) => (maps[k].has(m) ? Math.round((maps[k].get(m) / maps[k].get(base)) * 1000) / 10 : null));
   return chartCard({
     title: t.fuel_trend_title,
-    subtitle: t.fuel_trend_sub,
+    subtitle: fill(t.fuel_trend_sub, { base: monthText(base, t) }),
     labels: months.map((m) => monthText(m, t)),
     tickLabels: months.map((m) => monthShort(m, t)),
     series: [
-      { label: t.fuel_trend_lao, kind: "estimated", color: "--cat-1", values: index(diesel) },
-      { label: t.fuel_trend_brent, kind: "market", color: "--cat-3", values: index(brent) },
+      { label: t.fuel_trend_lao, kind: "estimated", color: "--cat-1", values: index("kip") },
+      ...(lines.includes("usd") ? [{ label: t.fuel_trend_lao_usd, kind: "estimated", color: "--cat-4", dashed: true, values: index("usd") }] : []),
+      { label: t.fuel_trend_brent, kind: "market", color: "--cat-3", values: index("brent") },
     ],
     unit: "index",
     t,

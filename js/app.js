@@ -1,5 +1,5 @@
 // App shell: loads texts + data, builds the sidebar menu, and shows one page at a time.
-// Pages are chosen by the address "hash": #/overview, #/rates, #/gold, #/living, #/economy, #/forecast, #/settings
+// Pages are chosen by the address "hash": #/overview, #/rates, #/gold, #/living, #/economy, #/forecast, #/settings, #/method
 // No build step - plain ES modules.
 
 import { icon } from "./icons.js";
@@ -15,6 +15,7 @@ import * as economy from "./pages/economy.js";
 import * as living from "./pages/living.js";
 import * as forecast from "./pages/forecast.js";
 import * as settings from "./pages/settings.js";
+import * as method from "./pages/method.js";
 
 // Menu: grouped into sections. "title" and "group" are keys in i18n/*.json
 const ROUTES = [
@@ -25,6 +26,7 @@ const ROUTES = [
   { path: "economy", title: "page_economy", icon: "economy", group: "nav_group_analysis", page: economy },
   { path: "forecast", title: "page_forecast", icon: "forecast", group: "nav_group_analysis", page: forecast },
   { path: "settings", title: "page_settings", icon: "settings", group: "nav_group_system", page: settings },
+  { path: "method", title: "page_method", icon: "book", group: "nav_group_system", page: method },
 ];
 // Phone bottom tab bar: the 4 most used pages + "more" (opens the full menu). Labels are i18n keys.
 const BOTTOM_TABS = [

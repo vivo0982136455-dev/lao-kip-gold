@@ -5,9 +5,53 @@ import { el, card, cardHead, metricCard, sectionTitle, emptyState, table, rangeB
 import { formatNumber, formatPct, formatDate } from "../format.js";
 import { dailyChartCard, mountCharts } from "../charts.js";
 import { uploadCard } from "./gold-upload.js";
+import { fill } from "./eco-common.js";
 
 // Value of a daily metric on one day (undefined when there is none)
 const onDay = (summary, id, day) => new Map((summary.metrics[id] || { daily: [] }).daily).get(day);
+
+// Our estimate of the Lao price (Thai bar price × the baht rate), and what the real price (Lao Bullion Bank) says
+// about it - two different numbers that must not be mixed up (audit 2026-10-02, P2-1):
+//   "how much dearer": fine gold in an LBB bar against fine gold in a Thai bar, gram for gram (like for like)
+//   the multiplier that turns the estimate into the adjusted estimate: it also holds the gap between the two
+//   units (15.244 g and 15 g) and between the two purities, so it is larger and is not a premium
+function estimateCard(summary, t) {
+  const c = metricCard(
+    {
+      title: "card_lao_gold_est",
+      kind: "estimated",
+      rows: [
+        ["row_est_sell", "calc.lao_gold_est_sell"],
+        ["row_est_buy", "calc.lao_gold_est_buy"],
+        ["row_adj_sell", "calc.lao_gold_adj_sell", { emptyText: t.need_shop_prices }],
+      ],
+    },
+    summary,
+    t
+  );
+  const foot = c.querySelector(".card-foot");
+  const p = summary.gold_premium;
+  const days = p && p.window_days;
+  // a row like the price rows above: the number, and under it over how many days it is an average
+  const row = (label, text) => {
+    const r = el("div", "row");
+    const right = el("div", "row-right");
+    right.append(el("div", "value", text || "—"));
+    right.append(el("div", "change", text ? fill(t.premium_window, { days, used: p.days_used }) : t.not_enough_data));
+    r.append(el("span", "row-label", label), right);
+    c.insertBefore(r, foot);
+  };
+  if (days) {
+    row(t.premium_fine_14d, p.fine_avg_14d ? formatPct((p.fine_avg_14d - 1) * 100, 1) : null);
+    row(t.premium_avg_14d, p.avg_14d ? `× ${p.avg_14d.toFixed(3)}` : null);
+  }
+  const b = p && p.basis;
+  if (b && days && b.thai_fineness && b.lbb_fineness) {
+    const pct = (v) => String(Math.round(v * 10000) / 100); // 0.9999 -> "99.99"
+    c.insertBefore(el("p", "note", fill(t.note_lao_gold_est, { days, thai_g: b.thai_g, thai_pct: pct(b.thai_fineness), lao_g: b.lao_g, lbb_pct: pct(b.lbb_fineness) })), foot);
+  }
+  return c;
+}
 
 // Phouvong card: jewellery + gold bar prices, bar compared with Lao Bullion Bank (bar vs bar, same day)
 function phouvongCard(summary, t) {
@@ -62,12 +106,6 @@ function phouvongCard(summary, t) {
     c.append(compare(`${t.row_adj_sell} (${formatDate(day, t)})`, m("sell").latest.value, onDay(summary, "calc.lao_gold_adj_sell", day), t.shop_minus_estimate));
   }
 
-  const p = summary.gold_premium;
-  const premText = p && p.avg_14d ? `${formatPct((p.avg_14d - 1) * 100)} (${t.premium_days}: ${p.days_used})` : t.not_enough_data;
-  const prem = el("div", "row");
-  prem.append(el("span", "row-label", t.premium_avg_14d), el("div", "row-right value", premText));
-  c.append(prem);
-  c.append(el("p", "note", t.note_premium));
   c.append(cardFoot(["gold-lao-manual.sell", "gold-lao-manual.bar_sell"].filter((id) => summary.metrics[id]), summary, t));
   return c;
 }
@@ -136,20 +174,7 @@ export function render(view, ctx) {
       summary,
       t
     ),
-    metricCard(
-      {
-        title: "card_lao_gold_est",
-        kind: "estimated",
-        note: "note_lao_gold_est",
-        rows: [
-          ["row_est_sell", "calc.lao_gold_est_sell"],
-          ["row_est_buy", "calc.lao_gold_est_buy"],
-          ["row_adj_sell", "calc.lao_gold_adj_sell", { emptyText: t.need_shop_prices }],
-        ],
-      },
-      summary,
-      t
-    )
+    estimateCard(summary, t)
   );
   const markets = el("div", "stack");
   markets.append(

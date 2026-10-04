@@ -13,7 +13,7 @@ import { el, card, cardHead, table } from "../ui.js";
 import { chartCard } from "../charts.js";
 import { formatNumber } from "../format.js";
 import { lazyJson } from "../lazy.js";
-import { lastOf, dayFull, freshness, sourcesFoot, invTile, factsCard, barTable, fill, staticSource, countryName, whole, FOCUS_PROVINCES } from "./eco-common.js";
+import { lastOf, dayFull, freshness, sourcesFoot, invTile, factsCard, barTable, fill, staticSource, countryName, whole, FOCUS_PROVINCES, sourceWords, THIS_YEAR } from "./eco-common.js";
 
 const million = (v) => (v / 1e6).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pct1 = (v) => `${v.toFixed(1)}%`;
@@ -81,6 +81,7 @@ function populationChart(p, t) {
     unitLabel: t.pop_unit_million,
     t,
     firstColTitle: t.year,
+    nowLabel: String(THIS_YEAR), // at rest the projection shows this year, not its last year (2050)
   });
 }
 
@@ -167,7 +168,8 @@ function pyramidCard(p, e) {
 }
 
 // ---------- every province ----------
-function provincesCard(p, t) {
+// census = the census that will replace both counts (data/invest-static.json), for the note under the table
+function provincesCard(p, t, census) {
   const pv = p.provinces;
   if (!pv || !pv.rows || !pv.rows.length) return null;
   const wb = p.indicators.pop && p.indicators.pop.values.length ? lastOf(p.indicators.pop.values) : null;
@@ -186,7 +188,7 @@ function provincesCard(p, t) {
   tb.classList.add("total-last");
   c.append(tb, el("p", "note", t.pop_prov_note));
   // the two counts of the same people, side by side, so that the difference is not a surprise
-  if (wb) c.append(el("p", "note", fill(t.pop_prov_two_counts, { lsb: million(pv.total), lsb_year: pv.year, wb: million(wb[1]), wb_year: wb[0] })));
+  if (wb) c.append(el("p", "note", fill(t.pop_prov_two_counts, { lsb: million(pv.total), lsb_year: pv.year, wb: million(wb[1]), wb_year: wb[0], census_year: census ? census.year : "" })));
   const fresh = el("div", "card-foot");
   fresh.append(freshness(t, { year: pv.year, stale: pv.stale }));
   c.append(fresh, sourcesFoot(t, [p.sources.hdx_codps]));
@@ -239,17 +241,30 @@ function neighboursCard(p, t) {
   const n = p.neighbours;
   if (!n || !n.rows || !n.rows.LAO || !n.rows.LAO.pop) return null;
   const v = (x, d) => (x ? x[1].toFixed(d) : "—");
+  const lao = n.rows.LAO;
+  // every number says which year it is (each country's newest year can differ): the year under the value, and a
+  // mark when it is not the year of Laos' own number in that column (audit 2026-10-02, P2-10)
+  let mixed = false;
+  const cell = (id, r, text) => {
+    if (!r[id]) return "—";
+    const off = !!lao[id] && r[id][0] !== lao[id][0];
+    if (off) mixed = true;
+    const box = el("span", "", text(r[id][1]));
+    box.append(el("span", off ? "sub-line cmp-year cmp-year-off" : "sub-line cmp-year", off ? `⚠ ${r[id][0]}` : String(r[id][0])));
+    return box;
+  };
+  const yearOf = (x) => (x ? x[0] : "—");
   const rows = n.countries.map((iso) => {
     const r = n.rows[iso] || {};
     const name = el("span", iso === "LAO" ? "focus-name" : "", countryName(t, null, iso));
-    name.append(el("span", "sub-line", fill(t.pop_nb_sub, { growth: v(r.growth, 1), children: v(r.fertility, 1) })));
-    return [name, r.pop ? million(r.pop[1]) : "—", r.young ? pct1(r.young[1]) : "—", r.old ? pct1(r.old[1]) : "—", r.urban ? pct1(r.urban[1]) : "—"];
+    name.append(el("span", "sub-line", fill(t.pop_nb_sub, { growth: v(r.growth, 1), growth_year: yearOf(r.growth), children: v(r.fertility, 1), children_year: yearOf(r.fertility) })));
+    return [name, cell("pop", r, million), cell("young", r, pct1), cell("old", r, pct1), cell("urban", r, pct1)];
   });
   const c = card("official");
   c.append(cardHead(t.pop_nb_title, "official", !!n.stale, t));
   const tb = table([t.rw_col_country, t.pop_col_people_m, t.pop_col_young, t.pop_col_old, t.pop_col_urban], rows);
   tb.classList.add("wrap-first");
-  c.append(tb, el("p", "note", t.pop_nb_note));
+  c.append(tb, el("p", "note", `${t.pop_nb_note} · ${mixed ? t.pop_nb_years_mixed : t.pop_nb_years}`));
   const fresh = el("div", "card-foot");
   fresh.append(freshness(t, { year: n.rows.LAO.pop[0], stale: n.stale }));
   c.append(fresh, sourcesFoot(t, [p.sources.worldbank]));
@@ -284,7 +299,7 @@ function meaningCard(p, e) {
   const wage = last("wage_workers");
   if (agri && wage) facts.push([fill(t.pop_f_work, { agri: agri[1].toFixed(0), wage: wage[1].toFixed(0), year: agri[0] }), null]);
   const w = e.stat.population && e.stat.population.work;
-  if (w) facts.push([fill(t.pop_f_survey, { from: w.agri_from, to: w.agri_to, period_from: w.period_from, period_to: w.period_to, self: w.self_employed, family: w.family_work }), null]);
+  if (w) facts.push([fill(t.pop_f_survey, { ...sourceWords(e, w.source), from: w.agri_from, to: w.agri_to, period_from: w.period_from, period_to: w.period_to, self: w.self_employed, family: w.family_work }), null]);
   const mig = last("net_migration");
   const rem = last("remit_usd");
   const remGdp = last("remit_gdp");
@@ -337,7 +352,7 @@ function censusCard(e) {
   const cs = e.stat.population && e.stat.population.census;
   if (!cs) return null;
   const c = card("estimated");
-  c.append(cardHead(t.pop_census_title, null, false, t));
+  c.append(cardHead(fill(t.pop_census_title, { no: cs.number, year: cs.year }), null, false, t));
   const ul = el("ul", "watch-list");
   ul.append(el("li", "", fill(t.pop_census_1, { start: dayFull(cs.start, t), end: dayFull(cs.end, t) })));
   ul.append(el("li", "", fill(t.pop_census_2, { date: dayFull(cs.status, t) })));
@@ -376,7 +391,7 @@ export function populationTab(panel, e) {
   two(populationChart(p, t), agesCard(p, t));
   two(pyramidCard(p, e), neighboursCard(p, t));
   panel.append(el("h2", "section-title", t.pop_sec_where));
-  add(provincesCard(p, t));
+  add(provincesCard(p, t, e.stat.population && e.stat.population.census));
   panel.append(el("h2", "section-title", t.pop_sec_work));
   two(workChart(p, t), remitChart(p, t));
   add(censusCard(e));

@@ -74,6 +74,8 @@ const CHECK = `
       ["rubber world", { eco_tab: "rubber", eco_rubber_view: "world" }, "economy"],
       ["rubber own prices", { eco_tab: "rubber", eco_rubber_view: "mine" }, "economy"],
       ["land", { eco_tab: "land" }, "economy"],
+      ["inflation", { eco_tab: "inflation" }, "economy"],
+      ["method", {}, "method"],
     ]) {
       const r = await open(store, hash, name.replace(/ /g, ""));
       check("live screen: " + name, r.cards > 0 && r.overflow <= 0 && !r.badText.length && !r.placeholders.length, JSON.stringify(r));
@@ -134,6 +136,47 @@ const CHECK = `
     await open({}, "forecast", "hintcases");
     const hint = await page.eval(`const tiles = [...document.querySelectorAll("#view .stats .stat")].slice(0, 2).map((x) => ({ value: x.querySelector(".stat-value").textContent, sub: x.querySelector(".stat-sub") ? x.querySelector(".stat-sub").textContent : "" })); return tiles.map((x) => ({ ...x, n: Number((x.sub.match(/\\d+/) || ["0"])[0]) }));`);
     check("live: kip hint - a percentage only from 20 checked cases", hint.length === 2 && hint.every((x) => (/^\d+%$/.test(x.value) ? x.n >= 20 : x.value === "กรณียังไม่พอ")), JSON.stringify(hint));
+    // ---------- audit 2026-10-02, group P2 ----------
+    // P2-9: the page's policy is in force and refused nothing so far; the chart library carries its hash
+    const policy = await page.eval(`const m = document.querySelector('meta[http-equiv="Content-Security-Policy"]'); const s = [...document.scripts].filter((x) => /chart\\.umd\\.min\\.js/.test(x.src)); return { policy: m ? m.content.slice(0, 40) : "", inline: [...document.scripts].filter((x) => !x.src).length, hashes: s.map((x) => x.integrity.slice(0, 13)), chart: typeof Chart };`);
+    const refused = page.errors.filter((e) => /Content Security Policy|Refused to|violates the following/i.test(e));
+    check("live: the page's policy is in force, refused nothing, and the chart library is checked by its hash", policy.policy.startsWith("default-src 'self'") && policy.inline === 0 && policy.hashes.length >= 1 && policy.hashes.every((h) => h.startsWith("sha512-")) && policy.chart === "function" && refused.length === 0, JSON.stringify(policy) + " " + refused.slice(0, 2).join(" || "));
+    // P2-8: the method page, and every source of every data file on the Settings page
+    const methodPage = await open({}, "method", "method");
+    const sections = await page.eval(`return document.querySelectorAll("#view .method-card").length;`);
+    check("live: method page - how every number is worked out", sections === 11 && !methodPage.badText.length && !methodPage.placeholders.length, sections + " sections " + JSON.stringify(methodPage));
+    await open({}, "settings", "sources");
+    await page.until(`document.querySelectorAll("#view .src-group").length > 0`, 20000);
+    const allSources = await page.eval(`const g = [...document.querySelectorAll("#view .src-group")]; return { groups: g.length, sources: document.querySelectorAll("#view .src-item").length, failed: g.filter((x) => x.querySelector(".badge-bad")).map((x) => x.querySelector(".src-group-title").textContent.slice(0, 30)), dated: [...document.querySelectorAll("#view .src-meta")].filter((x) => /\\d/.test(x.textContent)).length };`);
+    check("live: settings - every source of every data file, with its dates, nothing failed", allSources.groups === 15 && allSources.sources >= 75 && allSources.failed.length === 0 && allSources.dated >= 60, JSON.stringify(allSources));
+    // P2-1: the gold premium is like for like; the multiplier of the estimate is named as such
+    await open({}, "gold", "premium");
+    const premium = await page.eval(`return [...document.querySelectorAll('#view .card[data-kind="estimated"] .row')].map((x) => x.innerText.replace(/\\s+/g, " ")).slice(-2);`);
+    check("live: gold - premium per gram of fine gold, and the multiplier under its own name", premium.length === 2 && /[+−]\d+\.\d%/.test(premium[0]) && /× \d\.\d{3}/.test(premium[1]), premium.join(" | "));
+    // P2-2, P2-6: the kip tile shows the kip's own change; the yearly rate has dollar / baht / yuan and two lines
+    await open({ eco_tab: "inflation", eco_fx_cur: "THB" }, "economy", "kip");
+    const kip = await page.eval(`const bar = document.querySelector("#view .stack > .choice"); const c = bar ? bar.parentElement.querySelector(".chart-card") : null; return { buttons: bar ? bar.querySelectorAll("button").length : 0, lines: c ? c.querySelectorAll(".readout-row").length : 0, line: [...document.querySelectorAll("#view .readout-label")].some((x) => x.textContent.includes("ดอลลาร์แพงขึ้น")), old: document.getElementById("view").innerText.includes("กีบอ่อนค่าเทียบ USD") };`);
+    check("live: inflation tab - 'dollar dearer' line, yearly rate for dollar / baht / yuan as two lines", kip.buttons === 3 && kip.lines === 2 && kip.line && !kip.old, JSON.stringify(kip));
+    // P2-5, P2-6: the debt charts rest on this year, name the peak, and show the World Bank's count
+    await open({ eco_tab: "debt" }, "economy", "debtcharts");
+    const debtCharts = await page.eval(`return { now: [...document.querySelectorAll("#view .readout-when")].filter((x) => x.textContent.includes("ปัจจุบัน")).length, peak: document.querySelectorAll("#view .readout-peak").length, lines: document.querySelector("#view .chart-card").querySelectorAll(".readout-row").length };`);
+    check("live: debt tab - read-outs rest on this year, the peak is named, two counts of the debt", debtCharts.now === 2 && debtCharts.peak === 1 && debtCharts.lines === 5, JSON.stringify(debtCharts));
+    // P2-3: a multiple of Laos' average earnings only from Laos' own year
+    await open({ eco_tab: "wages" }, "economy", "avgyear");
+    const avg = await page.eval(`const c = [...document.querySelectorAll("#view .card")].filter((x) => x.querySelector(".bar-cell") && !x.querySelector(".wage-table")).pop(); const head = c ? c.querySelector("thead").innerText : ""; const cells = c ? [...c.querySelectorAll("tbody tr")].map((tr) => tr.cells[2].innerText.replace(/\\s+/g, " ")) : []; return { head: head.replace(/\\s+/g, " "), dashes: cells.filter((x) => x === "—").length, same: cells.filter((x) => /USD/.test(x)).length, rows: cells.length };`);
+    check("live: wages tab - 'times Laos' from one year only (others show the value of that year or a dash)", /\(.*20\d\d\)/.test(avg.head) && avg.rows >= 14 && avg.same >= 3 && avg.dashes >= 3, JSON.stringify(avg));
+    // P2-11, P2-10: the risk card (numbers only); every neighbour's number names its year; sold against produced
+    await open({ eco_tab: "overview" }, "economy", "risk");
+    const risk = await page.eval(`const c = document.querySelector("#view .risk-card"); return c ? [...c.querySelectorAll("li")].map((x) => /\\d/.test(x.textContent)) : [];`);
+    check("live: economy overview - risk card, every line with its numbers", risk.length === 4 && risk.every(Boolean), JSON.stringify(risk));
+    await open({ eco_tab: "population" }, "economy", "nbyears");
+    const nb = await page.eval(`return document.querySelectorAll("#view .cmp-year").length;`);
+    check("live: population tab - every number of the neighbours' table names its year", nb >= 24, nb + " years shown");
+    await open({ eco_tab: "rubber", eco_rubber_view: "lao" }, "economy", "sold");
+    await page.until(`document.getElementById("view").innerText.includes("ทำไมขายออกมากกว่าที่ผลิต")`, 10000);
+    const sold = await page.eval(`return document.getElementById("view").innerText.includes("ทำไมขายออกมากกว่าที่ผลิต");`);
+    check("live: rubber - why more is recorded as sold than as produced", sold);
+
     // the "who buys" view has its two data files (buyers per year, daily border markets)
     await open({ eco_tab: "rubber", eco_rubber_view: "buyers", eco_rubber_border_kind: "cuplump" }, "economy", "buyers");
     const buyers = await page.eval(`return { tiles: document.querySelectorAll("#view .stat").length, charts: document.querySelectorAll("#view canvas").length, failed: document.getElementById("view").innerText.includes("⚠") };`);

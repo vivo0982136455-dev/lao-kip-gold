@@ -364,6 +364,7 @@ button.readout-row:hover .readout-label { color: var(--text); }
 .readout-at { color: var(--muted); white-space: nowrap; }
 .readout-value { flex: none; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); }
 .readout-since { flex: none; min-width: 6.2em; text-align: right; font-size: 0.74rem; }
+.readout-peak { font-size: 0.74rem; color: var(--muted); padding-top: 3px; margin-top: 2px; border-top: 1px dashed var(--grid); }
 .readout-row[aria-pressed="false"] { opacity: 0.45; }
 .readout-row[aria-pressed="false"] .readout-label { text-decoration: line-through; }
 @media (min-width: 900px) { .chart-box { height: 280px; } }
@@ -384,6 +385,21 @@ details table { margin-top: 6px; }
 .status-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; font-size: 0.76rem; color: var(--muted); }
 .card > h3 { font-size: 0.92rem; font-weight: 600; margin-bottom: 8px; }
 .error-text { color: var(--bad-text); font-size: 0.74rem; white-space: normal; }
+/* Settings: the full list of sources - one group per data file, opened by a tap; its state shows without opening */
+.src-summary { margin: 0 0 6px; font-size: 0.86rem; color: var(--text-2); }
+.src-group { margin-top: 0; border-top: 1px solid var(--grid); font-size: 0.86rem; }
+.src-group > summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; color: var(--text); list-style: none; }
+.src-group > summary::-webkit-details-marker { display: none; }
+.src-group > summary::before { content: "▸"; color: var(--muted); flex: none; }
+.src-group[open] > summary::before { content: "▾"; }
+.src-group > summary .badge { flex: none; }
+.src-group-title { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.src-group-count { display: block; font-size: 0.76rem; color: var(--muted); }
+.src-list { list-style: none; margin: 0 0 10px; padding: 0 0 0 18px; }
+.src-item { padding: 6px 0; border-top: 1px dashed var(--grid); }
+.src-item:first-child { border-top: 0; }
+.src-name, .src-meta { overflow-wrap: anywhere; }
+.src-meta { font-size: 0.76rem; color: var(--muted); }
 .status-route { color: var(--text-2); font-size: 0.76rem; font-weight: 400; margin-top: 2px; }
 
 /* Link or label that looks like a button */

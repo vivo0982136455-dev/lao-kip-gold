@@ -41,7 +41,7 @@
 const fs = require("fs");
 const path = require("path");
 const { DATA_DIR, fetchText, readJson, writeIfChanged } = require("./lib/common");
-const { runParts, partsText, throttleArgs } = require("./lib/parts");
+const { runParts, partsText, throttleArgs, stampedSources } = require("./lib/parts");
 const { readPdf } = require("./lib/pdf-text");
 
 const OUT_FILE = path.join(DATA_DIR, "fuel-lao.json");
@@ -406,7 +406,7 @@ async function main(args = process.argv.slice(2)) {
       (p) => `${p.latest.date} ${p.latest.premium}/${p.latest.regular}/${p.latest.diesel} (${p.latest.from}${p.latest.notice ? " no. " + p.latest.notice.no : ""}) | ${p.history.length} confirmed notices since ${p.history.length ? p.history[0][0] : "-"} | ${p.waiting ? p.waiting.count + " newer notice(s) not confirmed" : "nothing newer"}`,
     ],
   ]);
-  const text = partsText({ sources: SOURCES, checked_at: now }, out);
+  const text = partsText({ sources: stampedSources(SOURCES, old.sources, out, now), checked_at: now }, out);
   writeIfChanged(OUT_FILE, text);
   console.log(`fuel-lao: ${failed} of 3 parts failed. Wrote data/fuel-lao.json (${(text.length / 1024).toFixed(0)} KB)`);
   return { ok: failed < 3 };

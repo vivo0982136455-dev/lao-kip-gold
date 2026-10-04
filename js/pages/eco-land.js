@@ -7,21 +7,15 @@
 //   - real sale prices: no open data exists (re-checked 2026-10-01); listing sites show asking prices only
 // A decision older than the legal re-valuation period (3 years) is marked.
 
-import { el, card, cardHead, table } from "../ui.js";
+import { el, card, cardHead, table, outLink } from "../ui.js";
 import { formatDate } from "../format.js";
 import { lazyJson } from "../lazy.js";
-import { freshness, sourcesFoot, ready, fill, staticSource, choice, whole, PROVINCES, FOCUS_PROVINCES } from "./eco-common.js";
+import { freshness, sourcesFoot, ready, fill, staticSource, choice, whole, PROVINCES, FOCUS_PROVINCES, dayFull } from "./eco-common.js";
 import { landEntryCard, landEntriesCard, landByProvince } from "./own-entry.js";
 
 // always with the year: the rows span many years
 const dayText = (day, t) => `${Number(day.slice(8, 10))} ${t.months[Number(day.slice(5, 7)) - 1]} ${day.slice(0, 4)}`;
-const link = (text, href) => {
-  const a = el("a", "", text);
-  a.href = href;
-  a.target = "_blank";
-  a.rel = "noopener";
-  return a;
-};
+const link = outLink; // (text, address): the addresses come from the provinces' own pages - https only
 
 // Newest official decision of every province: Map(province -> { decided, href, note })
 function decisions(e, data) {
@@ -124,7 +118,7 @@ function luangPrabangCard(e, own, decided) {
   c.append(cardHead(t.provinces.Louangphabang, "official", false, t));
   const d = decided.get("Louangphabang");
   if (d) c.append(infoRow(t.land_official_doc, decisionText(e, d)), infoRow(t.inv_land_col_doc, link(t.inv_land_open_doc, d.href)));
-  else c.append(el("p", "note", t.land_lpb_none));
+  else c.append(el("p", "note", fill(t.land_lpb_none, { checked: dayFull(e.stat.checked, t) })));
   const ul = el("ul", "watch-list");
   for (const key of ["land_lpb_1", "land_lpb_2"]) ul.append(el("li", "", t[key]));
   c.append(ul);
@@ -194,7 +188,7 @@ export function landTab(panel, e) {
   const c = card("estimated");
   c.append(cardHead(t.inv_land_title, null, false, t));
   const ul = el("ul", "watch-list");
-  for (const key of ["inv_land_1", "inv_land_2", "inv_land_3"]) ul.append(el("li", "", t[key]));
+  for (const key of ["inv_land_1", "inv_land_2", "inv_land_3"]) ul.append(el("li", "", fill(t[key], { checked: dayFull(e.stat.checked, t) })));
   c.append(ul);
   c.append(el("p", "note", t.inv_land_listings));
   const links = el("ul", "watch-list");
@@ -214,7 +208,8 @@ export function landTab(panel, e) {
   w.append(cardHead(t.inv_land_watch_title, null, false, t));
   const wl = el("ul", "watch-list");
   for (const key of ["inv_land_watch_1", "inv_land_watch_2", "inv_land_watch_3", "inv_land_watch_4"]) wl.append(el("li", "", t[key]));
-  w.append(wl);
+  // general reasoning, not a result worked out from Lao land prices (there are none): the card says so
+  w.append(wl, el("p", "note", t.inv_land_watch_note));
   const row = el("div", "watch-links");
   for (const [to, label] of [["gdp", "inv_tab_gdp"], ["inflation", "inv_tab_inflation"], ["fdi", "inv_tab_fdi"], ["debt", "inv_tab_debt"]]) {
     const b = el("button", "btn", t[label]);

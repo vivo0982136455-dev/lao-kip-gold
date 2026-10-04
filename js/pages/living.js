@@ -10,7 +10,7 @@
 //   7) Deposit rates      - BCEL rates for every term, and the LAK rate after inflation
 // Everything is calculated here from stored files. It shows the PAST, it is not a forecast or advice.
 
-import { el, card, cardHead, sectionTitle, statTile, table, emptyState, pctPill } from "../ui.js";
+import { el, card, cardHead, sectionTitle, statTile, table, emptyState, pctPill, sourceLink, outLink } from "../ui.js";
 import { formatNumber, formatPct } from "../format.js";
 import { chartCard, mountCharts } from "../charts.js";
 import { lazyJson } from "../lazy.js";
@@ -291,11 +291,7 @@ function pricesSection(ctx, view) {
   });
   tableCard.append(tbl, el("p", "note", t.living_prices_note));
   const foot = el("div", "card-foot", `${t.source}: `);
-  const a = el("a", "", prices.sources.wfp_markets.source_name);
-  a.href = prices.sources.wfp_markets.source_url;
-  a.target = "_blank";
-  a.rel = "noopener";
-  foot.append(a);
+  foot.append(sourceLink(prices.sources.wfp_markets));
   tableCard.append(foot);
 
   // Chart of the chosen item: this province vs national average
@@ -420,11 +416,7 @@ function depositSection(ctx, view) {
   c.append(nameTable([t.col_term, "LAK", `LAK ${t.col_after_inflation}`, "USD", "THB", "CNY"], rows));
   c.append(el("p", "note", inf ? t.living_deposit_note.replace("{inf}", formatPct(inf[1], 1)).replace("{month}", monthText(inf[0], t)) : t.not_enough_data));
   const foot = el("div", "card-foot", `${t.source}: `);
-  const a = el("a", "", "BCEL");
-  a.href = summary.sources["bcel-deposit"] ? summary.sources["bcel-deposit"].source_url : "https://www.bcel.com.la";
-  a.target = "_blank";
-  a.rel = "noopener";
-  foot.append(a);
+  foot.append(outLink("BCEL", summary.sources["bcel-deposit"] ? summary.sources["bcel-deposit"].source_url : "https://www.bcel.com.la"));
   c.append(foot);
   view.append(c);
 }

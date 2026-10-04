@@ -369,11 +369,76 @@ from the one the audit proposed (marked "checked:" below).
   after its work instead of lingering); the step's limit is 15 minutes. The failed series keep last week's
   values and are marked, as designed.
 
-**P2 - valuable / P3 - nice to have (not started)**: as listed in the audit (gold premium like for like, kip line
-wording, wage multiples of the same year only, numbers out of i18n sentences, chart read-outs, three charts,
-unsupported sentences, sources page, integrity hashes + CSP, notes, risk card; text sizes and contrast, tab index
-+ search on phones, 768 px test, target 0 in points, one real-rate function, unused indicators, i18n split + lint,
-Singapore's date).
+**P2 - valuable (done 2026-10-04, after the owner's "Go")** - every finding was checked against the code first;
+all eleven were right, two had to be done differently from the way the audit proposed (P2-6 b, P2-9 Tesseract).
+- P2-1 Gold premium. `scripts/lib/units.js` `fineGoldPremium()`: fine gold in an LBB bar (99.99% - LBB's own
+  rate panel is headed "LBB Gold Bar 99.99% International Standard", read 2026-10-04) against fine gold in a Thai
+  bar (96.5%, 15.244 g), gram for gram. The two purities are hand-read facts: `data/invest-static.json` "gold",
+  with their sources and the day they were checked; `build-summary.js` reads them there. `build-summary.js` writes `gold_premium.fine_avg_14d` (+ `window_days`,
+  `basis`) next to the unchanged `avg_14d`. Like for like LBB is 3.1% dearer; the plain ratio 1.051 - which the
+  page called "+5.1% premium" - is now shown as what it is, the multiplier of the estimate (it also holds the unit
+  gap 15 / 15.244 g and the purity gap: together about 2%). The adjusted estimate itself is unchanged. The two rows
+  moved from the Phouvong card to the estimate card: they compare LBB with the estimate, not with the shop.
+- P2-2 Kip line. `js/calc.js` `dearer()` and `kipChange()`. The chart line keeps its series and is now called
+  "dollar dearer (in kip)"; the subtitle names the line's own highest month in both measures (October 2022: dollar
+  +66% = kip -40%). The "kip (BOL)" tiles of the overview and the inflation tab show the kip's own change
+  (before / now - 1): -3.5% where "+3.6%" stood under the word "kip".
+- P2-3 Wage multiples. `fetch-wages.js` keeps every year of the ILO's average earnings (`ilo_avg.series`). The
+  column "x Laos" is worked out from the value of Laos' own year (2022) only: Thailand 2.6x (467 USD in 2022), not
+  2.9x from its 2025 number; a country without a 2022 value shows a dash. The year of every bar is still named.
+- P2-4 Numbers in sentences. 33 texts held a typed year (the audit counted 28) and 7 more another hand-read
+  number; all 40 now name them with placeholders, filled from `data/invest-static.json` (new fields: plan number,
+  budget surplus, census number and year, the `edition` of a report, the months a sentence speaks of ...) through
+  `planYears()` and `sourceWords()` in `eco-common.js`. Only the changed part of each sentence was patched, so the
+  wording stayed. `tests/words.js`: same keys and same placeholders in Thai and Lao, no year 2015-2035 typed in
+  any text (the allow-list is empty), and every text the page code names exists.
+- P2-5 Chart read-outs. `charts.js`: `nowLabel` (at rest a line that runs into the future shows the value of now:
+  `restPoint()`), `peak` (one more row), and no "% since the first point" for a line that starts below 5% of its
+  largest value or below zero (`sinceMakesSense()`). Used by every yearly chart with a forecast, the GDP size
+  chart, the population projection and the repayment schedule (now: 2026 = 1,845 m USD, peak 2025 = 2,342 m USD -
+  no longer "latest: 2032"). The table twins are unchanged.
+- P2-6 Three charts. (a) Fuel: Lao diesel a second time in dollars (kip price / BOL's monthly average), all three
+  lines = 100 in the same month. (b) Yearly exchange rate: NOT extended by gluing - the World Bank's official
+  yearly average and our average of BOL's buying and selling rate are 7.1% apart in 2024, so a glued line would
+  show a 2025 fall of the kip that never happened. Two lines side by side, the gap named under the chart; a
+  dollar / baht / yuan choice sits above the chart; baht and yuan before 2021 are worked out through the dollar
+  from the World Bank's series of Thailand and China (two new indicators, and BOL's monthly yuan average).
+  (c) Public debt: the World Bank's count as a second line (2022-2028, hand-read from its two reports:
+  `facts.debt_wb`; `check-data.js` compares it with the three other places that quote these numbers).
+- P2-7 Unsupported sentences. Three sentences of the watch cards now say "general reasoning" (and that this site
+  has not tested it / has no data for Laos); the land card says the same in its title and in a note. i18n only
+  (plus one line that shows the note); the no-advice notes are kept.
+- P2-8 Sources and method. Settings lists every source of every data file - 39 automatic sources in 14 files, read
+  from each file's own `sources` block (`js/pages/sources.js`): edition, the day the source changed its data, the
+  day it was read, licence, and the state of the parts that name it - and the 45 hand-read sources with their
+  publication date and the range of days the facts were checked. The fetchers of the part-based files now stamp
+  `retrieved` per source (`lib/parts.js stampedSources`). The daily list is kept. New page `#/method` (11
+  sections): every limit a sentence names is filled from the constant the code really uses.
+- P2-9 Security. A Content-Security-Policy meta tag (no inline script, no eval; scripts from this site and the two
+  CDNs only; data goes to this site, Google Forms / Sheets and jsDelivr only); the inline script and the inline
+  handler of index.html became `js/chart-backup.js`; an integrity hash on Chart.js for both CDNs (their files are
+  identical: the hash is the one cdnjs publishes, confirmed on the jsDelivr and unpkg copies); Tesseract's entry
+  file is checked by hash before it runs (`ocr.js importChecked`); both workflows pin the two actions to commits;
+  an address from a data file becomes a link only when it is https (`ui.js safeUrl / outLink`), and
+  `check-data.js` refuses any other address in a data file. `tests/security.js` (18 checks): the policy refuses
+  nothing on 19 screens, charts from the second CDN when the first is blocked, a wrong hash is refused, the
+  picture reader reads a test picture under the policy, no connection at all.
+  NOT possible: the browser offers no integrity check for the worker script, the engine and the language file that
+  Tesseract loads by itself inside its worker. They are pinned to exact versions and the policy limits where
+  scripts may come from. (Owner's choice, not taken: host those files on the site itself, about 15 MB.)
+- P2-10 Notes. Rubber, view "Laos": why more is recorded as sold than as produced (2024: China and Viet Nam
+  bought 403 thousand tonnes, the FAO gives 350 as production; customs weigh the goods as shipped - 99% of what
+  China buys is raw "other forms" - while the FAO counts dried rubber, and its Lao figure is not an official one;
+  source: FAO's handbook, `rubber.production_basis`). Neighbours' table of the Population tab: the year stands
+  under every number, and another year than Laos' is marked.
+- P2-11 Risk card on the overview: debt that falls due this year, the reserves (and how many times that debt they
+  are), the share of the debt that is foreign with the dollar's change in 12 months, and oil imports (the World
+  Bank's 6-8% of GDP for the group of net importers that includes Laos) with the Brent price. Numbers only.
+- Tests: see README "ทดสอบ" for the counts of this state.
+
+**P3 - nice to have (not started; waits for the owner's go)**: text sizes and contrast, tab index + search on
+phones, 768 px test, target 0 in points, one real-rate function, unused indicators, i18n split + lint, Singapore's
+date.
 
 ### Phase 8 — Install as an app (2026-10-01, owner agreed)
 - `manifest.webmanifest` (name, colours, icons 192 / 512 / maskable 512, 4 shortcuts) + `icons/` drawn by

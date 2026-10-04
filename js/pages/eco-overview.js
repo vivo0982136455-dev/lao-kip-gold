@@ -4,13 +4,78 @@
 // Every number that another tab also shows comes from eco-latest.js, so the tabs cannot disagree.
 
 import { el, card, cardHead, pctPill } from "../ui.js";
-import { formatNumber } from "../format.js";
-import { usdPerKg as perKg } from "../calc.js"; // US cents per pound -> USD per kg
+import { formatNumber, formatPct } from "../format.js";
+import { usdPerKg as perKg, kipChange, dearer } from "../calc.js"; // usdPerKg: US cents per pound -> USD per kg
 import {
   THIS_YEAR, lastOf, pct, indicator, latest, valueIn, usdText, pctText, freshness, invTile, factsCard,
-  statusBadge, targetStatus, fill, ready, monthText, usdParts,
+  statusBadge, targetStatus, fill, ready, monthText, usdParts, sourcesFoot, sourceOf, staticSource,
 } from "./eco-common.js";
 import { latestInflation, latestReserves, publicDebt, growthNow, debtServiceNow, rangeText, differCard } from "./eco-latest.js";
+
+// ---------- Macro risks (audit 2026-10-02, P2-11) ----------
+// A list of the pressure points the World Bank's reports on Laos name: debt that falls due, the reserves, the share
+// of the debt that is foreign, imported fuel. Each line is only numbers the site already has - the same resolvers
+// as every other tab - with their year or month. No adjectives, no forecast of what will happen, no advice.
+function riskCard(e) {
+  const { t, economy: eco } = e;
+  const F = e.stat.facts;
+  const lines = [];
+  const sources = [];
+  const period = (when) => (when.month ? monthText(when.month, t) : `${t.year} ${when.year}`);
+  const yearAgo = (series) => (series && series.values.length > 12 ? [series.values[series.values.length - 13], lastOf(series.values)] : null);
+
+  const service = debtServiceNow(e);
+  const due = service.ids;
+  if (due) {
+    let text = fill(t.risk_debt_due, { year: due.year, amount: usdText(due.total, t), china: due.china === null ? "—" : pctText(due.china, 0), stock: due.stock });
+    if (service.avg) text += " " + fill(t.risk_debt_avg, service.avg);
+    lines.push(text);
+    sources.push(sourceOf(e, "wb_ids"), service.avg && staticSource(e, service.avg.source));
+  }
+  const res = latestReserves(e);
+  if (res.usd) {
+    let text = fill(t.risk_reserves, { usd: res.usd.value.toFixed(2), when: period(res.usd.when), who: res.usd.src });
+    const m = res.months;
+    if (m) text += " " + fill(m.bol === null ? t.risk_reserves_months : t.risk_reserves_months_two, { months: m.value.toFixed(1), bol: m.bol === null ? "" : m.bol.toFixed(1), when: period(m.when) });
+    if (due) text += " " + fill(t.risk_reserves_vs_due, { times: ((res.usd.value * 1000) / due.total).toFixed(1), year: due.year });
+    lines.push(text);
+    sources.push(res.usd.source, m && m.source && staticSource(e, m.source));
+  }
+  const foreign = F.debt_external;
+  if (foreign) {
+    let text = fill(t.risk_fx_debt, foreign);
+    const usd = yearAgo(eco.monthly && eco.monthly.bol_usd_mid);
+    if (usd) text += " " + fill(t.risk_fx_debt_kip, { pct: formatPct(dearer(usd[0][1], usd[1][1]), 1), month: monthText(usd[1][0], t) });
+    lines.push(text);
+    sources.push(staticSource(e, foreign.source), usd && eco.sources.bol);
+  }
+  const oil = F.oil_imports;
+  if (oil) {
+    let text = fill(t.risk_oil, oil);
+    const brent = yearAgo(eco.monthly && eco.monthly.brent_usd);
+    if (brent) text += " " + fill(t.risk_oil_brent, { price: brent[1][1].toFixed(0), month: monthText(brent[1][0], t), pct: formatPct(pct(brent[0][1], brent[1][1]), 0) });
+    lines.push(text);
+    sources.push(staticSource(e, oil.source), brent && eco.sources.imf_sdmx);
+  }
+  if (!lines.length) return null;
+
+  const c = card("official", "risk-card");
+  c.append(cardHead(t.risk_title, "official", false, t), el("p", "note", t.risk_intro));
+  const ul = el("ul", "watch-list");
+  for (const line of lines) ul.append(el("li", "", line));
+  c.append(ul);
+  const row = el("div", "watch-links");
+  for (const to of ["debt", "inflation", "policy"]) {
+    const b = el("button", "btn", t["inv_tab_" + to]);
+    b.type = "button";
+    b.addEventListener("click", () => e.go(to));
+    row.append(b);
+  }
+  c.append(row);
+  const seen = new Set();
+  c.append(sourcesFoot(t, sources.filter((s) => s && !seen.has(s.source_name) && seen.add(s.source_name))));
+  return c;
+}
 
 export function overviewTab(panel, e) {
   const { t, economy: eco } = e;
@@ -63,13 +128,14 @@ export function overviewTab(panel, e) {
   const fdiGdp = latest(indicator(e, "wb.BX.KLT.DINV.WD.GD.ZS"));
   if (fdiL) stats.append(invTile(t, t.inv_k_fdi, usdParts(fdiL[1], t), fdiGdp ? `${pctText(fdiGdp[1])} ${t.inv_of_gdp} · World Bank` : "World Bank", freshness(t, { year: fdiL[0], stale: fdi.stale })));
 
-  // Kip vs USD over 12 months (BOL monthly averages): up = more kip per dollar = weaker kip
+  // Kip vs USD over 12 months (BOL monthly averages). The arrow is the kip's own change in value
+  // (more kip per dollar = the kip is worth less = down) - see js/calc.js kipChange
   const usd = eco.monthly && eco.monthly.bol_usd_mid;
   const usdNow = usd && lastOf(usd.values);
   const usdAgo = usd && usd.values.length > 12 ? usd.values[usd.values.length - 13] : null;
   if (usdNow && usdAgo) {
-    const tile = invTile(t, t.inv_k_kip, { num: formatNumber(usdNow[1], "LAK"), unit: t.inv_kip_per_usd }, `BOL · ${t.inv_12m_change}`, freshness(t, { month: usdNow[0], stale: usd.stale }));
-    tile.querySelector(".stat-sub").append(" ", pctPill(pct(usdAgo[1], usdNow[1]), { decimals: 1 }));
+    const tile = invTile(t, t.inv_k_kip, { num: formatNumber(usdNow[1], "LAK"), unit: t.inv_kip_per_usd }, `BOL · ${t.inv_kip_12m}`, freshness(t, { month: usdNow[0], stale: usd.stale }));
+    tile.querySelector(".stat-sub").append(" ", pctPill(kipChange(usdAgo[1], usdNow[1]), { decimals: 1 }));
     stats.append(tile);
   }
   panel.append(stats);
@@ -110,6 +176,10 @@ export function overviewTab(panel, e) {
   }
   const [planFrom, planTo] = e.stat.plan.period;
   if (facts.length) panel.append(factsCard(t, t.inv_facts_title, facts, fill(t.inv_facts_note, { from: planFrom, to: planTo, span: planTo - planFrom + 1 })));
+
+  // ---------- The pressure points the reports name, each with the newest number the site has ----------
+  const risks = riskCard(e);
+  if (risks) panel.append(risks);
 
   // ---------- What to watch (for the owner's own situations) ----------
   panel.append(el("h2", "section-title", t.inv_watch_title));

@@ -63,6 +63,36 @@ function vnExports(borders) {
   return Object.entries(rows).filter(([, v]) => v.month).map(([m, v]) => [m, v.month[0], v.month[1]]);
 }
 
+// What the two big buyers recorded as bought from Laos, next to what the FAO gives as Laos' production, for the
+// newest year that has all three numbers (Viet Nam: Comtrade, else a FULL year of its own customs).
+// More was "sold" than "produced" in most years (audit 2026-10-02, P2-10) - the two are weighed differently, and
+// the page must say so instead of leaving the two numbers side by side:
+//   customs record the weight of the goods as shipped; nearly all of what China buys from Laos is recorded as
+//   "other forms" (HS 400129: raw cup lump, unsmoked sheet), which still holds water
+//   the FAO counts production as dried rubber, and its number for Laos is not an official Lao figure
+// -> { year, production, official, bought, raw: { share (%), year } | null } | null   (tonnes)
+export function soldAgainstProduced(borders, world) {
+  const hist = world && world.production && world.production.history && world.production.history.LAO;
+  if (!borders || !hist || !hist.length) return null;
+  const vn = vnImports(borders);
+  const vietnam = (y) => boughtBy(borders, "VNM", y) || (vn.years.has(y) && vn.years.get(y).upTo.endsWith("-12") ? vn.years.get(y) : null);
+  const hit = [...hist].reverse().find(([y]) => boughtBy(borders, "CHN", y) && vietnam(y));
+  if (!hit) return null;
+  const [year, production] = hit;
+  const row = (world.production.rows || []).find((x) => x[0] === "LAO");
+  const forms = borders.forms && borders.forms.buyers && borders.forms.buyers.CHN;
+  const rawYear = forms ? Object.keys(forms).sort().pop() : null;
+  const kinds = rawYear ? Object.values(forms[rawYear]) : [];
+  const all = kinds.reduce((sum, v) => sum + v[0], 0);
+  return {
+    year,
+    production,
+    official: !!row && row[3] === "A", // the FAO's flag: A = an official figure of the country
+    bought: boughtBy(borders, "CHN", year).tonnes + vietnam(year).tonnes,
+    raw: all && forms[rawYear]["400129"] ? { share: (forms[rawYear]["400129"][0] / all) * 100, year: Number(rawYear) } : null,
+  };
+}
+
 // ---------- View "who buys": tiles ----------
 function buyerTiles(r) {
   const { t } = r;

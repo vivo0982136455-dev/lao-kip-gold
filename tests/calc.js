@@ -264,6 +264,57 @@ const test = (name, fn) => {
     assert.equal(units.lakPerLaoBaht(3000000), 45000000); // Lao Bullion Bank: per gram -> per Lao baht (15 g)
     assert.equal(units.mid(22361, 22584), 22472.5);
   });
+  test("gold premium: fine gold against fine gold, gram for gram - not the ratio of two different bars (audit P2-1)", () => {
+    // the two purities are hand-read facts (data/invest-static.json "gold"): the summary is built with them
+    const facts = JSON.parse(fs.readFileSync(path.join(ROOT, "data", "invest-static.json"), "utf8")).gold;
+    const fineness = { lbb: facts.lbb_bar.fineness, thai: facts.thai_bar.fineness };
+    assert.deepEqual(fineness, { lbb: 0.9999, thai: 0.965 });
+    // a Thai bar holds 15.244 x 0.965 = 14.71046 g of fine gold, an LBB "baht" 15 x 0.9999 = 14.9985 g
+    close(units.lakPerFineGram(44131380, 15.244, 0.965), 3000000, 1e-6);
+    close(units.lakPerFineGram(3000000, 1, 0.9999), 3000300.030003, 1e-5);
+    // both at 3,000,000 kip per gram of fine gold: no premium at all ...
+    close(units.fineGoldPremium(3000000 * 0.9999, 44131380, fineness), 1, 1e-12);
+    // ... while the plain ratio of the two bar prices says "2% dearer" (it holds the unit and the purity gap)
+    close((3000000 * 0.9999 * 15) / 44131380, 14.9985 / 14.71046, 1e-12);
+    assert.equal(((3000000 * 0.9999 * 15) / 44131380).toFixed(4), "1.0196");
+    // numbers of the size of 2 October 2026: LBB sells at 3,093,600 kip a gram, an estimate of 44,134,646 kip per Thai baht
+    const plain = (3093600 * 15) / 44134646;
+    assert.equal(plain.toFixed(4), "1.0514"); // what the page used to call "+5.1% premium"
+    assert.equal(units.fineGoldPremium(3093600, 44134646, fineness).toFixed(4), "1.0312"); // like for like: +3.1%
+    close(units.fineGoldPremium(3093600, 44134646, fineness), plain * (14.71046 / 14.9985), 1e-12);
+    // two bars of the same purity: only the unit gap is left (15 g against 15.244 g)
+    close(units.fineGoldPremium(3000000, 3000000 * 15.244, { lbb: 0.965, thai: 0.965 }), 1, 1e-12);
+  });
+  test("kip line: a dearer dollar and a kip that lost value are two different sizes (audit P2-2)", () => {
+    close(calc.dearer(10000, 20000), 100);
+    close(calc.kipChange(10000, 20000), -50);
+    close(calc.dearer(20000, 22000), 10);
+    close(calc.kipChange(20000, 22000), -9.090909090909, 1e-9);
+    // 2022-23 sized: 11,000 -> 17,000 kip per dollar is "+54.5% dearer" but "the kip lost 35.3%"
+    assert.equal(calc.dearer(11000, 17000).toFixed(1), "54.5");
+    assert.equal(calc.kipChange(11000, 17000).toFixed(1), "-35.3");
+    // one follows from the other: lost = dearer / (1 + dearer)
+    for (const [a, b] of [[9317, 22469], [21690, 22469], [22469, 21690]]) close(-calc.kipChange(a, b), (calc.dearer(a, b) / (100 + calc.dearer(a, b))) * 100, 1e-9);
+    close(calc.dearer(500, 500), 0);
+    close(calc.kipChange(500, 500), 0);
+    assert.ok(calc.kipChange(22469, 21690) > 0 && calc.dearer(22469, 21690) < 0); // a cheaper dollar = a kip worth more
+  });
+  const wagesTab = await page("pages/eco-wages.js");
+  test("average earnings: a multiple of Laos only from the value of Laos' own year (audit P2-3)", () => {
+    const avg = {
+      latest: { LAO: { year: 2022, usd: 178 }, THA: { year: 2025, usd: 508 }, CHN: { year: 2022, usd: 807 }, JPN: { year: 2021, usd: 2801 } },
+      series: { LAO: [[2017, 240], [2022, 178]], THA: [[2021, 486], [2022, 467], [2025, 508]], CHN: [[2022, 807]], JPN: [[2020, 2882], [2021, 2801]] },
+    };
+    assert.equal(wagesTab.earningsIn(avg, "THA", 2022), 467); // not the 508 of 2025: 2.6 times Laos, not 2.9
+    assert.equal(wagesTab.earningsIn(avg, "CHN", 2022), 807);
+    assert.equal(wagesTab.earningsIn(avg, "JPN", 2022), null); // no number for Laos' year: a dash, never another year
+    assert.equal(wagesTab.earningsIn(avg, "LAO", 2022), 178);
+    assert.equal(wagesTab.earningsIn(avg, "KOR", 2022), null); // a country the file does not have
+    // a file written before the yearly series existed: only a country whose newest year IS Laos' year has a multiple
+    const old = { latest: avg.latest };
+    assert.equal(wagesTab.earningsIn(old, "CHN", 2022), 807);
+    assert.equal(wagesTab.earningsIn(old, "THA", 2022), null);
+  });
   test("money amounts: millions of dollars are written as millions below a billion, as billions above", () => {
     const t = { unit_usd_bn: "bn", unit_usd_m: "m" };
     assert.equal(eco.usdText(988.46, t), "988.5 m");
@@ -271,6 +322,89 @@ const test = (name, fn) => {
     assert.deepEqual(eco.usdParts(15392.6, t), { num: "15.39", unit: "bn" });
     assert.equal(eco.pctText(4.538), "4.5%");
     assert.equal(eco.pctText(66.6, 0), "67%");
+  });
+
+  // ---------- chart read-outs and the yearly exchange rate (audit P2-5, P2-6) ----------
+  const charts = await page("charts.js");
+  test("read-out at rest: a line that runs into the future shows the value of now, not its far end", () => {
+    const n = null;
+    // labels 2022 ... 2028, now = 2026 (index 4)
+    assert.equal(charts.restPoint([1, 2, 3, 4, n, n, n], 3, 4), 3); // ends before now: its last value
+    assert.equal(charts.restPoint([n, n, n, n, 5, 6, 7], 6, 4), 4); // a forecast: this year, not 2028
+    assert.equal(charts.restPoint([1, 2, 3, 4, 5, 6, 7], 6, 4), 4); // a schedule that runs through now
+    assert.equal(charts.restPoint([n, n, n, n, n, 6, 7], 6, 4), 5); // starts only next year: its first value
+    assert.equal(charts.restPoint([1, 2, n, n, n, n, 7], 6, 4), 1); // nothing at now: the last one before it
+    assert.equal(charts.restPoint([1, 2, 3, 4, 5, 6, 7], 6, -1), 6); // a chart without "now": the last value, as always
+    assert.equal(charts.restPoint([1, 2, 3, 4, 5, n, n], 4, 4), 4);
+  });
+  test("read-out: no '% since the first point' for a line that starts near zero or below it", () => {
+    assert.equal(charts.sinceMakesSense([33.9, 500, 988.5]), false); // foreign investment 2000 -> 2024: "+2,816%" says nothing
+    assert.equal(charts.sinceMakesSense([9317, 14000, 22469]), true);
+    assert.equal(charts.sinceMakesSense([-2.5, 3, 4]), false);
+    assert.equal(charts.sinceMakesSense([0, 3, 4]), false);
+    assert.equal(charts.sinceMakesSense([null, 50, null, 900, 1000]), true); // 5% of the largest value is the limit
+    assert.equal(charts.sinceMakesSense([null, 49, null, 900, 1000]), false);
+    assert.equal(charts.sinceMakesSense([5]), false);
+  });
+  const inflationTab = await page("pages/eco-inflation.js");
+  test("yearly exchange rate: two sources side by side (never glued), the baht through the dollar, the running year as it stands", () => {
+    const months = (year, count, value) => Array.from({ length: count }, (_, i) => [`${year}-${String(i + 1).padStart(2, "0")}`, value]);
+    const economy = {
+      indicators: {
+        "wb.PA.NUS.FCRF": { values: [[2022, 14000], [2023, 17500], [2024, 20000]] },
+        "wb.PA.NUS.FCRF.THA": { values: [[2022, 35], [2023, 35], [2024, 40], [2025, 33]] },
+      },
+      monthly: {
+        // 2023: half a year only (not counted) · 2024 and 2025 complete · 2026: three months so far
+        bol_usd_mid: { values: [...months(2023, 6, 18000), ...months(2024, 12, 21400), ...months(2025, 12, 21600), ["2026-01", 22000], ["2026-02", 22100], ["2026-03", 22200]] },
+        bol_thb_mid: { values: months(2024, 12, 600) },
+      },
+    };
+    const usd = inflationTab.fxYears(economy, "USD", 2026);
+    assert.deepEqual(usd.years, [2022, 2023, 2024, 2025, 2026]);
+    assert.deepEqual(usd.wb, [14000, 17500, 20000, null, null]); // the World Bank's line simply ends
+    assert.deepEqual(usd.bol, [null, null, 21400, 21600, 22100]); // ... and the central bank's line stands next to it
+    assert.deepEqual(usd.partial, { year: 2026, month: "2026-03" });
+    assert.equal(usd.gap.year, 2024);
+    close(usd.gap.pct, 7, 1e-9); // the two counts of the same year are 7% apart: one glued line would invent a 2025 jump
+    const thb = inflationTab.fxYears(economy, "THB", 2026);
+    assert.deepEqual(thb.years, [2022, 2023, 2024]);
+    assert.deepEqual(thb.wb, [400, 500, 500]); // kip per dollar ÷ baht per dollar
+    assert.deepEqual(thb.bol, [null, null, 600]);
+    assert.equal(thb.partial, null);
+    close(thb.gap.pct, 20, 1e-9);
+    assert.equal(inflationTab.fxYears(economy, "CNY", 2026), null); // no yuan series in this file: no chart, never a guess
+    assert.equal(inflationTab.fxYears({ indicators: {} }, "USD", 2026), null);
+  });
+
+  // ---------- the list of every source on the Settings page (audit P2-8) ----------
+  const sourcesPage = await page("pages/sources.js");
+  test("sources list: each source with the state of the parts that name it, and the day it was last read", () => {
+    const file = {
+      sources: { a: { source_name: "A", retrieved: "2026-10-03" }, b: { source_name: "B" } },
+      checked_at: "2026-10-04T01:00:00Z",
+      p1: { source: "a", stale: false, values: [[2024, 1]] },
+      p2: { source: "b", stale: true, last_error: { message: "HTTP 502" } },
+      group: { x: { source: "a", stale: false }, y: { source: "b", stale: false } },
+    };
+    const rows = sourcesPage.sourcesOf(file);
+    assert.deepEqual(rows.map((r) => [r.id, r.retrieved, r.parts, r.failed, r.error]), [["a", "2026-10-03", 2, 0, null], ["b", "2026-10-04", 2, 1, "HTTP 502"]]);
+    // a file with ONE source whose parts do not name it: every part counts for that source
+    const single = { source: { source_name: "S" }, stale: false, provinces: { A: { stale: true, last_error: { message: "page not found" } }, B: { stale: false } } };
+    assert.deepEqual(sourcesPage.sourcesOf(single).map((r) => [r.id, r.retrieved, r.parts, r.failed, r.error]), [["main", null, 3, 1, "page not found"]]);
+    assert.deepEqual(sourcesPage.sourcesOf(null), []);
+    assert.deepEqual(sourcesPage.sourcesOf({ sources: {} }), []);
+    // the real files: every one names at least one source, and nothing in them is counted as failed by mistake
+    for (const [name] of sourcesPage.SOURCE_FILES) {
+      const real = JSON.parse(fs.readFileSync(path.join(ROOT, "data", name), "utf8"));
+      const list = sourcesPage.sourcesOf(real);
+      assert.ok(list.length > 0, `${name}: no sources found`);
+      for (const r of list) assert.ok(r.parts > 0 && r.src.source_name, `${name} ${r.id}: no part names this source`);
+    }
+  });
+  test("hand-read facts: the days they were checked are shown as a range, not as the newest day alone", () => {
+    assert.deepEqual(sourcesPage.checkedDays({ checked: "2026-10-01", a: { checked: "2026-10-04" }, b: [{ checked: "2026-10-02" }], c: { checked: "soon" } }), ["2026-10-01", "2026-10-04"]);
+    assert.equal(sourcesPage.checkedDays({ a: 1 }), null);
   });
 
   // ---------- accuracy of the kip hint (audit P1-9) ----------

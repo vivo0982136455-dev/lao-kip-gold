@@ -7,6 +7,12 @@
 
 const J = "https://cdn.jsdelivr.net/npm/";
 const TESSERACT_ESM = J + "tesseract.js@7.0.0/dist/tesseract.esm.min.js";
+// The exact published file of tesseract.js 7.0.0 (computed from the jsDelivr copy and compared with unpkg's copy of
+// the same npm package, 2026-10-04). The library's entry file runs only when it matches (audit 2026-10-02, P2-9).
+// What the browser offers no check for: the worker script, the engine and the language file, which the library
+// loads by itself inside its worker. They are pinned to exact versions above, and the page's Content-Security-
+// Policy lets scripts come from this site and the two CDNs only.
+const TESSERACT_INTEGRITY = "sha384-fDdNU3AFf+hEiUiSjD96lSEFawtCYOWQFSrFyHZOkX2jhwuUQKiSOAgWNfuKg4B6";
 const WORKER_OPTIONS = {
   workerPath: J + "tesseract.js@7.0.0/dist/worker.min.js",
   corePath: J + "tesseract.js-core@7.0.0", // must stay pinned: the unversioned core is an older, incompatible release
@@ -21,6 +27,46 @@ function withTimeout(promise, ms, what) {
     timer = setTimeout(() => reject(new Error(`timeout: ${what}`)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Import a module from another host only when the file is exactly the expected one.
+//   1) a browser with "modulepreload": the file is fetched by a <link rel="modulepreload" integrity=...>; the
+//      browser itself compares the hash, and the import below uses that very copy (one fetch per address)
+//   2) an older browser: the file is fetched and hashed here before the import
+// A file that does not match is never run: the picture is then entered by hand as before.
+const checked = new Map(); // address -> promise of the check
+export function importChecked(url, integrity) {
+  if (!checked.has(url)) {
+    const check = (async () => {
+      let preload = false;
+      try {
+        preload = document.createElement("link").relList.supports("modulepreload");
+      } catch {
+        /* very old browser */
+      }
+      if (preload) {
+        await new Promise((resolve, reject) => {
+          const link = document.createElement("link");
+          link.rel = "modulepreload";
+          link.href = url;
+          link.integrity = integrity;
+          link.crossOrigin = "anonymous";
+          link.onload = resolve;
+          link.onerror = () => reject(new Error("integrity check failed or file not reachable: " + url));
+          document.head.append(link);
+        });
+      } else {
+        const res = await fetch(url, { mode: "cors", credentials: "omit" });
+        if (!res.ok) throw new Error("file not reachable: " + url);
+        const digest = await crypto.subtle.digest("SHA-384", await res.arrayBuffer());
+        const hash = "sha384-" + btoa(String.fromCharCode(...new Uint8Array(digest)));
+        if (hash !== integrity) throw new Error("integrity check failed: " + url);
+      }
+    })();
+    checked.set(url, check);
+    check.catch(() => checked.delete(url)); // a failed download may be tried again
+  }
+  return checked.get(url).then(() => import(url));
 }
 
 // Big camera photos -> JPEG of at most MAX_SIDE px. Screenshots are used as they are.
@@ -50,7 +96,7 @@ async function shrinkIfHuge(file) {
 export async function readImageText(file, { score = () => 0, enough = 0, onProgress } = {}) {
   const report = (stage, progress) => onProgress && onProgress({ stage, progress: progress || 0 });
   report("load", 0);
-  const { default: Tesseract } = await withTimeout(import(TESSERACT_ESM), 60000, "load OCR library");
+  const { default: Tesseract } = await withTimeout(importChecked(TESSERACT_ESM, TESSERACT_INTEGRITY), 60000, "load OCR library");
   const worker = await withTimeout(
     Tesseract.createWorker("eng", 1, {
       ...WORKER_OPTIONS,

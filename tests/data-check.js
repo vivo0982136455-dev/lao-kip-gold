@@ -61,6 +61,26 @@ const DAMAGE = [
   ["a publication date that is no date", "invest-static.json", (d) => (d.sources.wb_lem_2606.published = "summer 2026"), /source wb_lem_2606: "published" is not a day, a month or a year/],
   ["a section checked in the future", "invest-static.json", (d) => (d.facts.checked = tomorrow), /facts: checked on .* which is in the future/],
   ["a section that does not say when it was checked", "invest-static.json", (d) => delete d.plan.checked, /plan: does not say when it was last checked/],
+  ["the World Bank's debt number in the chart series no longer the one of the sentences", "invest-static.json", (d) => (d.facts.debt_wb.values.find(([y]) => y === d.facts.debt_peak.now_year)[1] += 0.9), /facts\.debt_peak \(now\): .* two copies of one number differ/],
+  ["the World Bank's debt forecast in the outlook table changed, the chart series not", "invest-static.json", (d) => (d.policy.outlook.rows.debt[d.policy.outlook.rows.debt.length - 1] = 70), /policy\.outlook\.debt: 70% for .* two copies of one number differ/],
+  ["a debt of 1,310% of GDP in the chart series (a typing slip)", "invest-static.json", (d) => (d.facts.debt_wb.values[0][1] = 1310), /facts\.debt_wb .*outside what "% of GDP" can be/],
+  ["a link in a data file that is not https", "land.json", (d) => {
+    const visit = (node) => {
+      if (!node || typeof node !== "object") return false;
+      for (const [k, v] of Object.entries(node)) {
+        if (typeof v === "string" && v.startsWith("https://")) {
+          node[k] = "http://" + v.slice(8);
+          return true;
+        }
+        if (visit(v)) return true;
+      }
+      return false;
+    };
+    if (!visit(d)) throw new Error("land.json holds no link to damage");
+  }, /land\.json.*: a link that is not https/],
+  ["a link in a data file that would run a script", "report-watch.json", (d) => (d.sources.wb_wds.source_url = "javascript:alert(1)"), /a link that is not https: "javascript:alert\(1\)"/],
+  ["a gold purity typed as a percentage (99.99 instead of 0.9999)", "invest-static.json", (d) => (d.gold.lbb_bar.fineness = 99.99), /gold\.lbb_bar: fineness 99\.99 is not a share/],
+  ["a gold purity without its source", "invest-static.json", (d) => delete d.gold.thai_bar.source, /gold\.thai_bar: a fact without a source/],
   ["a hint marked right although it was wrong", path.join("forecast", "hints.json"), (d) => {
     const h = d.hints.find((x) => x.status === "resolved");
     h.correct.usd = !h.correct.usd;

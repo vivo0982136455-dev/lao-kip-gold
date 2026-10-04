@@ -537,6 +537,166 @@ const CHECK = `
       }
     }
 
+    // ---------- 2n. audit group P2: the states of the new parts ----------
+    const readJson = (name) => JSON.parse(fs.readFileSync(path.join(ROOT, "data", name), "utf8"));
+    const serve = (name, data) => site.override.set("/data/" + name, typeof data === "string" ? data : JSON.stringify(data));
+    const need = (r, ok, what) => {
+      if (!ok) r.badText.push(what);
+    };
+    const P2_WORDS = {
+      th: { now: "ปัจจุบัน", peak: "สูงสุด", sold: "ทำไมขายออกมากกว่าที่ผลิต", failed: "โหลดรายการของชุดนี้ไม่สำเร็จ", general: "เหตุผลทั่วไป" },
+      lo: { now: "ປັດຈຸບັນ", peak: "ສູງສຸດ", sold: "ເປັນຫຍັງຂາຍອອກຫຼາຍກວ່າທີ່ຜະລິດ", failed: "ໂຫຼດລາຍການຂອງຊຸດນີ້ບໍ່ສຳເລັດ", general: "ເຫດຜົນທົ່ວໄປ" },
+    };
+    const text = `return document.getElementById("view").innerText;`;
+    for (const lang of ["th", "lo"]) {
+      const w = P2_WORDS[lang];
+      // gold: the like-for-like premium and the multiplier are two rows; an older summary file has neither (P2-1)
+      await open(lang, {}, "gold");
+      let r = await page.eval(CHECK);
+      let rows = await page.eval(`return [...document.querySelectorAll('#view .card[data-kind="estimated"] .row')].map((x) => x.innerText.replace(/\\s+/g, " "));`);
+      need(r, rows.some((x) => /LBB .*[+−]\d+\.\d%/.test(x)) && rows.some((x) => /× 1\.\d{3}/.test(x)), "gold: premium rows " + JSON.stringify(rows.slice(-2)));
+      report(`${lang} gold: like-for-like premium and the multiplier`, r, lang === "th" ? rows.slice(-2).join(" | ") : "");
+      const summary = readJson("summary.json");
+      for (const [name, premium] of [["an older summary file", { avg_14d: summary.gold_premium.avg_14d, days_used: summary.gold_premium.days_used, last_day: summary.gold_premium.last_day }], ["no premium yet", null]]) {
+        serve("summary.json", { ...summary, gold_premium: premium });
+        await open(lang, {}, "gold");
+        report(`${lang} gold: ${name}`, await page.eval(CHECK));
+        await open(lang, {}, "method");
+        report(`${lang} method page: ${name}`, await page.eval(CHECK));
+      }
+      site.override.clear();
+
+      // method page: every section, every number filled in
+      await open(lang, {}, "method");
+      r = await page.eval(CHECK);
+      const method = await page.eval(`return { cards: document.querySelectorAll("#view .method-card").length, lines: document.querySelectorAll("#view .method-card li").length, dash: document.getElementById("view").innerText.includes("—") };`);
+      need(r, method.cards === 11 && method.lines >= 24, "method page: " + JSON.stringify(method));
+      report(`${lang} method page`, r, lang === "th" ? JSON.stringify(method) : "");
+
+      // settings: every source of every file; a part that failed and a file that does not load are said so (P2-8)
+      const groupsInfo = `return [...document.querySelectorAll("#view .src-group")].map((g) => ({ title: g.querySelector(".src-group-title").textContent.slice(0, 30), badge: g.querySelector(".badge").className, items: g.querySelectorAll(".src-item").length, errors: [...g.querySelectorAll(".error-text")].map((x) => x.textContent.slice(0, 200)) }));`;
+      const sourcesReady = () => page.until(`document.querySelectorAll("#view .src-group").length > 0`, 15000);
+      await open(lang, {}, "settings");
+      await sourcesReady();
+      r = await page.eval(CHECK);
+      let groups = await page.eval(groupsInfo);
+      need(r, groups.length === 15 && groups.every((g) => g.items > 0) && groups.slice(0, 14).every((g) => g.badge.includes("badge-ok")), "sources list: " + JSON.stringify(groups.map((g) => [g.items, g.badge])));
+      await page.eval(`for (const d of document.querySelectorAll("#view details")) d.open = true;`);
+      await sleep(300);
+      const opened = await page.eval(CHECK);
+      need(opened, true, "");
+      report(`${lang} settings: all sources, every group opened`, { ...opened, badText: [...r.badText, ...opened.badText] }, lang === "th" ? `${groups.length} groups, ${groups.reduce((n, g) => n + g.items, 0)} sources` : "");
+      const wagesFile = readJson("wages.json");
+      serve("wages.json", { ...wagesFile, ilo_avg: { ...wagesFile.ilo_avg, stale: true, last_error: { message: "HTTP 502 from the test", at: "2026-10-04T00:00:00Z" } } });
+      serve("land.json", "{ this is not JSON");
+      await open(lang, {}, "settings");
+      await sourcesReady();
+      r = await page.eval(CHECK);
+      groups = await page.eval(groupsInfo);
+      const failing = groups.filter((g) => g.badge.includes("badge-bad"));
+      need(r, failing.length === 2 && failing.some((g) => g.errors.some((x) => x.includes("HTTP 502 from the test"))) && failing.some((g) => g.errors.some((x) => x.includes(w.failed))), "sources list with failures: " + JSON.stringify(failing));
+      report(`${lang} settings: a failed part and a file that does not load`, r, lang === "th" ? JSON.stringify(failing.map((g) => g.errors)) : "");
+      site.override.clear();
+
+      // wages: a multiple of Laos only from the same year; an older file without the yearly series (P2-3)
+      const avgRows = `return [...document.querySelectorAll("#view .card")].filter((c) => c.querySelector(".bar-cell") && !c.querySelector(".wage-table")).map((c) => [...c.querySelectorAll("tbody tr")].map((tr) => tr.cells[0].innerText.replace(/\\s+/g, " ") + " => " + tr.cells[2].innerText.replace(/\\s+/g, " "))).pop() || [];`;
+      await open(lang, { eco_tab: "wages" });
+      r = await page.eval(CHECK);
+      rows = await page.eval(avgRows);
+      const laoYear = wagesFile.ilo_avg.latest.LAO.year;
+      const otherYear = Object.entries(wagesFile.ilo_avg.latest).filter(([, v]) => v.year !== laoYear);
+      const withSeries = otherYear.filter(([iso]) => (wagesFile.ilo_avg.series[iso] || []).some(([y]) => y === laoYear)).length;
+      need(r, rows.length === Object.keys(wagesFile.ilo_avg.latest).length && rows.filter((x) => x.endsWith("=> —")).length === otherYear.length - withSeries && rows.filter((x) => x.includes(String(laoYear)) && /=> \d/.test(x)).length >= withSeries, `average earnings: ${JSON.stringify(rows)}`);
+      report(`${lang} wages: multiples of Laos from one year only`, r, lang === "th" ? `${rows.length} rows, ${rows.filter((x) => x.endsWith("=> —")).length} without a number for ${laoYear}` : "");
+      const { series, ...latestOnly } = wagesFile.ilo_avg;
+      serve("wages.json", { ...wagesFile, ilo_avg: latestOnly });
+      await open(lang, { eco_tab: "wages" });
+      r = await page.eval(CHECK);
+      rows = await page.eval(avgRows);
+      need(r, rows.filter((x) => x.endsWith("=> —")).length === otherYear.length, `average earnings without the yearly series: ${JSON.stringify(rows)}`);
+      report(`${lang} wages: a file without the yearly series`, r);
+      site.override.clear();
+
+      // population: a neighbour whose number is from another year is marked (P2-10)
+      const pop = readJson("population.json");
+      const tha = pop.neighbours.rows.THA;
+      serve("population.json", { ...pop, neighbours: { ...pop.neighbours, rows: { ...pop.neighbours.rows, THA: { ...tha, urban: [tha.urban[0] - 2, tha.urban[1]] } } } });
+      await open(lang, { eco_tab: "population" });
+      r = await page.eval(CHECK);
+      const marks = await page.eval(`return { off: [...document.querySelectorAll("#view .cmp-year-off")].map((x) => x.textContent), years: document.querySelectorAll("#view .cmp-year").length };`);
+      need(r, marks.off.length === 1 && marks.off[0].includes(String(tha.urban[0] - 2)) && marks.years >= 24, "neighbours: " + JSON.stringify(marks));
+      report(`${lang} population: a neighbour's number from another year is marked`, r, lang === "th" ? JSON.stringify(marks) : "");
+      site.override.clear();
+
+      // debt: "now" in the read-outs, the peak of the schedule, the World Bank's line; without that hand-read series (P2-5, P2-6)
+      const debtInfo = `return { heads: [...document.querySelectorAll("#view .readout-when")].map((x) => x.textContent), peak: [...document.querySelectorAll("#view .readout-peak")].map((x) => x.textContent), rows: [...document.querySelectorAll("#view .chart-card")].map((c) => c.querySelectorAll(".readout-row").length) };`;
+      await open(lang, { eco_tab: "debt" });
+      r = await page.eval(CHECK);
+      let debt = await page.eval(debtInfo);
+      need(r, debt.heads.filter((x) => x.includes(w.now) && x.includes(String(thisYear))).length === 2 && debt.peak.length === 1 && debt.peak[0].includes(w.peak) && debt.rows[0] === 5, "debt charts: " + JSON.stringify(debt));
+      report(`${lang} debt: this year in the read-outs, the peak, two counts of the debt`, r, lang === "th" ? JSON.stringify(debt) : "");
+      const { debt_wb, ...otherFacts } = stat.facts;
+      serve("invest-static.json", { ...stat, facts: otherFacts });
+      await open(lang, { eco_tab: "debt" });
+      r = await page.eval(CHECK);
+      debt = await page.eval(debtInfo);
+      need(r, debt.rows[0] === 3, "debt chart without the World Bank series: " + JSON.stringify(debt));
+      report(`${lang} debt: without the World Bank's series`, r);
+      site.override.clear();
+
+      // overview: the risk card - every line is numbers; with facts missing it gets shorter, never empty words (P2-11)
+      await open(lang, { eco_tab: "overview" });
+      r = await page.eval(CHECK);
+      let risk = await page.eval(`const c = document.querySelector("#view .risk-card"); return c ? [...c.querySelectorAll("li")].map((x) => x.textContent) : null;`);
+      need(r, risk && risk.length === 4 && risk.every((x) => /\d/.test(x)), "risk card: " + JSON.stringify(risk));
+      report(`${lang} overview: risk card`, r, lang === "th" && risk ? risk.map((x) => x.slice(0, 46)).join(" | ") : "");
+      const { debt_external, oil_imports, ...fewFacts } = stat.facts;
+      serve("invest-static.json", { ...stat, facts: fewFacts });
+      await open(lang, { eco_tab: "overview" });
+      r = await page.eval(CHECK);
+      risk = await page.eval(`const c = document.querySelector("#view .risk-card"); return c ? [...c.querySelectorAll("li")].map((x) => x.textContent) : null;`);
+      need(r, risk && risk.length === 2, "risk card with two facts missing: " + JSON.stringify(risk));
+      report(`${lang} overview: risk card with facts missing`, r);
+      site.override.clear();
+
+      // inflation: the yearly exchange rate for the dollar, the baht and the yuan; a file without the baht series (P2-6)
+      for (const cur of ["USD", "THB", "CNY"]) {
+        await open(lang, { eco_tab: "inflation", eco_fx_cur: cur });
+        r = await page.eval(CHECK);
+        const fx = await page.eval(`const pressed = document.querySelector('#view .choice button[aria-pressed="true"]'); const c = pressed ? pressed.closest(".stack").querySelector(".chart-card") : null; return { pressed: pressed ? pressed.textContent : null, rows: c ? c.querySelectorAll(".readout-row").length : 0, drawn: c ? !!Chart.getChart(c.querySelector("canvas")) : false, unit: c ? c.querySelector(".chart-sub").textContent : "" };`);
+        need(r, fx.pressed && fx.pressed.includes(cur) && fx.rows === 2 && fx.drawn && fx.unit.includes(cur), "yearly exchange rate: " + JSON.stringify(fx));
+        report(`${lang} inflation: yearly exchange rate ${cur}`, r, lang === "th" ? fx.unit.slice(0, 60) : "");
+      }
+      const eco = readJson("economy.json");
+      const { "wb.PA.NUS.FCRF.THA": gone, ...otherIndicators } = eco.indicators;
+      serve("economy.json", { ...eco, indicators: otherIndicators });
+      await open(lang, { eco_tab: "inflation", eco_fx_cur: "THB" });
+      r = await page.eval(CHECK);
+      const noBaht = await page.eval(`return document.querySelectorAll("#view .choice").length;`);
+      need(r, noBaht === 0, "the baht chart without its series is still there: " + noBaht);
+      report(`${lang} inflation: a file without the baht series`, r);
+      site.override.clear();
+      await open(lang, { eco_tab: "inflation", eco_fx_cur: "USD" });
+
+      // rubber, view "Laos": why more is sold than produced; the land tab says what is general reasoning (P2-10, P2-7)
+      await open(lang, { eco_tab: "rubber", eco_rubber_view: "lao" });
+      await page.until(`document.getElementById("view").innerText.includes(${JSON.stringify(w.sold)})`, 8000);
+      r = await page.eval(CHECK);
+      need(r, (await page.eval(text)).includes(w.sold), "rubber: the note on sold and produced is missing");
+      report(`${lang} rubber: sold and produced`, r);
+      await open(lang, { eco_tab: "land" });
+      r = await page.eval(CHECK);
+      need(r, (await page.eval(text)).split(w.general).length >= 3, "land: general reasoning is not marked");
+      report(`${lang} land: general reasoning is marked`, r);
+      // cost of living: Lao diesel in kip, in dollars, and crude oil - three lines from one base month (P2-6)
+      await open(lang, {}, "living");
+      await page.until(`[...document.querySelectorAll("#view .chart-card")].some((c) => c.textContent.includes("Brent"))`, 15000);
+      r = await page.eval(CHECK);
+      const fuel = await page.eval(`const c = [...document.querySelectorAll("#view .chart-card")].find((x) => x.textContent.includes("Brent")); return c ? c.querySelectorAll(".readout-row").length : 0;`);
+      need(r, fuel === 3, "fuel trend chart: " + fuel + " lines");
+      report(`${lang} living: diesel in kip, in dollars, crude oil`, r, lang === "th" ? fuel + " lines" : "");
+    }
+
     // ---------- 3. the entry forms, opened and filled in (never saved) ----------
     const type = async (selector, text) => {
       await page.eval(`const el = document.querySelector(${JSON.stringify(selector)}); el.focus(); el.value = ${JSON.stringify(text)}; el.dispatchEvent(new Event("input", { bubbles: true })); el.dispatchEvent(new Event("change", { bubbles: true }));`);

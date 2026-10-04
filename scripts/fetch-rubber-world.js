@@ -30,6 +30,7 @@
 
 const path = require("path");
 const { DATA_DIR, fetchJson, fetchText, parseCsv, readJson, writeIfChanged } = require("./lib/common");
+const { stampedSources } = require("./lib/parts");
 const { unpack, eachLine } = require("./lib/zip");
 
 const OUT_FILE = path.join(DATA_DIR, "rubber-world.json");
@@ -384,6 +385,8 @@ async function main() {
     const lines = Object.entries(years || {}).map(([y, v]) => `   ${JSON.stringify(y)}: ${JSON.stringify(v)}`);
     return JSON.stringify({ ...head, years: "@" }).replace('"@"', "{\n" + lines.join(",\n") + "\n  }");
   };
+  // the day each source was last read (a source whose parts failed keeps its old day)
+  out.sources = stampedSources(SOURCES, old.sources, { trade: out.trade, production: out.production, farm_price: out.farm_price, world_prices: out.world_prices }, now);
   const text =
     `{\n "sources": ${JSON.stringify(out.sources)},\n "names": ${JSON.stringify(out.names)},\n "trade": ${tradeText(out.trade)},\n` +
     ` "production": ${JSON.stringify(out.production)},\n "farm_price": ${JSON.stringify(out.farm_price)},\n "world_prices": ${JSON.stringify(out.world_prices)}\n}\n`;

@@ -2,6 +2,17 @@
 <html lang="th" data-theme="dark">
 <head>
   <meta charset="utf-8">
+  <!-- Content-Security-Policy: what this page may load and where it may send data (audit 2026-10-02, P2-9).
+       GitHub Pages cannot send it as a header, so it is a meta tag - it must stay above every script and style.
+         script   this site + the two CDNs of Chart.js and of the picture reader (Tesseract). No inline script and
+                  no eval; 'wasm-unsafe-eval' = the picture reader's engine is WebAssembly.
+         worker   this site (sw.js) + blob: (the picture reader starts its worker from a blob)
+         style    this site + Google Fonts; no inline style
+         connect  this site (data, texts), Google Forms / Sheets (the owner's price form), jsDelivr (the picture
+                  reader fetches its engine and its language file)
+         img      this site, data: (the icon below), blob: (the preview of a chosen picture)
+       A change here needs: node tests/security.js -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://cdn.jsdelivr.net; manifest-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lao Kip &amp; Gold</title>
   <meta name="theme-color" content="#0f1115">
@@ -19,17 +30,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Lao:wght@400;600&family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet" crossorigin="anonymous">
   <link rel="stylesheet" href="css/style.css">
   <!-- Chart.js from CDN. "defer" = does not block the page; the numbers show first.
-       Some networks block cdnjs → load the same file from jsDelivr instead, then tell app.js to redraw. -->
-  <script>
-    function loadChartBackup() {
-      var s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js";
-      s.crossOrigin = "anonymous";
-      s.onload = function () { window.dispatchEvent(new Event("chartjs-ready")); };
-      document.head.appendChild(s);
-    }
-  </script>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js" crossorigin="anonymous" onerror="loadChartBackup()"></script>
+       integrity = the browser runs the file only when it is exactly the published chart.js 4.5.1 (the hash cdnjs
+       itself publishes; the jsDelivr copy is the identical file).
+       Some networks block cdnjs → js/chart-backup.js loads the same file from jsDelivr, then tells app.js to redraw. -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js" integrity="sha512-WoViKhKD4qI2WruSZqv9+kvM4WfFhUMQCLN4QlDTt5aU56fLQy2gYoxWIqlEnXqJy/+Ac5q/hk1oWfqnMDhwMA==" crossorigin="anonymous"></script>
+  <script defer src="js/chart-backup.js"></script>
   <!-- modulepreload:start - every module of the app is asked for at once. Without these lines the browser finds the modules
        one level at a time (app.js -> pages -> their helpers), one network round trip per level.
        Made by scripts/update-preload.js - run it after adding or removing a file in js/. -->
@@ -42,6 +47,7 @@
   <link rel="modulepreload" href="js/pages/forecast.js">
   <link rel="modulepreload" href="js/pages/gold.js">
   <link rel="modulepreload" href="js/pages/living.js">
+  <link rel="modulepreload" href="js/pages/method.js">
   <link rel="modulepreload" href="js/pages/overview.js">
   <link rel="modulepreload" href="js/pages/rates.js">
   <link rel="modulepreload" href="js/pages/settings.js">
@@ -64,6 +70,7 @@
   <link rel="modulepreload" href="js/pages/eco-wages.js">
   <link rel="modulepreload" href="js/pages/gold-upload.js">
   <link rel="modulepreload" href="js/pages/living-parts.js">
+  <link rel="modulepreload" href="js/pages/sources.js">
   <link rel="modulepreload" href="js/manual-entry.js">
   <link rel="modulepreload" href="js/ocr.js">
   <link rel="modulepreload" href="js/pages/eco-rubber-borders.js">

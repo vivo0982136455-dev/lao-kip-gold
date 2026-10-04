@@ -35,7 +35,7 @@
 
 const path = require("path");
 const { DATA_DIR, fetchJson, readJson, writeIfChanged } = require("./lib/common");
-const { runParts, partsText } = require("./lib/parts");
+const { runParts, partsText, stampedSources } = require("./lib/parts");
 const { readPdf } = require("./lib/pdf-text");
 
 const OUT_FILE = path.join(DATA_DIR, "rubber-borders.json");
@@ -331,7 +331,7 @@ async function main(args = process.argv.slice(2)) {
     ["vietnam", { source: "vn_customs", unit: ["tonnes", "USD"], imports_lao: {}, exports: {} }, (o) => vietnam(o, all), (p) => `imports from Laos ${Object.values(p.imports_lao).filter((v) => v.ytd).length} months (to ${lastOf(p.imports_lao)}: ${JSON.stringify(p.imports_lao[lastOf(p.imports_lao)].month)}), exports ${Object.values(p.exports).filter((v) => v.ytd).length} months, unreadable ${[...Object.values(p.imports_lao), ...Object.values(p.exports)].filter((v) => v.unreadable).length}`],
     ["philippines", { source: "psa", unit: "PHP per kg", item: "cup lump, farm gate", months: [] }, philippines, (p) => `${p.months.length} months, latest ${JSON.stringify(p.months[p.months.length - 1])}`],
   ]);
-  const text = partsText({ sources: SOURCES }, out);
+  const text = partsText({ sources: stampedSources(SOURCES, old.sources, out) }, out);
   writeIfChanged(OUT_FILE, text);
   console.log(`\nDone: ${failed} of 5 parts failed. Wrote data/rubber-borders.json (${(text.length / 1024).toFixed(0)} KB)`);
   if (failed === 5) process.exitCode = 1;

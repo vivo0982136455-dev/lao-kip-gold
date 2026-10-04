@@ -145,6 +145,9 @@ async function main() {
     failedKeys = again;
   }
   const failed = failedKeys.length;
+  // the day the source last answered (for at least one item); a run without any answer keeps the old day
+  const retrieved = failed < todo.length ? now.slice(0, 10) : old.source && old.source.retrieved;
+  if (retrieved) out.source = { ...SOURCE, retrieved };
   const text = writePrices(out);
   console.log(`Done: ${failed} failed. Wrote data/thai-prices.json (${(text.length / 1024).toFixed(0)} KB)`);
   if (failed === todo.length) process.exitCode = 1;

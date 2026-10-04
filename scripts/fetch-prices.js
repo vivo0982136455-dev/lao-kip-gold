@@ -13,6 +13,7 @@
 
 const path = require("path");
 const { DATA_DIR, fetchJson, fetchText, parseCsv, readJson, writeIfChanged } = require("./lib/common");
+const { stampedSources } = require("./lib/parts");
 
 const OUT_FILE = path.join(DATA_DIR, "prices.json");
 const FIRST_MONTH = "2020-01";
@@ -151,6 +152,9 @@ async function main() {
     console.error(`[FAIL] fuel estimate: ${err.message}`);
     out.fuel_estimate = { ...(old.fuel_estimate || {}), stale: true, last_error: { message: err.message, at: now } };
   }
+
+  // the day each source was last read (the survey prices and the estimate are two files of the WFP)
+  out.sources = stampedSources(SOURCES, old.sources, { market: { source: "wfp_markets", stale: !!out.market.stale }, fuel: { source: "wfp_realtime", stale: !!out.fuel_estimate.stale } }, now);
 
   // Compact: one item per line
   const m = out.market;

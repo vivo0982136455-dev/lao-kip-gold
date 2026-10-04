@@ -5,12 +5,12 @@
 //   constant prices = at the prices and the exchange rate of one base year: what was really produced
 //   PPP             = adjusted for what things cost in each country: for comparing living standards
 
-import { el, card, cardHead } from "../ui.js";
+import { el, card, cardHead, sourceLink } from "../ui.js";
 import { chartCard } from "../charts.js";
 import { formatNumber } from "../format.js";
 import {
   indicator, latest, valueIn, usdText, pctText, freshness, sourcesFoot, barTable, yearChart, ready, staticSource, fill,
-  buildSeries, unitName, invTile, sourceOf, pct,
+  buildSeries, unitName, invTile, sourceOf, pct, planLabel, planYears, THIS_YEAR,
 } from "./eco-common.js";
 import { growthNow, rangeText } from "./eco-latest.js";
 
@@ -26,7 +26,7 @@ function sizeChart(e) {
   if (real && real.values.length) series.push({ label: fill(t.inv_gdp_constant, { base: BASE_YEAR }), kind: "official", color: "--cat-3", values: s.years.map((y) => valueIn(real, y)) });
   if (s.forecast) series.push({ label: t.series_imf_forecast, kind: "official", color: "--cat-1", dashed: true, soft: true, values: s.forecast, shown: s.forecastOnly });
   const subtitle = [`${t.unit}: ${unitName(s.unit, t)}`, `${t.source}: World Bank + IMF`, `${t.latest_actual_year} ${s.lastActual}`, s.forecast ? (s.rebased ? t.forecast_rebased : t.dashed_is_forecast) : null, s.stale || (real && real.stale) ? "⚠ " + t.inv_fetch_failed : null].filter(Boolean).join(" · ");
-  const c = chartCard({ title: t.inv_gdp_size_title, subtitle, labels: s.years.map(String), series, unit: s.unit, t, firstColTitle: t.year });
+  const c = chartCard({ title: t.inv_gdp_size_title, subtitle, labels: s.years.map(String), series, unit: s.unit, t, firstColTitle: t.year, nowLabel: String(THIS_YEAR) });
   // the year in which the two lines part most: dollars fell, production did not (numbers from the series themselves)
   const cur = indicator(e, "wb.NY.GDP.MKTP.CD");
   const growth = indicator(e, "wb.NY.GDP.MKTP.KD.ZG");
@@ -79,7 +79,7 @@ export function gdpTab(panel, e) {
   const grid = el("div", "grid grid-2");
   const charts = [
     sizeChart(e),
-    yearChart(e, { actual: "wb.NY.GDP.MKTP.KD.ZG", forecast: "imf.NGDP_RPCH" }, { title: t.eco_growth, unitLabel: t.unit_pct_year, target: target("growth") && { value: target("growth").target, label: t.inv_plan_target_line } }),
+    yearChart(e, { actual: "wb.NY.GDP.MKTP.KD.ZG", forecast: "imf.NGDP_RPCH" }, { title: t.eco_growth, unitLabel: t.unit_pct_year, target: target("growth") && { value: target("growth").target, label: planLabel(e) } }),
     yearChart(e, { actual: "wb.NY.GDP.PCAP.CD", forecast: "imf.NGDPDPC" }, { title: t.inv_gdppc_title, target: target("gdp_pc") && { value: target("gdp_pc").target, year: target("gdp_pc").by, label: fill(t.inv_plan_target_by, { year: target("gdp_pc").by }) } }),
   ];
   for (const c of charts) if (c) grid.append(c);
@@ -115,7 +115,7 @@ export function gdpTab(panel, e) {
     c.append(cardHead(`${t.inv_structure_title} (${t.year} ${year})`, "official", shares.some((x) => x.stale), t));
     c.append(barTable([t.inv_col_sector, t.inv_col_share_gdp, t.inv_col_growth], rows));
     const plan = ["growth_srv", "growth_ind", "growth_agri"].map((id) => target(id)).filter(Boolean);
-    if (plan.length) c.append(el("p", "note", fill(t.inv_structure_plan_note, { srv: plan[0].target, ind: plan[1].target, agri: plan[2].target })));
+    if (plan.length) c.append(el("p", "note", fill(t.inv_structure_plan_note, { ...planYears(e), srv: plan[0].target, ind: plan[1].target, agri: plan[2].target })));
     c.append(el("p", "note", t.inv_structure_note));
     const fresh = el("div", "card-foot");
     fresh.append(freshness(t, { year, stale: shares.some((x) => x.stale) }));
@@ -184,7 +184,7 @@ export function gdpTab(panel, e) {
     const f = e.stat.facts.growth_drivers;
     if (f) {
       const d = card("official");
-      d.append(cardHead(t.inv_drivers_title, "official", false, t));
+      d.append(cardHead(fill(t.inv_drivers_title, f), "official", false, t));
       const ul = el("ul", "watch-list");
       for (const k of ["inv_drivers_1", "inv_drivers_2", "inv_drivers_3", "inv_drivers_4"]) ul.append(el("li", "", fill(t[k], f)));
       d.append(ul);
@@ -198,10 +198,6 @@ export function gdpTab(panel, e) {
   const n = el("p", "note");
   n.append(`${t.inv_top_sectors_note} `);
   const lsb = e.stat.sources.lsb;
-  const a = el("a", "", lsb.source_name);
-  a.href = lsb.source_url;
-  a.target = "_blank";
-  a.rel = "noopener";
-  n.append(a);
+  n.append(sourceLink(lsb));
   panel.append(n);
 }

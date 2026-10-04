@@ -104,9 +104,10 @@ export const pctText = (v, d = 1) => `${v.toFixed(d)}%`;
 export const whole = (v) => Math.round(v).toLocaleString("en-US");
 
 // Is a number too old to be called current? Yearly data: more than 2 years behind; monthly data: more than 6 months.
+export const OLD_AFTER = { years: 2, months: 6 };
 export function isOld({ year, month }) {
-  if (year !== undefined && year !== null) return year < THIS_YEAR - 2;
-  return month ? monthsAgo(month) > 6 : false;
+  if (year !== undefined && year !== null) return year < THIS_YEAR - OLD_AFTER.years;
+  return month ? monthsAgo(month) > OLD_AFTER.months : false;
 }
 
 // How many months the END of a period lies behind this month. A year ends in December (2024 seen in October 2026
@@ -284,8 +285,11 @@ export function ready(panel, e, keys = ["invest", "stat"]) {
 
 // A source from data/invest-static.json with its publish date: "KPL ... (26 ก.พ. 2026)"
 export function staticSource(e, id) {
-  const src = e.stat && e.stat.sources && e.stat.sources[id];
-  if (!src) return null;
+  const all = e.stat && e.stat.sources && e.stat.sources[id];
+  if (!all) return null;
+  // "edition" (the month in a report's own name) is for sentences (sourceWords); the footer shows the name of the
+  // report, which already says it, and the day it was published
+  const { edition, ...src } = all;
   if (!src.published) return src;
   // "2022" = only the year is known; "2025-12" = the month; "2026-02-26" = the day
   const when = /^\d{4}$/.test(src.published) ? src.published : /^\d{4}-\d{2}$/.test(src.published) ? monthText(src.published, e.t) : formatDate(src.published, e.t);
@@ -295,6 +299,24 @@ export function staticSource(e, id) {
 // Replace {name} placeholders
 export function fill(text, values) {
   return text.replace(/\{(\w+)\}/g, (m, k) => (values[k] === undefined ? m : values[k]));
+}
+
+// No year and no number is typed inside a sentence (audit 2026-10-02, P2-4): the sentences name them with
+// placeholders, and the values come from data/invest-static.json through these two helpers.
+// The five-year plan: { from, to, span (years), no (which plan it is) } - "แผน {span} ปี ครั้งที่ {no} ({from}–{to})"
+export function planYears(e) {
+  const plan = (e.stat && e.stat.plan) || {};
+  const [from, to] = plan.period || [];
+  return { from, to, span: to - from + 1, no: plan.number };
+}
+export const planLabel = (e) => fill(e.t.inv_plan_target_line, planYears(e));
+// The report a fact was read in: { edition: "มิ.ย. 2026" (the month in the report's own name; else the month it
+// was published), published: the month it was published, source_year: "2020" }
+export function sourceWords(e, id) {
+  const src = e.stat && e.stat.sources && e.stat.sources[id];
+  if (!src) return {};
+  const month = (v) => (/^\d{4}-\d{2}/.test(v || "") ? monthText(v.slice(0, 7), e.t) : v || "");
+  return { edition: month(src.edition || src.published), published: month(src.published), source_year: String(src.published || "").slice(0, 4) };
 }
 
 // ---------- Yearly chart: actual (World Bank) + forecast (IMF, dashed) ----------
@@ -370,13 +392,16 @@ export function buildSeries(e, def, firstYear = FIRST_YEAR) {
 // The line crosses the whole chart so every year can be compared with it, but the read-out and the table show
 // the goal only where it applies: the years of the plan, or the one year it must be reached by (target.year).
 // unitLabel: the unit in words when the plain unit says too little (e.g. "% ต่อปี" instead of "%")
-export function yearChart(e, def, { title, target, firstYear, unitLabel } = {}) {
+// more: (years) => [series] - further lines of the same unit (e.g. the same thing as another source counts it);
+//       moreSources = their sources for the footer, moreNote = one more piece of the subtitle
+export function yearChart(e, def, { title, target, firstYear, unitLabel, more, moreSources = [], moreNote } = {}) {
   const { t } = e;
   const s = buildSeries(e, def, firstYear);
   if (!s) return null;
   // the IMF's numbers for past years are its own estimates until a country's final data arrive: never "actual"
   const series = [{ label: s.isEstimate ? t.series_imf_estimate : t.series_actual, kind: "official", values: s.actual }];
   if (s.forecast) series.push({ label: t.series_imf_forecast, kind: "official", dashed: true, soft: true, values: s.forecast, shown: s.forecastOnly });
+  if (more) series.push(...more(s.years));
   if (target) {
     const period = e.stat && e.stat.plan && e.stat.plan.period;
     const applies = (y) => (target.year ? y === target.year : !period || (y >= period[0] && y <= period[1]));
@@ -392,11 +417,13 @@ export function yearChart(e, def, { title, target, firstYear, unitLabel } = {}) 
     `${t.source}: ${s.sources.map(sourceLabel).join(" + ")}`,
     `${s.isEstimate ? t.latest_estimate_year : t.latest_actual_year} ${s.lastActual}`,
     s.forecast ? (s.rebased ? t.forecast_rebased : t.dashed_is_forecast) : null,
+    moreNote || null,
     s.stale ? "⚠ " + t.inv_fetch_failed : null,
   ].filter(Boolean).join(" · ");
-  const c = chartCard({ title, subtitle, labels: s.years.map(String), series, unit: s.unit, unitLabel, t, firstColTitle: t.year });
+  // nowLabel: a chart with a forecast shows this year's values at rest, not the last forecast year (charts.js restPoint)
+  const c = chartCard({ title, subtitle, labels: s.years.map(String), series, unit: s.unit, unitLabel, t, firstColTitle: t.year, nowLabel: String(THIS_YEAR) });
   // every chart names its sources with their edition and the day they were read
-  const sources = s.sources.map((id) => sourceOf(e, id)).filter(Boolean);
+  const sources = [...s.sources.map((id) => sourceOf(e, id)), ...moreSources].filter(Boolean);
   if (sources.length) c.append(sourcesFoot(t, sources));
   return c;
 }

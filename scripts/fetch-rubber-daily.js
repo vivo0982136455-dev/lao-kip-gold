@@ -34,7 +34,7 @@
 
 const path = require("path");
 const { DATA_DIR, fetchJson, fetchText, readJson, writeIfChanged } = require("./lib/common");
-const { runParts, partsText, throttleArgs } = require("./lib/parts");
+const { runParts, partsText, throttleArgs, stampedSources } = require("./lib/parts");
 
 const OUT_FILE = path.join(DATA_DIR, "rubber-daily.json");
 const TIMEOUT_MS = 20000; // short: a source that hangs must not eat the 10 minutes of the 30-minute job
@@ -260,7 +260,7 @@ async function main(args = process.argv.slice(2)) {
     ["china", { source: "shfe", unit: "CNY per tonne", columns: ["ru", "ru_contract", "nr", "nr_contract"], latest_day: null, days: [] }, (o) => china(o, monthsBack), (p) => `${p.days.length} days, latest ${JSON.stringify(p.days[p.days.length - 1])}`],
     ["fx", { source: "fx", unit: "per USD", date: null, rates: {} }, () => fx(), (p) => `${p.date} ${JSON.stringify(p.rates)}`],
   ]);
-  const text = partsText({ sources: SOURCES, checked_at: now }, out);
+  const text = partsText({ sources: stampedSources(SOURCES, old.sources, out, now), checked_at: now }, out);
   writeIfChanged(OUT_FILE, text);
   console.log(`rubber-daily: ${failed} of 4 parts failed. Wrote data/rubber-daily.json (${(text.length / 1024).toFixed(0)} KB)`);
   return { ok: failed < 4 };

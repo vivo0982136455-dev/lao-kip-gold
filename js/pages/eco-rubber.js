@@ -19,10 +19,10 @@ import { formatNumber, formatDate } from "../format.js";
 import { lazyJson } from "../lazy.js";
 import { usdPerKg as perKg } from "../calc.js"; // US cents per pound -> USD per kg
 import {
-  lastOf, pct, indicator, freshness, sourcesFoot, invTile, barTable, ready, fill, monthText, monthShort, staticSource, choice, whole, PROVINCES,
+  lastOf, pct, indicator, freshness, sourcesFoot, invTile, barTable, ready, fill, monthText, monthShort, staticSource, choice, whole, PROVINCES, dayFull,
 } from "./eco-common.js";
 import { aseanView, worldView, laoProductionChart } from "./eco-rubber-world.js";
-import { buyersView, countryPricesCard } from "./eco-rubber-borders.js";
+import { buyersView, countryPricesCard, soldAgainstProduced } from "./eco-rubber-borders.js";
 import { rubberEntryCard, rubberEntriesCard, rubberByProvince, RUBBER_TYPES } from "./own-entry.js";
 
 const round2 = (v) => Math.round(v * 100) / 100;
@@ -83,7 +83,9 @@ function laoRubberCard(e, rates) {
   tb.classList.add("wrap-all", "scroll-y");
   card1.append(tb);
   const notes = el("ul", "watch-list");
-  for (const k of ["inv_rub_lao_note_1", "inv_rub_lao_note_2", "inv_rub_lao_note_3"]) notes.append(el("li", "", t[k]));
+  // the last year of the official series and the day the sources were last searched come from the facts file
+  const noteValues = { year: official && official.values.length ? lastOf(official.values)[0] : "—", checked: dayFull(e.stat.checked, t) };
+  for (const k of ["inv_rub_lao_note_1", "inv_rub_lao_note_2", "inv_rub_lao_note_3"]) notes.append(el("li", "", fill(t[k], noteValues)));
   card1.append(notes);
 
   // Single prices quoted in news / official statements
@@ -229,7 +231,7 @@ function marketView(panel, r) {
   const n = card("estimated");
   n.append(cardHead(t.inv_rub_notes_title, null, false, t));
   const ul = el("ul", "watch-list");
-  for (const k of ["inv_rub_note_1", "inv_rub_note_2", "inv_rub_note_3", "inv_rub_note_4", "inv_rub_note_5"]) ul.append(el("li", "", t[k]));
+  for (const k of ["inv_rub_note_1", "inv_rub_note_2", "inv_rub_note_3", "inv_rub_note_4", "inv_rub_note_5"]) ul.append(el("li", "", fill(t[k], { checked: r.stat ? dayFull(r.stat.checked, t) : "—" })));
   n.append(ul);
   panel.append(n);
 }
@@ -263,7 +265,7 @@ function provincesCard(r) {
   const tb = barTable([t.inv_land_col_province, t.rw_col_planted, t.rw_col_tapped], rows);
   tb.classList.add("total-last");
   c.append(tb);
-  c.append(el("p", "note", t.rw_lao_prov_note));
+  c.append(el("p", "note", fill(t.rw_lao_prov_note, { year: p.year })));
   const fresh = el("div", "card-foot");
   fresh.append(freshness(t, { year: p.year, checked: r.stat.checked }));
   c.append(fresh, sourcesFoot(t, [staticSource(r, p.source)]));
@@ -275,7 +277,22 @@ function laoView(panel, r) {
   if (prov) panel.append(prov);
   if (r.world) {
     const chart = laoProductionChart(r);
-    if (chart) panel.append(chart);
+    if (chart) {
+      // more rubber is recorded as sold abroad than as produced: say why, with the two numbers of one year
+      const s = soldAgainstProduced(r.borders, r.world);
+      const basis = r.stat.rubber && r.stat.rubber.production_basis;
+      if (s && s.bought > s.production && basis) {
+        const { t } = r;
+        const text = [
+          fill(t.rw_sold_vs_produced, { year: s.year, bought: whole(s.bought / 1000), production: whole(s.production / 1000) }),
+          s.raw ? fill(t.rw_sold_raw, { share: s.raw.share.toFixed(0), year: s.raw.year }) : null,
+          t.rw_sold_dry,
+          s.official ? null : t.rw_sold_not_official,
+        ].filter(Boolean).join(" ");
+        chart.append(el("p", "note", text), sourcesFoot(t, [r.borders.sources.comtrade, r.borders.sources.vn_customs, staticSource(r, basis.source)].filter(Boolean)));
+      }
+      panel.append(chart);
+    }
   } else if (r.worldState === "loading") panel.append(el("p", "muted", r.t.loading));
   const lao = laoRubberCard(r, ratesByYear(r));
   if (lao) panel.append(lao);

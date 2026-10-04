@@ -8,7 +8,7 @@ import { fill } from "./eco-common.js";
 
 const ARROW = { up: "▲", down: "▼", flat: "▬" };
 const WINDOW_DAYS = 30; // gold estimate against the real price
-const HINT_WINDOW_DAYS = 90; // checked hints that count for the accuracy
+export const HINT_WINDOW_DAYS = 90; // checked hints that count for the accuracy
 // Fewer checked hints than this: words, never a percentage. "2 of 2 = 100%" reads like a trading signal and is
 // only noise (audit 2026-10-02, P1-9).
 export const MIN_CASES = 20;

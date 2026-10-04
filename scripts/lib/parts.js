@@ -31,6 +31,23 @@ async function runParts(old, parts, now = new Date().toISOString()) {
   return { out, failed };
 }
 
+// The "sources" block of a file made of parts, with the day each source was last read ("retrieved") - the page
+// lists it on Settings and under the cards (audit 2026-10-02, P2-8: "one list of every source with ... retrieval
+// date"). A source is stamped with today when a part that names it answered in this run; a source whose parts all
+// failed keeps the day it was last read, so the page never claims a reading that did not happen.
+//   parts: { id: { source: "<source id>", stale: true | false } } (the "out" of runParts, or a hand-made list)
+function stampedSources(sources, oldSources, parts, now = new Date().toISOString()) {
+  const today = now.slice(0, 10);
+  const read = new Set(Object.values(parts || {}).filter((p) => p && p.source && p.stale === false).map((p) => p.source));
+  const out = {};
+  for (const [id, src] of Object.entries(sources)) {
+    const before = oldSources && oldSources[id] && oldSources[id].retrieved;
+    const retrieved = read.has(id) ? today : before;
+    out[id] = retrieved ? { ...src, retrieved } : { ...src };
+  }
+  return out;
+}
+
 // One part per line: a small diff in git when one part changes
 function partsText(head, parts) {
   const lines = [...Object.entries(head), ...Object.entries(parts)].map(([k, v]) => ` ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
@@ -47,4 +64,4 @@ function throttleArgs() {
   return process.env.FETCH_EVENT === "push" ? [] : ["throttle"];
 }
 
-module.exports = { okEntry, failEntry, runParts, partsText, throttleArgs };
+module.exports = { okEntry, failEntry, runParts, partsText, throttleArgs, stampedSources };

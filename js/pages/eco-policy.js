@@ -10,10 +10,10 @@
 //   data/economy.json: monthly inflation (IMF) - drawn next to the policy rate
 // A fact without a source and a date does not belong on this tab, and nothing here is advice.
 
-import { el, card, cardHead, table } from "../ui.js";
+import { el, card, cardHead, table, outLink } from "../ui.js";
 import { chartCard } from "../charts.js";
 import { lazyJson } from "../lazy.js";
-import { lastOf, monthText, monthShort, dayFull as dayText, freshness, sourcesFoot, invTile, fill, staticSource, ready, whole } from "./eco-common.js";
+import { lastOf, monthText, monthShort, dayFull as dayText, freshness, sourcesFoot, invTile, fill, staticSource, ready, whole, planYears, sourceWords } from "./eco-common.js";
 import { todayVientiane } from "../format.js";
 import { inflationSeries } from "./eco-latest.js";
 
@@ -153,11 +153,7 @@ function readCard(e, watch) {
   if (newer) {
     const warn = el("div", "alert");
     const text = el("div", "", fill(t.pol_read_newer, { date: dayText(newer.date, t), read: monthText(read.date.slice(0, 7), t) }) + " ");
-    const a = el("a", "", t.pol_read_open);
-    a.href = newer.url;
-    a.target = "_blank";
-    a.rel = "noopener";
-    text.append(a);
+    text.append(outLink(t.pol_read_open, newer.url));
     warn.append(el("span", "", "⚠"), text);
     c.append(warn);
   }
@@ -262,7 +258,7 @@ function liveLines(e, area, live, fuel) {
 function areaCard(e, area, live, fuel) {
   const { t } = e;
   const c = card("official", "policy-card");
-  c.append(cardHead(t["pol_area_" + area.id], "official", false, t));
+  c.append(cardHead(fill(t["pol_area_" + area.id], area), "official", false, t));
   // what it moves
   const moves = el("div", "policy-affects");
   moves.append(el("span", "policy-affects-label", t.pol_affects));
@@ -284,7 +280,8 @@ function areaCard(e, area, live, fuel) {
     const fromBank = area.id === "money" && (raw.id === "rate" || raw.id === "reserve") ? live[raw.id] : null;
     const item = fromBank ? { ...raw, ...fromBank } : raw;
     if (fromBank && fromBank.stale) failed = true;
-    const li = el("li", "", fill(t[`pol_${area.id}_${item.id}`], words(item, t)));
+    // the sentence may name the report the fact was read in ({edition}, {source_year}) - never a typed year
+    const li = el("li", "", fill(t[`pol_${area.id}_${item.id}`], { ...sourceWords(e, item.source), ...words(item, t) }));
     if (fromBank) li.append(" ", el("span", "tag tag-auto", t.pol_tag_auto));
     ul.append(li);
     used.add(item.source);
@@ -326,7 +323,7 @@ function outlookCard(e) {
   c.append(cardHead(t.pol_outlook_title, "official", false, t));
   const tb = table([t.pol_out_what, ...o.years.map((y) => (y >= o.first_forecast ? `${y}*` : String(y))), t.pol_out_target], rows);
   tb.classList.add("wrap-first");
-  c.append(tb, el("p", "note", t.pol_out_note));
+  c.append(tb, el("p", "note", fill(t.pol_out_note, { ...sourceWords(e, o.source), ...planYears(e) })));
   const fresh = el("div", "card-foot");
   fresh.append(freshness(t, { checked: e.stat.policy.checked || e.stat.checked }));
   c.append(fresh, sourcesFoot(t, [staticSource(e, o.source), staticSource(e, e.stat.plan && e.stat.plan.source)]));
@@ -344,7 +341,11 @@ function calendarValues(e) {
   const review = findItem(P, "wages", "review");
   const service = findItem(P, "debt", "service");
   const offers = review ? [review.labour, review.government, review.employers] : [];
+  const census = e.stat.population && e.stat.population.census;
   return {
+    ...planYears(e),
+    census_no: census ? census.number : "—",
+    census_said: census ? monthText(census.status.slice(0, 7), e.t) : "—",
     low: offers.length ? (Math.min(...offers) / 1e6).toFixed(1) : "—",
     high: offers.length ? (Math.max(...offers) / 1e6).toFixed(1) : "—",
     service: service ? service.usd_bn : "—",
@@ -386,7 +387,7 @@ function adviceCard(e) {
   const a = e.stat.policy.advice;
   if (!a) return null;
   const c = card("estimated");
-  c.append(cardHead(t.pol_advice_title, null, false, t));
+  c.append(cardHead(fill(t.pol_advice_title, sourceWords(e, a.source)), null, false, t));
   const ul = el("ul", "watch-list");
   for (const id of a.items) ul.append(el("li", "", t["pol_advice_" + id]));
   c.append(ul, el("p", "note", t.pol_advice_note));

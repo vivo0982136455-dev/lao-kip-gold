@@ -4,7 +4,8 @@
 //      (dataset IMF.RES,WEO), then the DataMapper API: DataMapper answers HTTP 403 to GitHub's servers (2026-10-01)
 //   #8 IMF SDMX API (monthly): Lao CPI (all items + 12 categories), CPI index, world gold price
 //      (replaced the Google-Sheet CPI entry on 2026-09-30 - nothing to type in any more)
-// Also builds monthly BOL mid rates (USD, THB) from data/history/bol.json for the "value kept" comparison.
+// Also builds monthly BOL mid rates (USD, THB, CNY) from data/history/bol.json for the "value kept" comparison
+// and the yearly exchange-rate chart.
 // Writes data/economy.json. Run monthly (GitHub Actions) or by hand: node scripts/fetch-economy.js
 //
 // Real responses (checked 2026-09-29 / 2026-09-30):
@@ -49,9 +50,9 @@ const SOURCES = {
     license: "IMF - free to use with attribution",
   },
   bol: {
-    source_name: "Bank of the Lao PDR (monthly average of daily rates)",
-    source_url: "https://www.bol.gov.la",
-    license: "Official rates via AllRatesToday mirror (CC BY 4.0)",
+    source_name: "Bank of the Lao PDR (monthly average of the daily buying and selling rates)",
+    source_url: "https://www.bol.gov.la/en/ExchangRate",
+    license: "Official rates of the Bank of the Lao PDR - the days before October 2026 through the data mirror by AllRatesToday (CC BY 4.0)",
   },
 };
 
@@ -73,6 +74,10 @@ const INDICATORS = {
   "wb.FP.CPI.TOTL.ZG": { source: "worldbank", code: "FP.CPI.TOTL.ZG", unit: "%" },
   "wb.BX.KLT.DINV.CD.WD": { source: "worldbank", code: "BX.KLT.DINV.CD.WD", unit: "USD m", scale: 1e-6 },
   "wb.PA.NUS.FCRF": { source: "worldbank", code: "PA.NUS.FCRF", unit: "LAK per USD" },
+  // the same official yearly rate of the baht and the yuan: kip per baht / per yuan of the years before our own
+  // BOL history starts (2021) are worked out through the dollar on the page (audit 2026-10-02, P2-6)
+  "wb.PA.NUS.FCRF.THA": { source: "worldbank", code: "PA.NUS.FCRF", area: "THA", unit: "THB per USD" },
+  "wb.PA.NUS.FCRF.CHN": { source: "worldbank", code: "PA.NUS.FCRF", area: "CHN", unit: "CNY per USD" },
   "imf.NGDPD": { source: "imf", code: "NGDPD", unit: "USD bn" },
   "imf.NGDP_RPCH": { source: "imf", code: "NGDP_RPCH", unit: "%" },
   "imf.PCPIPCH": { source: "imf", code: "PCPIPCH", unit: "%" },
@@ -86,7 +91,7 @@ const INDICATORS = {
 const round = (v) => Math.round(v * 1000) / 1000;
 
 async function fromWorldBank(def) {
-  const url = `https://api.worldbank.org/v2/country/LAO/indicator/${def.code}?format=json&per_page=100&date=${FIRST_YEAR}:2040`;
+  const url = `https://api.worldbank.org/v2/country/${def.area || "LAO"}/indicator/${def.code}?format=json&per_page=100&date=${FIRST_YEAR}:2040`;
   const data = await fetchJson(url, {}, 60000); // the World Bank API sometimes needs more than 20 s
   if (!Array.isArray(data) || !Array.isArray(data[1])) {
     throw new Error(`Unexpected World Bank response: ${JSON.stringify(data).slice(0, 120)}`);
@@ -309,7 +314,7 @@ async function main() {
   }
 
   // BOL monthly mid rates from our own history
-  for (const cur of ["USD", "THB"]) {
+  for (const cur of ["USD", "THB", "CNY"]) {
     const id = `bol_${cur.toLowerCase()}_mid`;
     const values = bolMonthly(cur);
     out.monthly[id] = values.length

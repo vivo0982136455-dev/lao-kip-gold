@@ -5,7 +5,7 @@ import { el, card, cardHead } from "../ui.js";
 import { chartCard } from "../charts.js";
 import {
   THIS_YEAR, indicator, latest, valueIn, usdText, usdParts, pctText, freshness, sourcesFoot, invTile, factsCard, barTable,
-  yearChart, ready, staticSource, fill, monthText,
+  yearChart, ready, staticSource, fill, monthText, planLabel, planYears, sourceWords,
 } from "./eco-common.js";
 import { publicDebt, latestReserves, rangeText, differCard } from "./eco-latest.js";
 
@@ -39,8 +39,27 @@ export function debtTab(panel, e) {
   panel.append(stats);
 
   const grid = el("div", "grid grid-2");
-  // Debt as % of GDP, with the plan's goal
-  const chart = yearChart(e, { forecast: "imf.GGXWDG_NGDP" }, { title: t.eco_debt, target: target && { value: target.target, label: t.inv_plan_target_line } });
+  // Debt as % of GDP, with the plan's goal. Two lines, because two institutions count two things: the IMF's
+  // series (government debt) and the World Bank's count from its reports on Laos (with guarantees, arrears and
+  // swaps: hand-read, facts.debt_wb). Neither is "the" number - the card at the end of the tab says what each counts.
+  const wb = F.debt_wb;
+  const wbLines = wb && wb.values && wb.values.length ? (years) => {
+    const m = new Map(wb.values);
+    const lastReal = wb.first_forecast - 1;
+    const pick = (ok) => years.map((y) => (m.has(y) && ok(y) ? m.get(y) : null));
+    return [
+      { label: t.inv_debt_wb_line, kind: "official", color: "--cat-3", values: pick((y) => y <= lastReal) },
+      // the dashed line starts at the last counted year so the two meet; the read-out and the table show forecasts only
+      { label: t.inv_debt_wb_forecast, kind: "official", color: "--cat-3", dashed: true, soft: true, values: pick((y) => y >= lastReal), shown: pick((y) => y > lastReal) },
+    ];
+  } : null;
+  const chart = yearChart(e, { forecast: "imf.GGXWDG_NGDP" }, {
+    title: t.eco_debt,
+    target: target && { value: target.target, label: planLabel(e) },
+    more: wbLines,
+    moreSources: wb ? [wb.source, ...(wb.sources || [])].map((id) => staticSource(e, id)) : [],
+    moreNote: wb ? t.inv_debt_two_counts : null,
+  });
   if (chart) grid.append(chart);
 
   // ---------- Owed to whom ----------
@@ -82,6 +101,9 @@ export function debtTab(panel, e) {
         unit: "USD m",
         t,
         firstColTitle: t.year,
+        // at rest: what falls due THIS year, and the year with the largest payment - not the last year of the schedule
+        nowLabel: String(THIS_YEAR),
+        peak: 1,
       })
     );
   }
@@ -114,9 +136,9 @@ export function debtTab(panel, e) {
   // ---------- Why · effects · plan · can it work (quoted from the reports) ----------
   const imfBelow = debt && target ? debt.values.find(([y, v]) => y >= THIS_YEAR && v <= target.target) : null;
   const blocks = [
-    ["inv_debt_why", [["inv_debt_why_1", F.debt_peak], ["inv_debt_why_2", F.debt_edl], ["inv_debt_why_3", F.debt_china_half], ["inv_debt_why_4", { source: "wb_lem" }]]],
+    ["inv_debt_why", [["inv_debt_why_1", F.debt_peak], ["inv_debt_why_2", F.debt_edl], ["inv_debt_why_3", F.debt_china_half], ["inv_debt_why_4", F.debt_external]]],
     ["inv_debt_effects", [["inv_debt_effect_1", F.debt_crowd_out], ["inv_debt_effect_2", F.reserves_wb], ["inv_debt_effect_3", F.debt_deferred]]],
-    ["inv_debt_plan", [["inv_debt_plan_1", F.debt_decree], ["inv_debt_plan_2", target ? { target: target.target, source: "kpl_plan" } : null], ["inv_debt_plan_3", F.debt_bond], ["inv_debt_plan_4", F.debt_restructure]]],
+    ["inv_debt_plan", [["inv_debt_plan_1", F.debt_decree], ["inv_debt_plan_2", target ? { target: target.target, span: planYears(e).span, source: "kpl_plan" } : null], ["inv_debt_plan_3", F.debt_bond], ["inv_debt_plan_4", F.debt_restructure]]],
     ["inv_debt_can", [["inv_debt_can_1", F.imf_unsustainable], ["inv_debt_can_2", imfBelow ? { year: imfBelow[0], value: pctText(imfBelow[1]), source: "imf" } : null], ["inv_debt_can_3", F.imf_advice], ["inv_debt_can_4", F.debt_service_avg], ["inv_debt_can_5", F.debt_service_year]]],
   ];
   panel.append(el("h2", "section-title", t.inv_debt_story));
@@ -128,7 +150,7 @@ export function debtTab(panel, e) {
     const used = new Set();
     for (const [key, f] of items) {
       if (!t[key] || !f) continue;
-      const values = { ...(f || {}) };
+      const values = { ...(f && f.source ? sourceWords(e, f.source) : {}), ...(f || {}) };
       if (values.month) values.month = monthText(values.month, t);
       if (values.date) values.date = monthText(values.date.slice(0, 7), t);
       ul.append(el("li", "", fill(t[key], values)));

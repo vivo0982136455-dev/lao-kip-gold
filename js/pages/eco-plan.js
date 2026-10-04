@@ -14,7 +14,7 @@ import { el, card, cardHead } from "../ui.js";
 import { formatNumber } from "../format.js";
 import {
   THIS_YEAR, indicator, latest, valueIn, pctText, freshness, sourcesFoot, statusBadge, targetStatus, fill,
-  ready, staticSource, monthText, newest, policyItem, buildSeries, NEAR_GAP,
+  ready, staticSource, monthText, newest, policyItem, buildSeries, NEAR_GAP, planYears, whole,
 } from "./eco-common.js";
 import { latestInflation, latestReserves, publicDebt, growthNow } from "./eco-latest.js";
 
@@ -107,7 +107,8 @@ function reservesNow(e, a) {
   return fill(e.t.inv_plan_reserves_now, { usd_bn: usd.value.toFixed(2), month: monthText(usd.when.month, e.t), ref_bn: (then[1] / 1000).toFixed(2), ref_month: monthText(then[0], e.t) }) + (usd.stale ? ` ⚠ ${e.t.inv_fetch_failed}` : "");
 }
 
-const targetText = (tg, t) => {
+// span = the number of years of the plan (a target counted over the whole plan says so)
+const targetText = (tg, t, span) => {
   const sign = tg.op === ">=" ? "≥" : "≤";
   switch (tg.unit) {
     case "%":
@@ -119,7 +120,7 @@ const targetText = (tg, t) => {
     case "months":
       return `${sign} ${tg.target} ${t.inv_unit_months}`;
     default:
-      return `${sign} ${tg.target} ${t["inv_plan_unit_" + tg.id] || ""}`.trim();
+      return `${sign} ${tg.target} ${fill(t["inv_plan_unit_" + tg.id] || "", { span })}`.trim();
   }
 };
 const actualText = (tg, value, t) => {
@@ -135,10 +136,14 @@ const ALWAYS = ["met", "near", "far"];
 
 export function planTab(panel, e) {
   const { t } = e;
-  panel.append(el("p", "muted tab-intro", t.inv_plan_intro));
+  // the intro names the plan with its years, which come with the plan itself (data/invest-static.json)
+  const intro = el("p", "muted tab-intro");
+  panel.append(intro);
   if (!ready(panel, e, ["invest", "stat", "bank"])) return;
   const plan = e.stat.plan;
   const from = plan.period[0];
+  const years = planYears(e);
+  intro.textContent = fill(t.inv_plan_intro, years);
 
   const c = card("official");
   c.append(cardHead(t.inv_plan_title, "official", false, t));
@@ -159,9 +164,9 @@ export function planTab(panel, e) {
 
     const tr = el("tr");
     const name = el("td");
-    name.append(el("span", "", t["inv_plan_" + tg.id]));
+    name.append(el("span", "", fill(t["inv_plan_" + tg.id], { span: years.span, surplus: tg.surplus_bn_kip ? whole(tg.surplus_bn_kip) : "" })));
     if (fc) name.append(el("span", "sub-line", fc.text));
-    const tgt = el("td", "", targetText(tg, t));
+    const tgt = el("td", "", targetText(tg, t, years.span));
     const act = el("td", "plan-actual");
     const when = () => {
       const line = el("div", "sub-line");

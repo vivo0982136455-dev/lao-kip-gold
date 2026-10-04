@@ -7,8 +7,11 @@
 //                         value a number inside what its unit allows; and an indicator that is kept in two files
 //                         (Laos' GDP in economy.json and compare.json ...) has the same number in both
 //   4. hand-read facts    invest-static.json: every source has a name, a link and a publication date (or says it
-//                         has none), every fact names a source that exists, every section says when it was read
+//                         has none), every fact names a source that exists, every section says when it was read;
+//                         the World Bank's debt numbers, which several facts quote, are the same in all of them
 //   5. the other files    valid JSON, sources with a name and a link, kip hints well-formed
+//   6. links              every address in a data file is https (audit 2026-10-02, P2-9: an address read from
+//                         somebody else's page becomes something the reader can tap)
 // The ranges are wide on purpose: they catch a wrong unit or a broken reading (a growth of 4,500%, a GDP of 0, a
 // year 20255), not an unusual year. A unit without a range is a problem too - a new unit must be given one.
 
@@ -96,6 +99,9 @@ const RANGES = {
   "US cents per pound": [1, 5000],
   "LAK per USD": [1000, 1000000],
   "LAK per THB": [50, 50000],
+  "LAK per CNY": [100, 200000],
+  "THB per USD": [5, 200],
+  "CNY per USD": [1, 50],
   index: [1, 100000],
   months: [0, 60],
   million: [0.1, 2000],
@@ -337,11 +343,39 @@ console.log("\n=== Hand-read facts (invest-static.json) ===");
     needSource(data.wages && data.wages.countries, "wages.countries");
     needSource(data.rubber && data.rubber.reports, "rubber.reports");
     needSource(data.land && data.land.official_extra, "land.official_extra");
-    for (const [where, fact] of [["plan", data.plan], ["plan.projects", data.plan && data.plan.projects], ["policy.outlook", data.policy && data.policy.outlook], ["policy.advice", data.policy && data.policy.advice], ["wages.thailand", data.wages && data.wages.thailand], ["rubber.official_yearly", data.rubber && data.rubber.official_yearly]]) {
+    for (const [where, fact] of [["plan", data.plan], ["plan.projects", data.plan && data.plan.projects], ["policy.outlook", data.policy && data.policy.outlook], ["policy.advice", data.policy && data.policy.advice], ["wages.thailand", data.wages && data.wages.thailand], ["rubber.official_yearly", data.rubber && data.rubber.official_yearly], ["rubber.production_basis", data.rubber && data.rubber.production_basis]]) {
       if (!fact || !fact.source) problem(`${name} ${where}: a fact without a source`);
     }
     // ... and when it was read: the section's own "checked", else the file's
-    for (const section of ["plan", "facts", "policy", "wages"]) if (!data[section] || !isDay(data[section].checked)) problem(`${name} ${section}: does not say when it was last checked`);
+    // the purity of the two gold bars: a share (0.9999), not a percentage - build-summary.js divides by it
+    needSource(data.gold, "gold");
+    for (const bar of ["lbb_bar", "thai_bar"]) {
+      const f = data.gold && data.gold[bar] && data.gold[bar].fineness;
+      if (!(typeof f === "number" && f > 0.5 && f <= 1)) problem(`${name} gold.${bar}: fineness ${JSON.stringify(f)} is not a share between 0.5 and 1 (99.99% is written 0.9999)`);
+    }
+    for (const section of ["plan", "facts", "policy", "wages", "gold"]) if (!data[section] || !isDay(data[section].checked)) problem(`${name} ${section}: does not say when it was last checked`);
+    // The World Bank's public-debt numbers are quoted in several facts (the series for the chart, the sentences
+    // of the debt tab, the policy card, the outlook table): one year must have one number everywhere
+    const wbDebt = data.facts && data.facts.debt_wb;
+    if (wbDebt) {
+      checkRows(`${name} facts.debt_wb`, wbDebt.values, "% of GDP", "year", THIS_YEAR + 6);
+      const series = new Map(Array.isArray(wbDebt.values) ? wbDebt.values : []);
+      const copy = (where, year, value) => {
+        if (year === undefined || value === undefined) return;
+        if (!series.has(year)) problem(`${name} ${where}: ${value}% for ${year}, but facts.debt_wb has no ${year}`);
+        else if (series.get(year) !== value) problem(`${name} ${where}: ${value}% for ${year}, facts.debt_wb says ${series.get(year)}% - two copies of one number differ`);
+      };
+      const peak = data.facts.debt_peak || {};
+      copy("facts.debt_peak (before)", peak.before_year, peak.before);
+      copy("facts.debt_peak (now)", peak.now_year, peak.now);
+      const debtArea = ((data.policy && data.policy.areas) || []).find((a) => a.id === "debt");
+      const level = (debtArea && debtArea.items.find((i) => i.id === "level")) || {};
+      copy("policy.debt.level", level.year, level.pct);
+      copy("policy.debt.level (before)", level.before_year, level.before);
+      const outlook = (data.policy && data.policy.outlook) || {};
+      if (outlook.rows && outlook.rows.debt) outlook.years.forEach((y, i) => copy("policy.outlook.debt", y, outlook.rows.debt[i]));
+      if (outlook.first_forecast !== undefined && outlook.first_forecast !== wbDebt.first_forecast) problem(`${name} facts.debt_wb: forecasts start in ${wbDebt.first_forecast}, in policy.outlook in ${outlook.first_forecast}`);
+    }
     const idle = Object.keys(sources).filter((id) => !used.has(id));
     console.log(`${name.padEnd(18)} ${String(Object.keys(sources).length).padStart(4)} sources, ${facts} facts with a source, last checked ${checkedDays.filter(isDay).sort().pop() || "-"}${idle.length ? `   (no fact names: ${idle.join(", ")})` : ""}`);
   }
@@ -359,6 +393,30 @@ for (const file of listJson(DATA_DIR).filter((f) => !DONE.has(f))) {
   if (data && typeof data === "object" && data.sources && file !== "summary.json") checkSources(file, data.sources);
   const stale = data && typeof data === "object" ? Object.entries(data).filter(([, v]) => v && typeof v === "object" && v.stale === true).map(([k]) => k) : [];
   console.log(`${file.padEnd(18)} ok${stale.length ? `   STALE parts: ${stale.join(", ")}` : ""}`);
+}
+// Links. A link in a data file was read from somebody else's page (a notice, a report, a price list) and becomes
+// something the reader can tap: only "https://" may get that far (audit 2026-10-02, P2-9). Checked in every data
+// file, also the ones above; the page refuses any other link as well (js/ui.js safeUrl).
+{
+  let links = 0;
+  let bad = 0;
+  const visit = (node, where) => {
+    if (typeof node === "string") {
+      if (/^[a-z][a-z0-9+.-]*:\/\//i.test(node) || /^(javascript|data|vbscript|file):/i.test(node)) {
+        links++;
+        if (!/^https:\/\/[^\s/]+\.[^\s/]+/.test(node)) {
+          bad++;
+          problem(`${where}: a link that is not https: ${JSON.stringify(node.slice(0, 80))}`);
+        }
+      }
+      return;
+    }
+    if (Array.isArray(node)) return node.forEach((x, i) => visit(x, `${where}[${i}]`));
+    if (node && typeof node === "object") for (const [k, v] of Object.entries(node)) visit(v, `${where}.${k}`);
+  };
+  for (const file of listJson(DATA_DIR)) visit(readJson(path.join(DATA_DIR, file), null), file);
+  for (const file of listJson(LATEST_DIR)) visit(readJson(path.join(LATEST_DIR, file), null), `latest/${file}`);
+  console.log(`links in the data files: ${links}${bad ? ` - NOT https: ${bad}` : " - every one https"}`);
 }
 {
   const file = path.join("forecast", "hints.json");

@@ -9,7 +9,7 @@
 
 import { el, card, cardHead } from "../ui.js";
 import {
-  indicator, latest, usdText, usdParts, pctText, freshness, sourcesFoot, invTile, barTable, yearChart, ready, staticSource, fill,
+  indicator, latest, usdText, usdParts, pctText, freshness, sourcesFoot, invTile, barTable, yearChart, ready, staticSource, fill, monthText, sourceWords,
 } from "./eco-common.js";
 
 export function fdiTab(panel, e) {
@@ -57,7 +57,9 @@ export function fdiTab(panel, e) {
       const cover = (fp.total / same[1]) * 100;
       c.append(el("p", "note", fill(cover > 100 ? t.inv_fdi_cover_over : t.inv_fdi_cover_under, { n, year: fp.year, total: usdText(same[1], t), reported: usdText(fp.total, t), cover: pctText(cover, 0) })));
     }
-    c.append(el("p", "note", t.inv_fdi_missing));
+    // which country is missing most: named by the World Bank's report (hand-read, with the months it speaks of)
+    const vn = e.stat.facts.fdi_vietnam;
+    if (vn) c.append(el("p", "note", fill(t.inv_fdi_missing, { ...sourceWords(e, vn.source), rank: vn.rank, from: monthText(vn.from, t), to: monthText(vn.to, t) })));
     const fresh = el("div", "card-foot");
     fresh.append(freshness(t, { year: fp.year, stale: fp.stale || !!(same && all.stale) }));
     c.append(fresh, sourcesFoot(t, [inv.sources.imf_dip, same ? inv.sources.unctad : null]));
@@ -69,7 +71,7 @@ export function fdiTab(panel, e) {
   const f = e.stat.facts.fdi_2025;
   if (f) {
     const d = card("official");
-    d.append(cardHead(t.inv_fdi_where_title, "official", false, t));
+    d.append(cardHead(fill(t.inv_fdi_where_title, f), "official", false, t));
     const ul = el("ul", "watch-list");
     for (const k of ["inv_fdi_where_1", "inv_fdi_where_2", "inv_fdi_where_3"]) ul.append(el("li", "", fill(t[k], f)));
     d.append(ul);

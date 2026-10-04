@@ -4,6 +4,7 @@ import { el, card, cardHead, kindChip, statusBadge, sourceStatus, sourceLink, se
 import { formatDate, toMs } from "../format.js";
 import { installState, askInstall } from "../pwa.js";
 import { fill } from "./eco-common.js";
+import { allSourcesCard } from "./sources.js";
 
 function settingRow(label, options, current, onPick) {
   const row = el("div", "setting-row");
@@ -34,8 +35,9 @@ function routeLine(src, t) {
   return line;
 }
 
-// One status row per source: name, kind, status, newest data time, error
-function statusRows(summary, economy, hints, t) {
+// One status row per DAILY source: name, kind, status, newest data time, error.
+// (The yearly and monthly sources - World Bank, IMF and all the others - are in the full list below: sources.js)
+function statusRows(summary, hints, t) {
   const rows = [];
   for (const [id, src] of Object.entries(summary.sources)) {
     const status = sourceStatus(id, summary);
@@ -46,28 +48,6 @@ function statusRows(summary, economy, hints, t) {
     if (route) name.append(route);
     // "shown_as": the label of a source whose stored kind is kept for older copies of the app (the API rate)
     rows.push([name, kindChip(src.shown_as || src.kind, t), statusBadge(status, t), src.latest_source_date ? formatDate(src.latest_source_date, t) : "—"]);
-  }
-  if (economy && economy.indicators) {
-    for (const group of ["worldbank", "imf"]) {
-      const list = Object.values(economy.indicators).filter((i) => i.source === group);
-      const bad = list.find((i) => i.stale);
-      const newestYear = Math.max(...list.flatMap((i) => i.values.map(([y]) => y)).filter((y) => y <= new Date().getFullYear()));
-      const name = el("div");
-      name.append(sourceLink(economy.sources[group]));
-      if (bad && bad.last_error) name.append(el("div", "error-text", bad.last_error.message));
-      rows.push([name, kindChip("official", t), statusBadge(bad ? "error" : "ok", t), `${t.year} ${newestYear}`]);
-    }
-    // Monthly series: IMF (CPI, gold) - newest month of monthly inflation
-    const monthly = Object.values(economy.monthly || {}).filter((s) => s.source === "imf_sdmx");
-    if (monthly.length && economy.sources.imf_sdmx) {
-      const bad = monthly.find((s) => s.stale);
-      const name = el("div");
-      name.append(sourceLink(economy.sources.imf_sdmx));
-      if (bad && bad.last_error) name.append(el("div", "error-text", bad.last_error.message));
-      const cpi = economy.monthly.cpi_yoy;
-      const last = cpi && cpi.values.length ? cpi.values[cpi.values.length - 1][0] : "—";
-      rows.push([name, kindChip("official", t), statusBadge(bad ? "error" : "ok", t), `${t.month} ${last}`]);
-    }
   }
   const n = hints && hints.hints ? hints.hints.length : 0;
   rows.push([t.forecast_store, kindChip("estimated", t), statusBadge(hints ? "ok" : "stale", t), `${n} ${t.hints_stored}`]);
@@ -103,7 +83,7 @@ function installCard(ctx) {
 }
 
 export function render(view, ctx) {
-  const { t, summary, economy, hints } = ctx;
+  const { t, summary, hints } = ctx;
   const grid = el("div", "grid grid-2");
 
   const prefs = card(null);
@@ -126,7 +106,7 @@ export function render(view, ctx) {
   const c = card(null);
   // A stacked list (not a table) so it also fits on a narrow phone
   const list = el("ul", "status-list");
-  for (const [name, chip, badge, latest] of statusRows(summary, economy, hints, t)) {
+  for (const [name, chip, badge, latest] of statusRows(summary, hints, t)) {
     const li = el("li", "status-item");
     const top = el("div", "status-top");
     top.append(typeof name === "string" ? el("strong", "", name) : name, badge);
@@ -138,6 +118,15 @@ export function render(view, ctx) {
   c.append(list);
   c.append(el("p", "note", t.source_status_note));
   view.append(c);
+
+  // Every other source of the site: the yearly and monthly data files and the reports read by hand
+  view.append(sectionTitle(t.src_all_title));
+  view.append(allSourcesCard(ctx));
+  const how = el("div", "watch-links");
+  const toMethod = el("a", "btn", t.src_to_method);
+  toMethod.href = "#/method";
+  how.append(toMethod);
+  view.append(how);
 
   view.append(sectionTitle(t.manual_title));
   const m = card("shop");

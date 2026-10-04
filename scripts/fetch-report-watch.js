@@ -17,7 +17,7 @@
 
 const path = require("path");
 const { DATA_DIR, fetchJson, readJson, writeIfChanged } = require("./lib/common");
-const { runParts, partsText } = require("./lib/parts");
+const { runParts, partsText, stampedSources } = require("./lib/parts");
 
 const OUT_FILE = path.join(DATA_DIR, "report-watch.json");
 const TIMEOUT_MS = 30000;
@@ -51,7 +51,7 @@ async function main() {
   const now = new Date().toISOString();
   const { out, failed } = await runParts(old, [["lem", { source: "wb_wds", latest: null, editions: [] }, economicMonitor, (p) => `newest: ${p.latest.date} "${p.latest.title}" (${p.editions.length} editions kept)`]], now);
   // checked_at moves only when the search answered: the page shows it as "last looked on"
-  const text = partsText({ sources: SOURCES, checked_at: failed ? old.checked_at || null : now.slice(0, 10) }, out);
+  const text = partsText({ sources: stampedSources(SOURCES, old.sources, out, now), checked_at: failed ? old.checked_at || null : now.slice(0, 10) }, out);
   writeIfChanged(OUT_FILE, text);
   console.log(`\nDone: ${failed} of 1 parts failed. Wrote data/report-watch.json (${(text.length / 1024).toFixed(1)} KB)`);
   return { ok: failed < 1 };

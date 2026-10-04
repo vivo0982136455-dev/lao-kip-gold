@@ -29,7 +29,7 @@
 
 const path = require("path");
 const { DATA_DIR, readJson, writeIfChanged } = require("./lib/common");
-const { runParts, partsText } = require("./lib/parts");
+const { runParts, partsText, stampedSources } = require("./lib/parts");
 const { fetchTextAia, fetchBufferAia } = require("./lib/aia");
 const { unpack } = require("./lib/zip");
 
@@ -193,7 +193,7 @@ async function main() {
     ["reserves", { source: "bol_reserves", unit: "USD million", includes_swap_since: "2020-07", rows: [] }, reserves, (p) => `${p.rows.length} months, newest: ${last(p)}`],
     ["inflation", { source: "bol_inflation", unit: "% vs a year earlier", year: null, rows: [] }, inflation, (p) => `${p.rows.length} months of ${p.year}, newest: ${last(p)}`],
   ]);
-  const text = partsText({ sources: SOURCES }, out);
+  const text = partsText({ sources: stampedSources(SOURCES, old.sources, out) }, out);
   writeIfChanged(OUT_FILE, text);
   console.log(`\nDone: ${failed} of 4 parts failed. Wrote data/bol-policy.json (${(text.length / 1024).toFixed(1)} KB)`);
   return { ok: failed < 4 };

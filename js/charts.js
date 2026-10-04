@@ -344,22 +344,46 @@ function drawChart(canvas, { labels, tickLabels, series, unit, t, onActive, anim
   return chart;
 }
 
+// The point of a line that the read-out shows while nothing is touched ("at rest").
+//   A line that ends at or before "now", or a chart that has no "now": its last value.
+//   A line that goes on into the future (a forecast, a repayment schedule, a projection): its value NOW - or the
+//   last one before now, or its first one when it only starts later. Without this, "latest" was the far end of a
+//   forecast (audit 2026-10-02, P2-5: the debt schedule showed the year 2032 as "latest").
+export function restPoint(values, last, now) {
+  if (now < 0 || last <= now) return last;
+  if (has(values[now])) return now;
+  for (let k = now - 1; k >= 0; k--) if (has(values[k])) return k;
+  return values.findIndex(has);
+}
+// "% since the first point" says nothing when the line starts near zero (33.9 -> 988 = "+2,816%") or below it
+export const NEAR_ZERO = 0.05; // the first value must be at least this share of the line's largest value
+export function sinceMakesSense(values) {
+  const list = values.filter(has);
+  if (list.length < 2 || list[0] <= 0) return false;
+  return list[0] >= NEAR_ZERO * Math.max(...list.map(Math.abs));
+}
+
 // Read-out above the plot: one row per line = colour key, name, value, change since the start of the period.
 // It shows the latest value of every line; while a point is touched / hovered it shows that point instead.
 // With two or more lines a row is also a button that hides / shows its line (as a legend does).
-function buildReadout({ labels, series, unit, t, whenPrefix, since = true }) {
+//   nowIndex: the label of "now" on an axis that runs into the future (see restPoint); -1 = no such axis
+//   peak: index of the line whose highest point is named in an extra row (e.g. the year the most debt falls due)
+function buildReadout({ labels, series, unit, t, whenPrefix, since = true, nowIndex = -1, peak = null }) {
   const box = el("div", "readout");
   const head = el("div", "readout-head");
   const when = el("span", "readout-when");
   head.append(when);
-  const showSince = since && !isPct(unit) && unit !== "index"; // a % of a % (or of an index) would only confuse
+  const sinceOk = series.map((s) => sinceMakesSense(s.values));
+  const showSince = since && !isPct(unit) && unit !== "index" && sinceOk.some(Boolean); // a % of a % (or of an index) would only confuse
   if (showSince) head.append(el("span", "readout-note", `▲▼ % = ${t.since_start}`));
   box.append(head);
 
   const firstIndex = series.map((s) => s.values.findIndex(has));
   const first = series.map((s, i) => (firstIndex[i] >= 0 ? s.values[firstIndex[i]] : null));
   const lastIndex = series.map((s) => shownOf(s).reduce((acc, v, k) => (has(v) ? k : acc), -1));
-  const sameEnd = lastIndex.every((k) => k === lastIndex[0]);
+  const restIndex = series.map((s, i) => restPoint(shownOf(s), lastIndex[i], nowIndex));
+  const future = nowIndex >= 0 && lastIndex.some((k) => k > nowIndex); // a line runs past "now"
+  const sameEnd = restIndex.every((k) => k === restIndex[0]);
   const many = series.length > 1;
   // The widest value any point can show: the value column keeps this width, so the names never re-wrap
   const widest = Math.max(1, ...series.flatMap((s) => shownOf(s).filter(has).map((v) => valueText(v, unit).length)));
@@ -384,18 +408,26 @@ function buildReadout({ labels, series, unit, t, whenPrefix, since = true }) {
     return { row, at, value, since };
   });
 
-  // index = the touched point, or null = the latest value of every line
+  // the highest point of one line, always on show (the touched point does not replace it)
+  if (peak !== null && series[peak]) {
+    const values = shownOf(series[peak]);
+    const top = values.reduce((best, v, k) => (has(v) && (best < 0 || v > values[best]) ? k : best), -1);
+    if (top >= 0) box.append(el("div", "readout-peak", `${t.readout_peak} · ${series[peak].label}: ${whenPrefix}${labels[top]} · ${valueText(values[top], unit)}`));
+  }
+
+  // index = the touched point, or null = every line at rest (its latest value, or its value now: see restPoint)
   const show = (index) => {
     if (index !== null) when.textContent = `${whenPrefix}${labels[index]}`;
-    else when.textContent = sameEnd && lastIndex[0] >= 0 ? `${t.readout_latest} · ${whenPrefix}${labels[lastIndex[0]]}` : t.readout_latest;
+    else if (future) when.textContent = `${t.readout_now} · ${whenPrefix}${labels[nowIndex]}`;
+    else when.textContent = sameEnd && restIndex[0] >= 0 ? `${t.readout_latest} · ${whenPrefix}${labels[restIndex[0]]}` : t.readout_latest;
     series.forEach((s, i) => {
-      const k = index === null ? lastIndex[i] : index;
+      const k = index === null ? restIndex[i] : index;
       const v = k >= 0 ? shownOf(s)[k] : null;
       rows[i].value.textContent = has(v) ? valueText(v, unit) : "—";
-      // lines that end on different days: say which day each "latest" is
-      rows[i].at.textContent = index === null && !sameEnd && has(v) ? ` · ${whenPrefix}${labels[k]}` : "";
+      // a line whose point is not the one named in the head says which one it is
+      rows[i].at.textContent = index === null && has(v) && (future ? k !== nowIndex : !sameEnd) ? ` · ${whenPrefix}${labels[k]}` : "";
       // Change since the first point of the line (the first point itself has nothing to be compared with)
-      if (has(v) && first[i] && k > firstIndex[i]) {
+      if (sinceOk[i] && has(v) && first[i] && k > firstIndex[i]) {
         const change = ((v - first[i]) / first[i]) * 100;
         rows[i].since.replaceChildren(pctPill(Math.abs(change) < 0.005 ? 0 : change, { plain: true })); // too small to show = "0.00%", not "+0.00%"
       } else {
@@ -453,10 +485,14 @@ function dataTable({ labels, series, unit, unitLabel, t, firstColTitle, title })
 //     soft  = forecast / target / not yet paid: quieter numbers in the table
 //   unitLabel: the unit in words; left out = from the unit code (format.js unitText)
 //   periodText (e.g. "30 วัน"): shows the change of the FIRST line over the period as a ▲/▼ pill.
-//   noSince: leave out the "% since the first point" of the read-out (a line that starts near zero gives +35,000%)
+//   noSince: leave out the "% since the first point" of the read-out for every line (a line that starts near zero
+//            or below it leaves it out by itself: sinceMakesSense)
+//   nowLabel: the label of "now" (e.g. "2026") on an axis that runs into the future: at rest the read-out shows
+//            the value of now for a forecast / schedule / projection, not its far end (restPoint)
+//   peak:    index of the line whose highest point the read-out names in an extra row
 //   snap: one label per day but values only on some days (see drawChart); series then carry gap: <days>
 // Call mountCharts(container) after the card is in the page.
-export function chartCard({ title, subtitle, labels, tickLabels, series, unit, unitLabel, t, firstColTitle, extraClass = "", periodText, noSince = false, snap = false }) {
+export function chartCard({ title, subtitle, labels, tickLabels, series, unit, unitLabel, t, firstColTitle, extraClass = "", periodText, noSince = false, snap = false, nowLabel = null, peak = null }) {
   const c = card(null, "chart-card " + extraClass);
   const head = el("div", "chart-head");
   head.append(el("h3", "", title));
@@ -473,7 +509,7 @@ export function chartCard({ title, subtitle, labels, tickLabels, series, unit, u
     c.append(box);
   } else {
     // "ปี 2025" for yearly charts; dates and months already read well on their own
-    const readout = buildReadout({ labels, series, unit, t, whenPrefix: colTitle === t.year ? `${t.year} ` : "", since: !noSince });
+    const readout = buildReadout({ labels, series, unit, t, whenPrefix: colTitle === t.year ? `${t.year} ` : "", since: !noSince, nowIndex: nowLabel === null ? -1 : labels.indexOf(nowLabel), peak });
     c.append(readout.box, box);
     const canvas = el("canvas");
     canvas.setAttribute("role", "img");

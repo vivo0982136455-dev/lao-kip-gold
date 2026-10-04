@@ -13,7 +13,8 @@ const SOURCES = ["bol", "gold-world", "silver-world", "gold-thai", "fx-market", 
 const OUT_FILE = path.join(DATA_DIR, "summary.json");
 
 // Weights and conversions: scripts/lib/units.js (tested in tests/calc.js)
-const { mid, goldLakPerBaht, silverLakPerKg, lakPerLaoBaht } = require("./lib/units");
+const { mid, goldLakPerBaht, silverLakPerKg, lakPerLaoBaht, fineGoldPremium, GRAMS_PER_BAHT, GRAMS_PER_LAO_BAHT, GRAMS_PER_TROY_OZ } = require("./lib/units");
+const PREMIUM_DAYS = 14; // the average of this many days is shown, and turns the estimate into the adjusted estimate
 
 // ---------- Day helpers (all days are Asia/Vientiane, UTC+7, no daylight saving) ----------
 
@@ -80,14 +81,28 @@ function combineDaily(inputs, formula) {
 
 // ---------- Lao premium (Phase 3, automatic since LBB was added) ----------
 // The REAL Lao price is Lao Bullion Bank's sell price per Lao baht (15 g) - it updates by itself.
-// premium (per day) = LBB sell price ÷ our estimate (same day)
-// avg_14d           = average premium of the last 14 days (shown on the Gold page)
-// adjusted estimate = estimate × average premium of the 14 days BEFORE that day
-//                     (never uses the same day's real price, so accuracy tests stay honest)
-// The premium also absorbs the unit gap (Thai baht 15.244 g vs Lao baht 15 g) and the purity gap.
+// multiplier (per day) = LBB sell price ÷ our estimate (same day). It is NOT a premium: next to the price gap it
+//                        holds the unit gap (Thai baht 15.244 g, Lao baht 15 g) and the purity gap (96.5%, 99.99%)
+// avg_14d              = average multiplier of the last 14 days
+// adjusted estimate    = estimate × average multiplier of the 14 days BEFORE that day
+//                        (never uses the same day's real price, so accuracy tests stay honest)
+// fine_avg_14d         = the like-for-like premium: fine gold in an LBB bar ÷ fine gold in a Thai bar, gram for
+//                        gram (scripts/lib/units.js fineGoldPremium), average of the same days - what the Gold page
+//                        shows as "how much dearer" (audit 2026-10-02, P2-1)
+// basis                = the weights and purities the numbers were worked out with (the page prints them)
+// How pure the two bars are: hand-read facts (data/invest-static.json "gold"). Without them there is no
+// like-for-like premium - a guessed purity would be a made-up number.
+function barFineness() {
+  const gold = (readJson(path.join(DATA_DIR, "invest-static.json"), null) || {}).gold || {};
+  const share = (bar) => (gold[bar] && typeof gold[bar].fineness === "number" && gold[bar].fineness > 0.5 && gold[bar].fineness <= 1 ? gold[bar].fineness : null);
+  const [lbb, thai] = [share("lbb_bar"), share("thai_bar")];
+  return lbb && thai ? { lbb, thai } : null;
+}
+
 function addLaoPremium(summary) {
   const m = summary.metrics;
   const actual = m["calc.lbb_sell_baht"];
+  const perGram = m["gold-lbb.sell_g"];
   const est = m["calc.lao_gold_est_sell"];
   summary.gold_premium = null;
   if (!actual || !est) return;
@@ -95,17 +110,23 @@ function addLaoPremium(summary) {
   const estByDay = new Map(est.daily);
   const premiums = actual.daily.filter(([d]) => estByDay.has(d)).map(([d, v]) => [d, v / estByDay.get(d)]);
   if (!premiums.length) return;
+  const fineness = barFineness();
+  const fine = perGram && fineness ? perGram.daily.filter(([d]) => estByDay.has(d)).map(([d, v]) => [d, fineGoldPremium(v, estByDay.get(d), fineness)]) : [];
 
   const mean = (list) => list.reduce((sum, [, v]) => sum + v, 0) / list.length;
-  const between = (endDay, fromOffset, toOffset) =>
-    premiums.filter(([d]) => d >= addDays(endDay, fromOffset) && d <= addDays(endDay, toOffset));
+  const inDays = (list, endDay, fromOffset, toOffset) => list.filter(([d]) => d >= addDays(endDay, fromOffset) && d <= addDays(endDay, toOffset));
+  const between = (endDay, fromOffset, toOffset) => inDays(premiums, endDay, fromOffset, toOffset);
 
   const today = localDay(new Date().toISOString());
-  const last14 = between(today, -13, 0);
+  const last14 = between(today, 1 - PREMIUM_DAYS, 0);
+  const fine14 = inDays(fine, today, 1 - PREMIUM_DAYS, 0);
   summary.gold_premium = {
     avg_14d: last14.length ? round(mean(last14)) : null,
     days_used: last14.length,
     last_day: premiums[premiums.length - 1][0],
+    fine_avg_14d: fine14.length ? round(mean(fine14)) : null,
+    window_days: PREMIUM_DAYS,
+    basis: { thai_g: GRAMS_PER_BAHT, thai_fineness: fineness ? fineness.thai : null, lao_g: GRAMS_PER_LAO_BAHT, lbb_fineness: fineness ? fineness.lbb : null, oz_g: GRAMS_PER_TROY_OZ },
   };
 
   m["calc.shop_premium"] = makeMetric({
@@ -119,11 +140,11 @@ function addLaoPremium(summary) {
 
   const adjDaily = est.daily
     .map(([d, v]) => {
-      const before = between(d, -14, -1);
+      const before = between(d, -PREMIUM_DAYS, -1);
       return before.length ? [d, v * mean(before)] : null;
     })
     .filter(Boolean);
-  const latestBefore = between(localDay(est.latest.source_date), -14, -1);
+  const latestBefore = between(localDay(est.latest.source_date), -PREMIUM_DAYS, -1);
   if (!latestBefore.length) return; // need at least one earlier real price
 
   m["calc.lao_gold_adj_sell"] = makeMetric({

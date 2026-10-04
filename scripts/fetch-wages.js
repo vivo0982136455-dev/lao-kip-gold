@@ -3,6 +3,7 @@
 //   ilo_min   ILO (ILOSTAT): statutory monthly minimum wage by year, in US dollars and in dollars of equal buying
 //             power (PPP) - the same method for every country, but one or two years behind
 //   ilo_avg   ILO (ILOSTAT): average monthly earnings of employees, in US dollars - the newest year each country has
+//             ("latest") and every year since 2015 ("series": a multiple of Laos is only fair within one year)
 //   fx        reference mid rates (API) of the US dollar, to turn today's legal minimum wages into dollars and kip
 // The minimum wages in force TODAY are not in this file: they are read by hand from each government's notice and
 // kept in data/invest-static.json ("wages"), with the date of the check.
@@ -24,7 +25,7 @@
 
 const path = require("path");
 const { DATA_DIR, fetchJson, fetchText, parseCsv, readJson, writeIfChanged } = require("./lib/common");
-const { runParts, partsText } = require("./lib/parts");
+const { runParts, partsText, stampedSources } = require("./lib/parts");
 
 const OUT_FILE = path.join(DATA_DIR, "wages.json");
 const TIMEOUT_MS = 60000;
@@ -76,10 +77,20 @@ async function minimumWage() {
   return { source: "ilo", indicator: "EAR_INEE_CUR_NB_A", unit: "per month", series };
 }
 
-// Average monthly earnings, newest year per country: { THA: { year, usd, ppp }, ... }
+// Average monthly earnings: latest = the newest year per country { THA: { year, usd, ppp }, ... }, and
+// series = every year in US dollars { THA: [[year, usd]] } - the countries' newest years differ (Laos 2022,
+// Thailand 2025), so "x times Laos" is worked out from the value of Laos' own year (audit 2026-10-02, P2-3)
 async function averageEarnings() {
   const rows = await ilo("EAR_EMTA_SEX_CUR_NB_A", "&sex=SEX_T", AVG_FROM);
   const latest = {};
+  const byYear = {};
+  for (const r of rows) {
+    if (r.type !== "CUR_TYPE_USD") continue;
+    const m = (byYear[r.area] = byYear[r.area] || new Map());
+    if (!m.has(r.year)) m.set(r.year, round(r.value, 0)); // several sources per year can exist: the first row is kept
+  }
+  const series = {};
+  for (const [area, m] of Object.entries(byYear)) series[area] = [...m].sort((a, b) => a[0] - b[0]);
   for (const r of rows) {
     if (r.type !== "CUR_TYPE_USD" && r.type !== "CUR_TYPE_PPP") continue;
     const key = r.type === "CUR_TYPE_USD" ? "usd" : "ppp";
@@ -93,7 +104,12 @@ async function averageEarnings() {
   }
   for (const [area, c] of Object.entries(latest)) if (c.usd < 30 || c.usd > 20000) throw new Error(`ILO average earnings: ${area} ${c.year} = ${c.usd} US$ a month is not possible`);
   if (Object.keys(latest).length < 12) throw new Error(`ILO average earnings: only ${Object.keys(latest).length} countries`);
-  return { source: "ilo", indicator: "EAR_EMTA_SEX_CUR_NB_A", unit: "per month", latest };
+  // the two views of the same answer must agree: the newest year of a series is the "latest" value
+  for (const [area, c] of Object.entries(latest)) {
+    const last = series[area] && series[area][series[area].length - 1];
+    if (!last || last[0] !== c.year || last[1] !== c.usd) throw new Error(`ILO average earnings: ${area} latest ${c.year} = ${c.usd} does not match its series (${JSON.stringify(last)})`);
+  }
+  return { source: "ilo", indicator: "EAR_EMTA_SEX_CUR_NB_A", unit: "per month", latest, series };
 }
 
 async function fx() {
@@ -113,10 +129,10 @@ async function main() {
   const old = readJson(OUT_FILE, {});
   const { out, failed } = await runParts(old, [
     ["ilo_min", { source: "ilo", indicator: "EAR_INEE_CUR_NB_A", unit: "per month", series: {} }, minimumWage, (p) => `${Object.keys(p.series).length} countries; Laos ${JSON.stringify(p.series.LAO.usd.slice(-2))} US$`],
-    ["ilo_avg", { source: "ilo", indicator: "EAR_EMTA_SEX_CUR_NB_A", unit: "per month", latest: {} }, averageEarnings, (p) => `${Object.keys(p.latest).length} countries; Laos ${JSON.stringify(p.latest.LAO)}`],
+    ["ilo_avg", { source: "ilo", indicator: "EAR_EMTA_SEX_CUR_NB_A", unit: "per month", latest: {}, series: {} }, averageEarnings, (p) => `${Object.keys(p.latest).length} countries; Laos ${JSON.stringify(p.latest.LAO)}; ${Object.values(p.series).filter((s) => s.some(([y]) => y === p.latest.LAO.year)).length} countries have Laos' year`],
     ["fx", { source: "fx", base: "USD", date: null, rates: {} }, fx, (p) => `${Object.keys(p.rates).length} currencies on ${p.date}; 1 US$ = ${p.rates.LAK} kip`],
   ]);
-  const text = partsText({ sources: SOURCES }, out);
+  const text = partsText({ sources: stampedSources(SOURCES, old.sources, out) }, out);
   writeIfChanged(OUT_FILE, text);
   console.log(`\nDone: ${failed} of 3 parts failed. Wrote data/wages.json (${(text.length / 1024).toFixed(1)} KB)`);
   return { ok: failed < 3 };

@@ -227,23 +227,44 @@ function trendChart(e, wages) {
 }
 
 // ---------- what an average employee earns (ILO) ----------
+// The average earnings of one country in one given year, or null when the ILO has no number for that year.
+//   avg = data/wages.json "ilo_avg": latest { ISO: { year, usd } } and (newer files) series { ISO: [[year, usd]] }
+export function earningsIn(avg, iso, year) {
+  const now = avg.latest && avg.latest[iso];
+  if (now && now.year === year) return now.usd;
+  const hit = avg.series && avg.series[iso] && avg.series[iso].find(([y]) => y === year);
+  return hit ? hit[1] : null;
+}
+
 function averageCard(e, rows, wages) {
   const { t } = e;
   const latest = wages && wages.ilo_avg && wages.ilo_avg.latest;
   if (!latest || !latest.LAO) return null;
   const data = rows.filter((r) => latest[r.c.iso]).map((r) => ({ iso: r.c.iso, ...latest[r.c.iso] })).sort((a, b) => b.usd - a.usd);
+  // "x times Laos" only within ONE year: the value each country had in the year of Laos' own number (the newest
+  // years differ - Laos 2022, Thailand 2025 - and a ratio across years is not a comparison). No value for that
+  // year = a dash. The bar and the number of a row stay the country's newest year, with that year named.
+  const base = latest.LAO.year;
+  const multiple = (r) => {
+    if (r.iso === "LAO") return "1×";
+    const usd = earningsIn(wages.ilo_avg, r.iso, base);
+    if (usd === null) return "—";
+    const cell = el("span", "", times(usd / latest.LAO.usd));
+    if (r.year !== base) cell.append(el("span", "sub-line", fill(t.wg_avg_same, { usd: whole(usd), year: base })));
+    return cell;
+  };
   const list = data.map((r) => ({
     label: countryName(t, null, r.iso),
     cls: r.iso === "LAO" ? "focus-name" : "",
     sub: fill(t.wg_avg_row, { year: r.year }),
     value: r.usd,
     text: whole(r.usd),
-    share: r.iso === "LAO" ? "1×" : times(r.usd / latest.LAO.usd),
+    share: multiple(r),
   }));
   const c = card("official");
   c.append(cardHead(t.wg_avg_title, "official", !!wages.ilo_avg.stale, t));
   const missing = rows.filter((r) => !latest[r.c.iso]).map((r) => countryName(t, null, r.c.iso));
-  c.append(barTable([t.rw_col_country, t.wg_col_usd, t.wg_col_times], list), el("p", "note", fill(t.wg_avg_note, { missing: missing.join(", ") || "—" })));
+  c.append(barTable([t.rw_col_country, t.wg_col_usd, fill(t.wg_col_times_same, { year: base })], list), el("p", "note", fill(t.wg_avg_note, { year: base, missing: missing.join(", ") || "—" })));
   const fresh = el("div", "card-foot");
   // the label shows the year of Laos' own number: the row everything is compared with
   fresh.append(freshness(t, { year: latest.LAO.year, stale: wages.ilo_avg.stale }));

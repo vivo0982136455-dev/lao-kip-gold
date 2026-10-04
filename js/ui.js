@@ -87,13 +87,32 @@ export function cardFoot(metricIds, summary, t) {
   return foot;
 }
 
-export function sourceLink(src) {
-  if (!src.source_url) return document.createTextNode(src.source_name);
-  const link = el("a", "", src.source_name);
-  link.href = src.source_url;
+// An address that came out of a data file was read from somebody else's page (a notice, a report, a price list).
+// It becomes a link only when it is a plain https address: "javascript:", "data:", http and anything that is not
+// an address at all are refused (audit 2026-10-02, P2-9; scripts/check-data.js checks the files the same way).
+export function safeUrl(url) {
+  if (typeof url !== "string") return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && !u.username && !u.password ? u.href : null;
+  } catch {
+    return null;
+  }
+}
+
+// "text" as a link that opens in a new tab - or as plain text when the address is refused
+export function outLink(text, url) {
+  const href = safeUrl(url);
+  if (!href) return el("span", "", text);
+  const link = el("a", "", text);
+  link.href = href;
   link.target = "_blank";
   link.rel = "noopener";
   return link;
+}
+
+export function sourceLink(src) {
+  return src.source_url ? outLink(src.source_name, src.source_url) : document.createTextNode(src.source_name);
 }
 
 // ---------- Up / down pills (green ▲ / red ▼ / grey ▬ - colour never without the arrow) ----------
