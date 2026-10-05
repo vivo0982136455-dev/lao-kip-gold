@@ -39,6 +39,7 @@ function startSite(root, port) {
   const server = http.createServer((req, res) => {
     site.hits.push(req.url);
     if (site.mode === "down") return req.socket.destroy(); // like a lost connection
+    if (site.handle && site.handle(req, res)) return; // a test's own answer for a path that is not a file
     let urlPath = decodeURIComponent(req.url.split("?")[0]);
     if (urlPath.endsWith("/")) urlPath += "index.html";
     const filePath = path.join(root, urlPath);

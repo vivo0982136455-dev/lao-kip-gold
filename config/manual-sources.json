@@ -1,5 +1,6 @@
 {
-  "_help": "Links for the owner's shop-price Google Form and its Sheet. Question IDs are found automatically (scripts/fetch-form-entries.js -> data/manual-form.json). Guide: docs/manual-entry-guide-th.md",
+  "_help": "Links for the owner's shop-price Google Form and its Sheet. Question IDs are found automatically (scripts/fetch-form-entries.js -> data/manual-form.json). Guide: docs/manual-entry-guide-th.md. save_url: the address (.../exec) of the owner's own save script, apps-script/save-prices.gs - once it is set, prices are saved through it with the owner's key and the Form is not used (docs/owner-save-key-th.md). Never a key in this file.",
   "lao_gold_csv_url": "https://docs.google.com/spreadsheets/d/1uKH9A0aoemxJfceglZpBXteIvwexp91VwW7S8sX0Azc/export?format=csv",
+  "save_url": "",
   "shop_form_url": "https://docs.google.com/forms/d/e/1FAIpQLSe9nGE_XCCiKMx2XpTorj0T8Dl91k6CHGjqho6rc37gLQLFFg/viewform"
 }

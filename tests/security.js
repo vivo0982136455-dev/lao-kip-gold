@@ -70,7 +70,7 @@ check("picture reader: its entry file has a pinned hash, and every address names
     await page.s("Network.setBlockedURLs", { urls: [] });
     page.errors.length = 0;
     const SCREENS = [["overview", {}], ["rates", {}], ["gold", {}], ["living", {}], ["forecast", {}], ["settings", {}], ["method", {}],
-      ...["overview", "compare", "population", "wages", "gdp", "plan", "policy", "fdi", "debt", "inflation", "rubber", "land"].map((tab) => ["economy", { eco_tab: tab }])];
+      ...["overview", "compare", "population", "wages", "gdp", "plan", "policy", "fdi", "debt", "inflation", "bank", "rubber", "land"].map((tab) => ["economy", { eco_tab: tab }])];
     let n = 0;
     const seen = [];
     for (const [route, values] of SCREENS) {

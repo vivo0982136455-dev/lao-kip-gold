@@ -8,11 +8,12 @@
                   no eval; 'wasm-unsafe-eval' = the picture reader's engine is WebAssembly.
          worker   this site (sw.js) + blob: (the picture reader starts its worker from a blob)
          style    this site + Google Fonts; no inline style
-         connect  this site (data, texts), Google Forms / Sheets (the owner's price form), jsDelivr (the picture
+         connect  this site (data, texts), Google Forms / Sheets (the owner's price form), script.google.com (the
+                  owner's own save script; its answer comes from *.googleusercontent.com), jsDelivr (the picture
                   reader fetches its engine and its language file)
          img      this site, data: (the icon below), blob: (the preview of a chosen picture)
        A change here needs: node tests/security.js -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://docs.google.com https://*.googleusercontent.com https://cdn.jsdelivr.net; manifest-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://docs.google.com https://script.google.com https://*.googleusercontent.com https://cdn.jsdelivr.net; manifest-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lao Kip &amp; Gold</title>
   <meta name="theme-color" content="#0f1115">
@@ -54,6 +55,7 @@
   <link rel="modulepreload" href="js/pwa.js">
   <link rel="modulepreload" href="js/ui.js">
   <link rel="modulepreload" href="js/calc.js">
+  <link rel="modulepreload" href="js/pages/eco-bank.js">
   <link rel="modulepreload" href="js/pages/eco-common.js">
   <link rel="modulepreload" href="js/pages/eco-compare.js">
   <link rel="modulepreload" href="js/pages/eco-debt.js">

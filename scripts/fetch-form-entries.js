@@ -9,11 +9,17 @@
 // A question is recognised by words in its title (Thai), so its position in the form does not matter.
 // The page cannot read the form itself (Google sends no CORS headers), which is why this runs here.
 
+// When config/manual-sources.json names a "save_url" (the owner's own Apps Script, apps-script/save-prices.gs),
+// the Form is closed and cannot be read any more: the script itself is asked which prices its Sheet has a
+// column for (a GET writes nothing and needs no key), and the page saves through that address.
+//   Real answer: not seen yet - the owner has not deployed the script (2026-10-05). The same code answers in
+//   tests/save-script.js: {"ok":true,"roles":["date","sell", ...]}
+//
 // The file also carries the limits of the owner's own prices (scripts/fetch-own-prices.js LIMITS), so that the
 // page checks an entry with the very numbers the bot will check it with.
 
 const path = require("path");
-const { DATA_DIR, ROOT_DIR, fetchText, readJson, writeIfChanged } = require("./lib/common");
+const { DATA_DIR, ROOT_DIR, fetchText, fetchJson, readJson, writeIfChanged } = require("./lib/common");
 const { LIMITS } = require("./fetch-own-prices");
 
 const OUT_FILE = path.join(DATA_DIR, "manual-form.json");
@@ -69,6 +75,18 @@ async function main() {
   const formUrl = String(config.shop_form_url || "").trim();
   const sheetMatch = /\/spreadsheets\/d\/([\w-]+)/.exec(config.lao_gold_csv_url || "");
   const formMatch = /\/forms\/d\/e\/([\w-]+)\//.exec(formUrl);
+  const saveUrl = process.env.SAVE_URL !== undefined ? process.env.SAVE_URL.trim() : String(config.save_url || "").trim();
+  if (saveUrl) {
+    // an environment variable is a test's own server; the address in the config must be an Apps Script web app
+    if (process.env.SAVE_URL === undefined && !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(saveUrl)) throw new Error("save_url is not the address of an Apps Script web app (https://script.google.com/macros/s/.../exec)");
+    const answer = await fetchJson(saveUrl);
+    const roles = answer && answer.ok === true && Array.isArray(answer.roles) ? answer.roles.filter((r) => /^[a-z_]+$/.test(r)) : [];
+    if (!roles.includes("date") || !roles.includes("sell")) throw new Error("the save script found no date / sell column in the Sheet");
+    const out = { save_url: saveUrl, sheet_id: sheetMatch ? sheetMatch[1] : null, entries: Object.fromEntries(roles.map((r) => [r, r])), direct_submit_ok: true, limits: LIMITS };
+    writeIfChanged(OUT_FILE, JSON.stringify(out, null, 2) + "\n");
+    console.log(`[OK]   manual-form: saved through the owner's script: ${roles.join(", ")}`);
+    return;
+  }
   if (!formMatch) {
     console.log("[SKIP] manual-form: no shop_form_url in config/manual-sources.json");
     return;

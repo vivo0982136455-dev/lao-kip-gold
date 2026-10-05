@@ -20,6 +20,7 @@ export const TAB_HEADS = {
   fdi: ["inv_k_fdi", "inv_k_fdi_gdp", "inv_k_fdi_stock", "inv_k_fdi_total", "inv_fdi_chart", "inv_fdi_who", "inv_fdi_where_title"],
   debt: ["inv_k_debt", "inv_k_debt_ext_gov", "inv_k_debt_ext_all", "inv_k_debt_service_exports", "eco_debt", "inv_debt_who", "inv_debt_schedule", "inv_debt_facts_title", "§inv_debt_story", "inv_debt_why", "inv_debt_effects", "inv_debt_plan", "inv_debt_can", "dif_title"],
   inflation: ["inv_k_inflation", "inv_k_imf_year", "inv_k_infl_target", "inv_k_kip", "inv_infl_vs_kip", "infl_compare_title", "inv_infl_yearly", "eco_fx_avg", "inv_infl_why_title", "dif_title"],
+  bank: ["bank_k_m2", "bank_k_fx", "bank_k_credit", "bank_k_loan", "bank_k_deposit", "bank_k_npl", "bank_k_capital", "bank_fx_title", "bank_parts_title", "bank_growth_title", "bank_rates_title", "bank_sound_title", "bank_sectors_title", "bank_read_title"],
   rubber: {
     market: ["inv_rub_world", "inv_rub_cuplump", "inv_rub_latex", "inv_rub_china", "inv_rub_world_chart", "inv_rub_thai_chart", "inv_rub_years_title", "inv_rub_notes_title"],
     buyers: ["rb_k_china", "rb_k_vietnam", "rb_k_vn_month", "rb_k_thailand", "rb_who_title", "rb_vn_chart", "rb_kinds_title", "rb_thai_title", "rb_m_nongkhai", "rb_m_chiangrai", "rb_m_all", "rb_thai_chart"],

@@ -6,7 +6,7 @@
 
 import { el, card, cardHead, table, emptyState } from "../ui.js";
 import { formatNumber, formatDate, todayVientiane } from "../format.js";
-import { loadFormConfig, formHas, prefilledUrl, saveDirect, newTag } from "../manual-entry.js";
+import { loadFormConfig, formHas, prefilledUrl, saveDirect, newTag, usesKey, keyReady, keyBox, saveWithKey } from "../manual-entry.js";
 import { PROVINCES, fill, whole } from "./eco-common.js";
 import { borderPriceLak } from "./eco-rubber-borders.js";
 
@@ -202,8 +202,9 @@ function entryCard(ctx, spec) {
     const fresh = spec.analysis() || el("div");
     analysisBox.replaceWith(fresh);
     analysisBox = fresh;
-    saveBtn.disabled = list.some(([level]) => level === "bad") || !s.config || st.save === "send" || st.save === "check";
-    link.href = s.config ? prefilledUrl(s.config, spec.formValues()) : "#";
+    saveBtn.disabled = list.some(([level]) => level === "bad") || !s.config || !keyReady(s.config) || st.save === "send" || st.save === "check";
+    link.href = s.config && !usesKey(s.config) ? prefilledUrl(s.config, spec.formValues()) : "#";
+    link.hidden = usesKey(s.config); // the Form is closed on the road with the owner's key
   };
   spec.build(grid, refresh);
   panel.append(grid, checksBox, analysisBox);
@@ -216,6 +217,14 @@ function entryCard(ctx, spec) {
   });
   saveBtn.addEventListener("click", async () => {
     spec.remember();
+    if (usesKey(s.config)) {
+      st.save = "send";
+      rerender();
+      st.save = await saveWithKey(s.config, spec.formValues());
+      if (st.save === "saved") st.open = false;
+      rerender();
+      return;
+    }
     // A form that needs sign-in / e-mail cannot be filled silently: open it filled in instead
     if (!s.config.direct_submit_ok) {
       window.open(prefilledUrl(s.config, spec.formValues()), "_blank", "noopener");
@@ -241,9 +250,11 @@ function entryCard(ctx, spec) {
   });
   const saveRow = el("div", "up-actions");
   saveRow.append(saveBtn, link, cancel);
+  const key = keyBox(t, s.config, (redraw) => (redraw ? rerender() : refresh()));
+  if (key) panel.append(key);
   panel.append(saveRow);
   if (st.save !== "idle") {
-    const cls = st.save === "manual" ? "ok" : st.save === "unconfirmed" || st.save === "error" ? "warn" : "";
+    const cls = st.save === "manual" ? "ok" : st.save === "send" || st.save === "check" ? "" : "warn";
     panel.append(el("p", "up-save-status " + cls, t["up_save_" + st.save]));
   }
   panel.append(el("p", "note", t.own_public_note));

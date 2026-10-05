@@ -8,7 +8,7 @@
 import { el, card, cardHead, pctPill } from "../ui.js";
 import { formatNumber, formatPct, todayVientiane } from "../format.js";
 import { readImageText, parsePhouvong, parseSilver, guessKind, priceScore } from "../ocr.js";
-import { loadFormConfig, formHas, prefilledUrl, saveDirect, newTag } from "../manual-entry.js";
+import { loadFormConfig, formHas, prefilledUrl, saveDirect, newTag, usesKey, keyReady, keyBox, saveWithKey } from "../manual-entry.js";
 
 const GOLD_FIELDS = [
   ["sell", "up_ornament_sell"],
@@ -306,8 +306,9 @@ export function uploadCard(ctx) {
       const fresh = analysis(t, summary);
       analysisBox.replaceWith(fresh);
       analysisBox = fresh;
-      saveBtn.disabled = checks(t, lbbSell).some(([level]) => level === "bad") || !s.config || s.save === "send" || s.save === "check";
-      link.href = s.config ? prefilledUrl(s.config, valuesForForm(t)) : "#";
+      saveBtn.disabled = checks(t, lbbSell).some(([level]) => level === "bad") || !s.config || !keyReady(s.config) || s.save === "send" || s.save === "check";
+      link.href = s.config && !usesKey(s.config) ? prefilledUrl(s.config, valuesForForm(t)) : "#";
+      link.hidden = usesKey(s.config); // the Form is closed on the road with the owner's key
     };
     for (const [role, key] of s.kind === "gold" ? GOLD_FIELDS : SILVER_FIELDS) grid.append(priceInput(role, key, t, refresh));
     panel.append(grid, checksBox);
@@ -328,6 +329,13 @@ export function uploadCard(ctx) {
       rerender();
     });
     saveBtn.addEventListener("click", async () => {
+      if (usesKey(s.config)) {
+        s.save = "send";
+        rerender();
+        s.save = await saveWithKey(s.config, valuesForForm(t));
+        rerender();
+        return;
+      }
       // Form needs sign-in / e-mail -> a silent save cannot work: open the filled-in form instead
       if (!s.config.direct_submit_ok) {
         window.open(prefilledUrl(s.config, valuesForForm(t)), "_blank", "noopener");
@@ -352,9 +360,11 @@ export function uploadCard(ctx) {
       rerender();
     });
     saveRow.append(saveBtn, link, cancel);
+    const key = keyBox(t, s.config, (redraw) => (redraw ? rerender() : refresh()));
+    if (key) panel.append(key);
     panel.append(saveRow);
     if (s.save !== "idle") {
-      const cls = s.save === "saved" || s.save === "manual" ? "ok" : s.save === "unconfirmed" || s.save === "error" ? "warn" : "";
+      const cls = s.save === "saved" || s.save === "manual" ? "ok" : s.save === "send" || s.save === "check" ? "" : "warn";
       panel.append(el("p", "up-save-status " + cls, t["up_save_" + s.save]));
     }
     panel.append(el("p", "note", t.up_privacy));

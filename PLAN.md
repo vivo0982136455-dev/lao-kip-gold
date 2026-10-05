@@ -544,3 +544,47 @@ date is right, but the file did not hold its evidence).
 - Keep each file small and commented in simple English so the owner can follow.
 - After each phase: summarise in Thai what was built, how to test it, and what is still unverified.
 - Before a push that changes pages: `node tests/all.js` must pass; after the push: `node tests/live.js`.
+
+## Owner-only entries, road "b" (2026-10-05) - BUILT, waits for the owner's four steps
+
+The owner chose road "b" of docs/todo-owner-only-entries-th.md (audit P0-3).
+- `apps-script/save-prices.gs`: the script the owner pastes into his Sheet. POST {key, values} writes one row into
+  the columns of the Form's questions (found by their titles, the list of fetch-form-entries.js) - only with the
+  right key (compared letter by letter, a wrong one is answered slowly, at least 16 letters; `makeKey()` creates
+  24 random letters and keeps them in the script's own settings). GET names the prices the Sheet has a column for.
+- Page (`js/manual-entry.js`, gold form and own-price forms): when data/manual-form.json names `save_url`, the
+  values go there with the key; the answer says saved / wrong key / refused / no answer. The key is typed once per
+  device (localStorage `save_key`, kept only after a save proved it, removable by a button); the Form link is hidden.
+- Bot (`scripts/fetch-form-entries.js`): with `save_url` in config/manual-sources.json it asks the script for
+  the roles instead of reading the Form (a closed Form cannot be read).
+- CSP: connect-src + https://script.google.com.
+- Tests: tests/save-script.js (29), tests/states.js section 3b (15 states, Thai + Lao, 380 + 1440).
+- The Sheet stays "anyone with the link can VIEW" (the bot reads it; the prices are public on the site anyway).
+- NOT verified yet: Google's real answer (needs the owner's deployment; then test with a wrong key, which writes
+  nothing) and how the Sheet shows the date of the first real row.
+- Owner's steps: docs/owner-save-key-th.md. Until he sends the address, everything works through the Form as before.
+
+## Money and banks tab (2026-10-05) - BUILT (audit P1-7, the owner let Steep choose what to build)
+
+Chosen: the indicators whose source is the Bank of the Lao PDR itself (the owner's rule of the day: the most
+reliable source = the institution that owns the number). Built first: money and banks. NOT built yet: FDI by
+country and sector from the BOL workbook (5.9 MB, above the 5 MB limit of scripts/lib/aia.js), trade, the
+government's revenue and spending.
+- `scripts/fetch-bol-money.js` -> `data/bol-money.json` (weekly workflow, its own step): three workbooks of
+  bol.gov.la/en/Money_and_Banking, three parts (money, rates, soundness), each kept and marked stale when its
+  download fails. New `scripts/lib/xlsx.js` (workbook + "one indicator per row, one period per column" table).
+  Believed only when: three hand-read values are still there (2% slack for revisions), cash + demand + kip
+  deposits + foreign-currency deposits = M2 (1%), loans by sector = 100% (1 point).
+- `js/pages/eco-bank.js`: tab "bank" after "inflation" (13 tabs). 7 tiles (M2, share of foreign-currency deposits,
+  credit to the private sector, loan and deposit rate in kip, bad loans, capital), charts (share of foreign-currency
+  deposits of M2; growth of M2 and credit against a year before; loan and deposit rate; capital and bad loans by
+  quarter), tables (parts of M2; rates by currency; loans by sector). The deposit rate after inflation uses
+  realRate() of js/calc.js with the inflation of the very same month.
+- Said next to the numbers: foreign-currency deposits are counted in kip, so the share and the growth rise when
+  the kip falls; bad loans are what banks report to the central bank, not an outside audit.
+- `scripts/check-data.js` checks the new file (rows in order, no future period, possible values, the sums);
+  tests/data-check.js damages it in five ways; tests/calc.js: three formulas; index, search, Settings list
+  (15 files), screens, states, security and install tests know the tab.
+- Found on the way: a failed download's message (a long address) made the Settings page wider than a phone
+  (`.error-text` now breaks anywhere) - visible on the live site since the ILO went down on 2026-10-04; the
+  settings state test no longer depends on which part is down in the real data.

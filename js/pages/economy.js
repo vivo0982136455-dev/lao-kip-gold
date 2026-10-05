@@ -38,6 +38,7 @@ import { populationTab } from "./eco-population.js";
 import { policyTab } from "./eco-policy.js";
 import { wagesTab } from "./eco-wages.js";
 import { compareTab } from "./eco-compare.js";
+import { bankTab } from "./eco-bank.js";
 
 const TABS = [
   ["overview", overviewTab],
@@ -50,6 +51,7 @@ const TABS = [
   ["fdi", fdiTab],
   ["debt", debtTab],
   ["inflation", inflationTab],
+  ["bank", bankTab],
   ["rubber", rubberTab],
   ["land", landTab],
 ];

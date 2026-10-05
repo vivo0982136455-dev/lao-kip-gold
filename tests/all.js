@@ -6,7 +6,8 @@
 // the price form, run on a sample sheet (own-prices.js), the two routes of the official exchange rate, run on
 // saved pages (bol-route.js), and the data checker, run on a copy of the data that is damaged on purpose
 // (data-check.js), the download helper against a server that never finishes its error page (download.js), and the
-// Thai price script against a server that hangs: it must end by itself and mark what it could not ask (thai-prices.js).
+// Thai price script against a server that hangs: it must end by itself and mark what it could not ask (thai-prices.js),
+// and the owner's save script, run as it is with a pretend Sheet: no row without the right key (save-script.js).
 // Then the browser tests - with security.js among them: what the page may load (its policy, the hashes of the
 // files from the CDNs), which needs the network.
 // Every test has a time limit: a browser that hangs (seen once, 2026-10-02) fails the test instead of blocking the
@@ -16,7 +17,7 @@ const path = require("path");
 
 const quick = process.argv.includes("quick");
 // [file, arguments, limit in minutes]
-const TESTS = [["../scripts/lint.js", [], 3], ["calc.js", [], 2], ["words.js", [], 2], ["own-prices.js", [], 2], ["bol-route.js", [], 3], ["data-check.js", [], 3], ["download.js", [], 2], ["thai-prices.js", [], 3], ["screens.js", quick ? ["quick"] : [], quick ? 8 : 60], ["states.js", [], 30], ["menu.js", [], 6], ["security.js", [], 12], ["install.js", [], 10], ["offline-label.js", [], 8]];
+const TESTS = [["../scripts/lint.js", [], 3], ["calc.js", [], 2], ["words.js", [], 2], ["own-prices.js", [], 2], ["bol-route.js", [], 3], ["data-check.js", [], 3], ["download.js", [], 2], ["thai-prices.js", [], 3], ["save-script.js", [], 2], ["screens.js", quick ? ["quick"] : [], quick ? 8 : 60], ["states.js", [], 30], ["menu.js", [], 6], ["security.js", [], 12], ["install.js", [], 10], ["offline-label.js", [], 8]];
 const failed = [];
 for (const [file, args, minutes] of TESTS) {
   console.log("\n=== " + file + " " + args.join(" ") + " ===");

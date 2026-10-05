@@ -39,7 +39,7 @@ const SCREENS = [
   ["forecast", "forecast", {}],
   ["settings", "settings", {}],
   ["method", "method", {}],
-  ...["overview", "compare", "population", "wages", "gdp", "plan", "policy", "fdi", "debt", "inflation"].map((tab) => ["eco-" + tab, "economy", { eco_tab: tab }]),
+  ...["overview", "compare", "population", "wages", "gdp", "plan", "policy", "fdi", "debt", "inflation", "bank"].map((tab) => ["eco-" + tab, "economy", { eco_tab: tab }]),
   ...["market", "buyers", "lao", "asean", "world", "mine"].map((v) => ["rubber-" + v, "economy", { eco_tab: "rubber", eco_rubber_view: v }]),
   ["land", "economy", { eco_tab: "land" }],
 ];

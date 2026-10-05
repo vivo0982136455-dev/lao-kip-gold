@@ -20,6 +20,7 @@ export const SOURCE_FILES = [
   ["compare.json", "srcf_compare"],
   ["population.json", "srcf_population"],
   ["bol-policy.json", "srcf_bol_policy"],
+  ["bol-money.json", "srcf_bol_money"],
   ["wages.json", "srcf_wages"],
   ["prices.json", "srcf_prices"],
   ["thai-prices.json", "srcf_thai_prices"],

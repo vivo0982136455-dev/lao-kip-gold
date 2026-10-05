@@ -26,6 +26,7 @@ on:
       - "scripts/fetch-population.js"
       - "scripts/fetch-compare.js"
       - "scripts/fetch-bol-policy.js"
+      - "scripts/fetch-bol-money.js"
       - "scripts/fetch-wages.js"
       - "scripts/fetch-report-watch.js"
       - "scripts/check-data.js"
@@ -116,6 +117,13 @@ jobs:
         if: always()
         timeout-minutes: 5
         run: node scripts/fetch-bol-policy.js
+
+      # Money and banks: the central bank's own workbooks (money supply and deposits by month, the commercial banks'
+      # average interest rates by month, the banks' soundness by quarter) - three files of the same server
+      - name: Fetch the central bank's money, interest-rate and bank-soundness statistics
+        if: always()
+        timeout-minutes: 6
+        run: node scripts/fetch-bol-money.js
 
       # Wages: the ILO's minimum-wage series and average earnings of 17 countries + market exchange rates
       # (the minimum wages in force today are hand-checked facts in data/invest-static.json)

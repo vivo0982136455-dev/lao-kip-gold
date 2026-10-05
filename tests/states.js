@@ -10,6 +10,7 @@
 const fs = require("fs");
 const path = require("path");
 const { ROOT, SHOTS, launch, startSite, sleep } = require("./browser.js");
+const { loadScript, fakeSheet, KEY, HEADERS } = require("./save-script.js");
 const PORT = 8098;
 const BASE = `http://127.0.0.1:${PORT}/`;
 const LOADING = { th: "กำลังโหลดข้อมูล", lo: "ກຳລັງໂຫຼດຂໍ້ມູນ" };
@@ -593,7 +594,7 @@ const CHECK = `
       let expected = await page.eval(failedFiles);
       const fileCount = expected.names.length;
       // every data file is a group, marked as failed exactly when one of its downloads failed - and then it says why
-      need(r, fileCount === 14 && groups.length === fileCount + 1 && groups.every((g) => g.items > 0) && groups.slice(0, fileCount).every((g, i) => badgeOf(g) === (expected.bad[i] ? "bad" : "ok") && (g.errors.length > 0) === expected.bad[i]) && badgeOf(groups[fileCount]) === "other", "sources list: " + JSON.stringify(groups.map((g, i) => [expected.names[i] || "hand-read", g.items, g.badge, expected.bad[i], g.errors.length])));
+      need(r, fileCount === 15 && groups.length === fileCount + 1 && groups.every((g) => g.items > 0) && groups.slice(0, fileCount).every((g, i) => badgeOf(g) === (expected.bad[i] ? "bad" : "ok") && (g.errors.length > 0) === expected.bad[i]) && badgeOf(groups[fileCount]) === "other", "sources list: " + JSON.stringify(groups.map((g, i) => [expected.names[i] || "hand-read", g.items, g.badge, expected.bad[i], g.errors.length])));
       const downNow = expected.names.filter((name, i) => expected.bad[i]);
       await page.eval(`for (const d of document.querySelectorAll("#view details")) d.open = true;`);
       await sleep(300);
@@ -601,7 +602,10 @@ const CHECK = `
       need(opened, true, "");
       report(`${lang} settings: all sources, every group opened`, { ...opened, badText: [...r.badText, ...opened.badText] }, lang === "th" ? `${groups.length} groups, ${groups.reduce((sum, g) => sum + g.items, 0)} sources${downNow.length ? " · a download failed in the real data of: " + downNow.join(", ") : ""}` : "");
       const wagesFile = readJson("wages.json");
-      serve("wages.json", { ...wagesFile, ilo_avg: { ...wagesFile.ilo_avg, stale: true, last_error: { message: "HTTP 502 from the test", at: "2026-10-04T00:00:00Z" } } });
+      // (every part of the file, so that the answer does not depend on which part is down in the real data today:
+      // seen 2026-10-05, the ILO was down and the page - rightly - showed that part's own message first)
+      const testError = { stale: true, last_error: { message: "HTTP 502 from the test", at: "2026-10-04T00:00:00Z" } };
+      serve("wages.json", Object.fromEntries(Object.entries(wagesFile).map(([k, v]) => [k, v && typeof v.stale === "boolean" ? { ...v, ...testError } : v])));
       serve("land.json", "{ this is not JSON");
       await open(lang, {}, "settings");
       await sourcesReady();
@@ -730,7 +734,7 @@ const CHECK = `
       await sleep(150);
     };
     const indexInfo = `const box = document.getElementById("tab-index"); return { hidden: box.hidden, expanded: document.querySelector(".tab-index-btn").getAttribute("aria-expanded"), count: (box.querySelector(".tab-index-count") || {}).textContent || "", items: [...box.querySelectorAll(".tab-index-item")].map((b) => ({ title: b.querySelector("strong").textContent, under: (b.querySelector(".tab-index-sub") || {}).textContent || "", current: b.getAttribute("aria-current") === "true" })) };`;
-    const TABS_AND_VIEWS = [...["overview", "compare", "population", "wages", "gdp", "plan", "policy", "fdi", "debt", "inflation"].map((tab) => [tab, null]), ...["market", "buyers", "lao", "asean", "world", "mine"].map((v) => ["rubber", v]), ["land", null]];
+    const TABS_AND_VIEWS = [...["overview", "compare", "population", "wages", "gdp", "plan", "policy", "fdi", "debt", "inflation", "bank"].map((tab) => [tab, null]), ...["market", "buyers", "lao", "asean", "world", "mine"].map((v) => ["rubber", v]), ["land", null]];
     for (const lang of ["th", "lo"]) {
       const w = FIND[lang];
       await open(lang, { eco_tab: "debt" });
@@ -742,7 +746,7 @@ const CHECK = `
       await sleep(150);
       info = await page.eval(indexInfo);
       r = await page.eval(CHECK);
-      need(r, !info.hidden && info.expanded === "true" && info.items.length === 12 && info.items.every((x) => x.title && x.under) && info.items.filter((x) => x.current).length === 1, "index: " + JSON.stringify(info).slice(0, 500));
+      need(r, !info.hidden && info.expanded === "true" && info.items.length === 13 && info.items.every((x) => x.title && x.under) && info.items.filter((x) => x.current).length === 1, "index: " + JSON.stringify(info).slice(0, 500));
       report(`${lang} economy: the index of the twelve tabs`, r, lang === "th" ? info.items.map((x) => x.title).join(" · ") : "");
       // a tab chosen in the index: the tab opens and the index closes
       await page.eval(`[...document.querySelectorAll("#tab-index .tab-index-item")][7].click();`);
@@ -878,6 +882,107 @@ const CHECK = `
       await page.shot(path.join(SHOTS, `form-land-${lang}-${width}.png`));
       await page.eval(`[...document.querySelectorAll(".own-land .up-actions button")].pop().click();`); // cancel
     }
+    // ---------- 3b. saving with the owner's key (apps-script/save-prices.gs answers from the test server) ----------
+    // The page's file names a save address: the Form is not used, a wrong key saves nothing, the right key saves
+    // one row and is kept on this device. The script's own code answers; nothing leaves this machine.
+    {
+      const script = loadScript();
+      const sheet = fakeSheet();
+      const realForm = JSON.parse(fs.readFileSync(path.join(ROOT, "data/manual-form.json"), "utf8"));
+      const keyed = { save_url: BASE + "__save", sheet_id: null, entries: Object.fromEntries(Object.keys(script.roles(HEADERS)).map((r) => [r, r])), direct_submit_ok: true, limits: realForm.limits };
+      site.override.set("/data/manual-form.json", JSON.stringify(keyed));
+      site.handle = (req, res) => {
+        if (!req.url.startsWith("/__save")) return false;
+        let body = "";
+        req.on("data", (d) => (body += d));
+        req.on("end", () => {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify(script.handle(body, sheet.env())));
+        });
+        return true;
+      };
+      const words = (lang) => JSON.parse(fs.readFileSync(path.join(ROOT, "i18n", lang, "app.json"), "utf8"));
+      const look = `const p = document.querySelector(".own-rubber"); const st = p.querySelector(".up-save-status"); const link = p.querySelector(".up-actions a"); return { field: !!p.querySelector(".up-key input[type=password]"), stored: !!p.querySelector(".up-key-forget"), disabled: (p.querySelector(".up-panel .btn-primary") || {}).disabled, status: st ? st.textContent : "", cls: st ? st.className : "", open: !!p.querySelector(".up-panel"), link: link ? !link.hidden && getComputedStyle(link).display !== "none" : false, kept: localStorage.getItem("save_key") };`;
+      const press = `document.querySelector(".own-rubber .up-panel .btn-primary").click();`;
+      const warned = `(document.querySelector(".own-rubber .up-save-status") || {}).className === "up-save-status warn"`;
+      for (const [lang, width] of [["th", 380], ["lo", 380], ["th", 1440]]) {
+        const t = words(lang);
+        sheet.rows.length = 0;
+        await page.size(width, width < 700 ? 820 : 900, width < 700);
+        await page.eval(`localStorage.removeItem("save_key");`);
+        await open(lang, { eco_tab: "rubber", eco_rubber_view: "mine" });
+        await page.eval(`document.querySelector(".own-rubber .btn-primary").click();`);
+        await page.until(`document.querySelector(".own-rubber .up-key")`, 5000);
+        await sleep(500);
+        await type(".own-rubber .up-grid input[inputmode='numeric']", "18500");
+        const r = await page.eval(CHECK);
+        const first = await page.eval(look);
+        if (!first.field || first.stored || !first.disabled || first.link) r.badText.push("before a key is typed: " + JSON.stringify(first));
+        // a wrong key
+        await type(".own-rubber .up-key input", "not-the-owners-key-123");
+        const ready = await page.eval(look);
+        await page.eval(press);
+        await page.until(warned, 8000);
+        const wrong = await page.eval(look);
+        if (ready.disabled || wrong.status !== t.up_save_key || sheet.rows.length !== 0 || wrong.kept || !wrong.field || !wrong.open) r.badText.push("a wrong key: " + JSON.stringify(wrong) + " rows " + sheet.rows.length);
+        const rWrong = await page.eval(CHECK);
+        report(`${lang} ${width} save with key: a wrong key saves nothing and is not kept`, rWrong, lang === "th" && width === 380 ? wrong.status : "");
+        if (width === 380) {
+          await page.eval(`document.querySelector(".own-rubber .up-key").scrollIntoView({ block: "center" });`);
+          await sleep(200);
+          await page.shot(path.join(SHOTS, `save-key-wrong-${lang}-${width}.png`));
+        }
+        // the right key
+        await type(".own-rubber .up-key input", KEY);
+        await page.eval(press);
+        await page.until(`!document.querySelector(".own-rubber .up-panel") && document.querySelector(".own-rubber .up-save-status.ok")`, 8000);
+        const done = await page.eval(look);
+        const row = sheet.rows[0] || [];
+        const cols = script.roles(HEADERS);
+        if (sheet.rows.length !== 1 || row[cols.rubber_price] !== 18500 || row[cols.rubber_type] !== "ยางก้อนถ้วย" || !/^\d{4}-\d{2}-\d{2}$/.test(row[cols.date]) || done.kept !== KEY) r.badText.push("the right key: " + JSON.stringify(done) + " rows " + JSON.stringify(sheet.rows));
+        report(`${lang} ${width} save with key: the right key saves one row`, r, lang === "th" && width === 380 ? JSON.stringify(row.filter((c) => c !== "")) : "");
+        // the next entry: the key is not asked for again; it can be removed from this device
+        await page.eval(`document.querySelector(".own-rubber .btn-primary").click();`);
+        await page.until(`document.querySelector(".own-rubber .up-key")`, 5000);
+        await sleep(300);
+        const again = await page.eval(look);
+        const r2 = await page.eval(CHECK);
+        if (again.field || !again.stored || again.link) r2.badText.push("the next entry: " + JSON.stringify(again));
+        if (width === 380) {
+          await page.eval(`document.querySelector(".own-rubber .up-key").scrollIntoView({ block: "center" });`);
+          await sleep(200);
+          await page.shot(path.join(SHOTS, `save-key-kept-${lang}-${width}.png`));
+        }
+        await page.eval(`document.querySelector(".own-rubber .up-key-forget").click();`);
+        await sleep(300);
+        const forgot = await page.eval(look);
+        if (!forgot.field || forgot.stored || forgot.kept) r2.badText.push("after the key was removed: " + JSON.stringify(forgot));
+        report(`${lang} ${width} save with key: kept for the next entry, and removable`, r2);
+        // no answer from the script: said plainly, nothing kept
+        await type(".own-rubber .up-grid input[inputmode='numeric']", "18500");
+        await type(".own-rubber .up-key input", KEY);
+        await block(["*__save*"]);
+        await page.eval(press);
+        await page.until(warned, 8000);
+        const lost = await page.eval(look);
+        await block([]);
+        const r3 = await page.eval(CHECK);
+        if (lost.status !== t.up_save_failed || sheet.rows.length !== 1 || lost.kept) r3.badText.push("no answer: " + JSON.stringify(lost));
+        report(`${lang} ${width} save with key: no answer is said plainly`, r3, lang === "th" && width === 380 ? lost.status : "");
+        // the gold page asks for the same key
+        await open(lang, {}, "gold");
+        await page.eval(`[...document.querySelectorAll(".upload-card .up-actions button")].find((b) => !b.classList.contains("btn-primary")).click();`);
+        await page.until(`document.querySelector(".upload-card .up-key")`, 5000);
+        const gold = await page.eval(`const p = document.querySelector(".upload-card"); const link = p.querySelector(".up-panel .up-actions a"); return { field: !!p.querySelector(".up-key input[type=password]"), link: link ? !link.hidden && getComputedStyle(link).display !== "none" : false };`);
+        const r4 = await page.eval(CHECK);
+        if (!gold.field || gold.link) r4.badText.push("gold form: " + JSON.stringify(gold));
+        report(`${lang} ${width} save with key: the gold form asks for the key, no Form link`, r4);
+        await page.eval(`localStorage.removeItem("save_key");`);
+      }
+      site.override.delete("/data/manual-form.json");
+      site.handle = null;
+    }
+
     const errs = page.errors.filter((e) => !/cdnjs|ERR_CONNECTION_RESET|net::ERR_FAILED|ERR_BLOCKED_BY_CLIENT/.test(e));
     if (errs.length) {
       bad++;

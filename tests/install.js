@@ -97,7 +97,7 @@ const check = (name, ok, detail = "") => {
     check("offline: another page opens", offGold.cards > 2, JSON.stringify(offGold));
     await page.goto(BASE + "?offline=1#/economy", 2000);
     const offEco = await page.eval(`const all = document.getElementById("view").innerText; return { cards: document.querySelectorAll(".card").length, tabs: [...document.querySelectorAll(".tabbar button")].filter((b) => b.textContent.trim()).length, undefinedText: /undefined/.test(all), text: all.slice(0, 80) };`);
-    check("offline: economy page (lazy data and its own texts saved earlier) opens with all its words", offEco.cards > 2 && offEco.tabs === 12 && !offEco.undefinedText, JSON.stringify(offEco));
+    check("offline: economy page (lazy data and its own texts saved earlier) opens with all its words", offEco.cards > 2 && offEco.tabs === 13 && !offEco.undefinedText, JSON.stringify(offEco));
 
     // ---------- 6. the connection comes back: the numbers refresh by themselves ----------
     site.mode = "ok";

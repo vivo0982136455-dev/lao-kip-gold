@@ -382,7 +382,7 @@ details table { margin-top: 6px; }
 .status-top > div, .status-top > strong { min-width: 0; overflow-wrap: anywhere; }
 .status-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; font-size: var(--fs-sm); color: var(--muted); }
 .card > h3 { font-size: 0.92rem; font-weight: 600; margin-bottom: 8px; }
-.error-text { color: var(--bad-text); font-size: var(--fs-sm); white-space: normal; }
+.error-text { color: var(--bad-text); font-size: var(--fs-sm); white-space: normal; overflow-wrap: anywhere; } /* a failed download names its address: one long word */
 /* Settings: the full list of sources - one group per data file, opened by a tap; its state shows without opening */
 .src-summary { margin: 0 0 6px; font-size: 0.86rem; color: var(--text-2); }
 .src-group { margin-top: 0; border-top: 1px solid var(--grid); font-size: 0.86rem; }
@@ -429,6 +429,10 @@ button.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
   border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); color-scheme: inherit;
 }
 .up-field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.up-actions [hidden] { display: none; }
+.up-key { margin-top: 12px; }
+.up-key .up-field { max-width: 340px; }
+.up-key-forget { min-height: 32px; padding: 2px 10px; font-size: var(--fs-sm); }
 .up-date { grid-column: 1 / -1; }
 .up-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: var(--fs-sm); }
 .up-check.ok { color: var(--up); }

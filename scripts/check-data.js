@@ -83,6 +83,7 @@ for (const file of listJson(LATEST_DIR)) {
 const RANGES = {
   "%": [-60, 300],
   "% per year": [-60, 300],
+  "LAK billion": [-10000000, 10000000],
   "% of GDP": [-100, 400],
   "% of GNI": [0, 500],
   "% of exports": [0, 500],
@@ -440,6 +441,62 @@ for (const file of listJson(DATA_DIR).filter((f) => !DONE.has(f))) {
       }
     }
     console.log(`${file.padEnd(18)} ok   ${data.hints.length} hints, ${data.hints.filter((h) => h.status === "resolved").length} checked`);
+  }
+}
+
+// ---------- the central bank's money and bank statistics (data/bol-money.json): three parts of [period, value] rows ----------
+{
+  const name = "bol-money.json";
+  const data = readJson(path.join(DATA_DIR, name), null);
+  if (!data) problem(`${name}: missing or not valid JSON`);
+  else {
+    checkSources(name, data.sources);
+    const isQuarter = (s) => typeof s === "string" && /^\d{4}-Q[1-4]$/.test(s);
+    let series = 0;
+    for (const id of ["money", "rates", "soundness"]) {
+      const part = data[id];
+      const where = `${name} ${id}`;
+      checkEntry(where, part, data.sources);
+      if (!part || typeof part !== "object") continue;
+      if (!part.unit) problem(`${where}: no unit`);
+      const rows = part.rows || {};
+      if (!part.stale && !Object.keys(rows).length) problem(`${where}: no series`);
+      for (const [key, list] of Object.entries(rows)) {
+        series++;
+        if (!part.stale && !(Array.isArray(list) && list.length)) problem(`${where} ${key}: no values`);
+        if (id !== "soundness") checkRows(`${where} ${key}`, list, part.unit, "month");
+        else {
+          // quarters: in order, none in the future, a possible percentage
+          let before = "";
+          for (const row of Array.isArray(list) ? list : []) {
+            const [q, v] = Array.isArray(row) ? row : [];
+            if (!isQuarter(q)) problem(`${where} ${key}: impossible quarter ${JSON.stringify(q)}`);
+            else if (`${q.slice(0, 4)}-${String(Number(q.slice(6)) * 3 - 2).padStart(2, "0")}` > THIS_MONTH) problem(`${where} ${key}: quarter ${q} is in the future`);
+            if (before && !(q > before)) problem(`${where} ${key}: ${JSON.stringify(q)} comes after ${JSON.stringify(before)} - not in order, or twice`);
+            before = q;
+            if (typeof v !== "number" || !Number.isFinite(v)) problem(`${where} ${key} ${q}: value ${JSON.stringify(v)} is not a number`);
+            else if (v < -100 || v > 200) problem(`${where} ${key} ${q}: ${v} is outside what "%" of a bank ratio can be (-100 to 200)`);
+          }
+        }
+      }
+    }
+    // the four parts of broad money add up to it, month by month (1% of slack: rounding)
+    const m = data.money && data.money.rows;
+    if (m && m.m2) {
+      const maps = ["cash", "demand", "kip_deposits", "fx_deposits"].map((k) => new Map(m[k] || []));
+      for (const [month, total] of m.m2) {
+        if (!maps.every((x) => x.has(month))) continue;
+        const sum = maps.reduce((a, x) => a + x.get(month), 0);
+        if (Math.abs(sum / total - 1) > 0.01) problem(`${name} money ${month}: the parts of broad money add up to ${Math.round(sum)}, the total is ${total}`);
+      }
+    }
+    const sec = data.soundness && data.soundness.sectors;
+    if (sec && sec.shares) {
+      const total = Object.values(sec.shares).reduce((a, b) => a + b, 0);
+      if (Math.abs(total - 100) > 1) problem(`${name} soundness: the loans by sector of ${sec.quarter} add up to ${total.toFixed(1)}%, not 100%`);
+    }
+    const stale = ["money", "rates", "soundness"].filter((id) => data[id] && data[id].stale);
+    console.log(`${name.padEnd(18)} ${String(series).padStart(4)} series in 3 parts${stale.length ? "   STALE: " + stale.join(", ") : ""}`);
   }
 }
 

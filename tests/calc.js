@@ -451,8 +451,21 @@ const test = (name, fn) => {
     assert.ok(!index.isHeading("ราคา (a+b)", "ราคา (a.b)")); // the signs of a text are read as they are
     assert.ok(!index.isHeading("anything", ""));
   });
-  test("economy index: twelve tabs, the rubber tab with six views, every listed text exists in Thai and in Lao", () => {
-    assert.equal(Object.keys(index.TAB_HEADS).length, 12);
+  const bankTab = await page("pages/eco-bank.js");
+  test("money and banks: change against the same month a year before, only where that month exists", () => {
+    const rows = [["2025-01", 100], ["2025-02", 200], ["2026-01", 110], ["2026-02", 190], ["2026-03", 50]];
+    assert.deepEqual(bankTab.yearOnYear(rows), [["2026-01", 10], ["2026-02", -5]]); // no March a year before: no number
+    assert.deepEqual(bankTab.yearOnYear([["2026-01", 5]]), []);
+  });
+  test("money and banks: the share of foreign-currency deposits is taken of broad money of the very same month", () => {
+    const money = { rows: { m2: [["2026-06", 400], ["2026-07", 500]], fx_deposits: [["2026-05", 99], ["2026-06", 100], ["2026-07", 340]] } };
+    assert.deepEqual(bankTab.fxShare(money), [["2026-06", 25], ["2026-07", 68]]); // May has no total: left out
+  });
+  test("money and banks: a quarter is as old as its last month", () => {
+    assert.deepEqual(["2026-Q1", "2026-Q2", "2025-Q3", "2025-Q4"].map(bankTab.quarterMonth), ["2026-03", "2026-06", "2025-09", "2025-12"]);
+  });
+  test("economy index: thirteen tabs, the rubber tab with six views, every listed text exists in Thai and in Lao", () => {
+    assert.equal(Object.keys(index.TAB_HEADS).length, 13);
     assert.deepEqual(Object.keys(index.TAB_HEADS.rubber), ["market", "buyers", "lao", "asean", "world", "mine"]);
     for (const lang of ["th", "lo"]) {
       const heads = index.allHeads(texts(lang));
