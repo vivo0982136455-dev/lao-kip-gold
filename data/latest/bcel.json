@@ -6,7 +6,7 @@
   "kind": "bank",
   "same_day_updates": true,
   "stale": false,
-  "last_success_at": "2026-10-02T07:06:21.190Z",
+  "last_success_at": "2026-10-05T02:28:41.325Z",
   "last_error": null,
   "records": [
     {
@@ -14,48 +14,48 @@
       "metric": "USD_LAK_buy",
       "value": 22207,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-02T07:06:12.272Z",
-      "source_date": "2026-10-02"
+      "fetched_at": "2026-10-05T02:28:39.293Z",
+      "source_date": "2026-10-05"
     },
     {
       "source": "bcel",
       "metric": "USD_LAK_sell",
       "value": 22584,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-02T07:06:12.272Z",
-      "source_date": "2026-10-02"
+      "fetched_at": "2026-10-05T02:28:39.293Z",
+      "source_date": "2026-10-05"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_buy",
-      "value": 669.7,
+      "value": 669.94,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-02T07:06:12.272Z",
-      "source_date": "2026-10-02"
+      "fetched_at": "2026-10-05T02:28:39.293Z",
+      "source_date": "2026-10-05"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_sell",
-      "value": 683.07,
+      "value": 683.32,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-02T07:06:12.272Z",
-      "source_date": "2026-10-02"
+      "fetched_at": "2026-10-05T02:28:39.293Z",
+      "source_date": "2026-10-05"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_buy",
       "value": 3293,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-02T07:06:12.272Z",
-      "source_date": "2026-10-02"
+      "fetched_at": "2026-10-05T02:28:39.293Z",
+      "source_date": "2026-10-05"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_sell",
       "value": 3358,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-02T07:06:12.272Z",
-      "source_date": "2026-10-02"
+      "fetched_at": "2026-10-05T02:28:39.293Z",
+      "source_date": "2026-10-05"
     }
   ]
 }
