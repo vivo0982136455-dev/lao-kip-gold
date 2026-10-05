@@ -3132,5 +3132,7 @@
 {"source":"gold-lbb","metric":"buy_g","value":3067000,"unit":"LAK per gram","fetched_at":"2026-10-02T07:06:11.431Z","source_date":"2026-10-02T04:34:00.000Z"},
 {"source":"gold-lbb","metric":"sell_g","value":3093600,"unit":"LAK per gram","fetched_at":"2026-10-02T07:06:11.431Z","source_date":"2026-10-02T04:34:00.000Z"},
 {"source":"gold-lbb","metric":"buy_g","value":3050000,"unit":"LAK per gram","fetched_at":"2026-10-05T02:28:38.527Z","source_date":"2026-10-05T01:20:00.000Z"},
-{"source":"gold-lbb","metric":"sell_g","value":3076600,"unit":"LAK per gram","fetched_at":"2026-10-05T02:28:38.527Z","source_date":"2026-10-05T01:20:00.000Z"}
+{"source":"gold-lbb","metric":"sell_g","value":3076600,"unit":"LAK per gram","fetched_at":"2026-10-05T02:28:38.527Z","source_date":"2026-10-05T01:20:00.000Z"},
+{"source":"gold-lbb","metric":"buy_g","value":3050000,"unit":"LAK per gram","fetched_at":"2026-10-05T09:24:10.967Z","source_date":"2026-10-05T07:50:00.000Z"},
+{"source":"gold-lbb","metric":"sell_g","value":3076600,"unit":"LAK per gram","fetched_at":"2026-10-05T09:24:10.967Z","source_date":"2026-10-05T07:50:00.000Z"}
 ]
