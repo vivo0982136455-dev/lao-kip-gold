@@ -4,9 +4,12 @@
   "source_url": "https://gold-api.com",
   "license": "Free public API, no key",
   "kind": "market",
-  "stale": false,
+  "stale": true,
   "last_success_at": "2026-10-06T19:08:51.298Z",
-  "last_error": null,
+  "last_error": {
+    "message": "Download failed (https://api.gold-api.com/price/XAG): fetch failed",
+    "at": "2026-10-06T23:07:50.674Z"
+  },
   "records": [
     {
       "source": "silver-world",
