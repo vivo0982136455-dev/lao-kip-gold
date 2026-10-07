@@ -4,20 +4,17 @@
   "source_url": "https://gold-api.com",
   "license": "Free public API, no key",
   "kind": "market",
-  "stale": true,
-  "last_success_at": "2026-10-06T19:08:51.298Z",
-  "last_error": {
-    "message": "Download failed (https://api.gold-api.com/price/XAG): fetch failed",
-    "at": "2026-10-06T23:07:50.674Z"
-  },
+  "stale": false,
+  "last_success_at": "2026-10-07T02:30:20.004Z",
+  "last_error": null,
   "records": [
     {
       "source": "silver-world",
       "metric": "XAG_USD",
-      "value": 61.823,
+      "value": 61.062,
       "unit": "USD per troy oz",
-      "fetched_at": "2026-10-06T19:08:50.966Z",
-      "source_date": "2026-10-06T19:08:40.000Z"
+      "fetched_at": "2026-10-07T02:30:19.652Z",
+      "source_date": "2026-10-07T02:30:11.000Z"
     }
   ]
 }
