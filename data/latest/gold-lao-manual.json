@@ -6,40 +6,40 @@
   "kind": "shop",
   "configured": true,
   "stale": false,
-  "last_success_at": "2026-10-07T09:04:54.770Z",
+  "last_success_at": "2026-10-08T07:34:36.557Z",
   "last_error": null,
   "records": [
     {
       "source": "gold-lao-manual",
       "metric": "sell",
-      "value": 46179000,
+      "value": 46159000,
       "unit": "LAK per baht (shop)",
-      "fetched_at": "2026-10-07T05:05:09.000Z",
-      "source_date": "2026-10-07"
+      "fetched_at": "2026-10-08T05:32:54.000Z",
+      "source_date": "2026-10-08"
     },
     {
       "source": "gold-lao-manual",
       "metric": "buy",
-      "value": 44978000,
+      "value": 44959000,
       "unit": "LAK per baht (shop)",
-      "fetched_at": "2026-10-07T05:05:09.000Z",
-      "source_date": "2026-10-07"
+      "fetched_at": "2026-10-08T05:32:54.000Z",
+      "source_date": "2026-10-08"
     },
     {
       "source": "gold-lao-manual",
       "metric": "bar_sell",
-      "value": 46070000,
+      "value": 46050000,
       "unit": "LAK per baht (shop)",
-      "fetched_at": "2026-10-07T05:05:09.000Z",
-      "source_date": "2026-10-07"
+      "fetched_at": "2026-10-08T05:32:54.000Z",
+      "source_date": "2026-10-08"
     },
     {
       "source": "gold-lao-manual",
       "metric": "bar_buy",
-      "value": 45540000,
+      "value": 45520000,
       "unit": "LAK per baht (shop)",
-      "fetched_at": "2026-10-07T05:05:09.000Z",
-      "source_date": "2026-10-07"
+      "fetched_at": "2026-10-08T05:32:54.000Z",
+      "source_date": "2026-10-08"
     }
   ]
 }

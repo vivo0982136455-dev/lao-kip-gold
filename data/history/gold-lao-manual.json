@@ -22,5 +22,9 @@
 {"source":"gold-lao-manual","metric":"bar_buy","value":45540000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-07T05:05:09.000Z","source_date":"2026-10-07"},
 {"source":"gold-lao-manual","metric":"bar_sell","value":46070000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-07T05:05:09.000Z","source_date":"2026-10-07"},
 {"source":"gold-lao-manual","metric":"buy","value":44978000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-07T05:05:09.000Z","source_date":"2026-10-07"},
-{"source":"gold-lao-manual","metric":"sell","value":46179000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-07T05:05:09.000Z","source_date":"2026-10-07"}
+{"source":"gold-lao-manual","metric":"sell","value":46179000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-07T05:05:09.000Z","source_date":"2026-10-07"},
+{"source":"gold-lao-manual","metric":"bar_buy","value":45520000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-08T05:32:54.000Z","source_date":"2026-10-08"},
+{"source":"gold-lao-manual","metric":"bar_sell","value":46050000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-08T05:32:54.000Z","source_date":"2026-10-08"},
+{"source":"gold-lao-manual","metric":"buy","value":44959000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-08T05:32:54.000Z","source_date":"2026-10-08"},
+{"source":"gold-lao-manual","metric":"sell","value":46159000,"unit":"LAK per baht (shop)","fetched_at":"2026-10-08T05:32:54.000Z","source_date":"2026-10-08"}
 ]
