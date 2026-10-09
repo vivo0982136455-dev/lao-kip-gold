@@ -6,56 +6,56 @@
   "kind": "bank",
   "same_day_updates": true,
   "stale": false,
-  "last_success_at": "2026-10-08T07:34:34.776Z",
+  "last_success_at": "2026-10-09T06:50:42.907Z",
   "last_error": null,
   "records": [
     {
       "source": "bcel",
       "metric": "USD_LAK_buy",
-      "value": 22241,
+      "value": 22246,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-08T07:34:26.263Z",
-      "source_date": "2026-10-08"
+      "fetched_at": "2026-10-09T06:50:34.179Z",
+      "source_date": "2026-10-09"
     },
     {
       "source": "bcel",
       "metric": "USD_LAK_sell",
       "value": 22602,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-08T07:34:26.263Z",
-      "source_date": "2026-10-08"
+      "fetched_at": "2026-10-09T06:50:34.179Z",
+      "source_date": "2026-10-09"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_buy",
-      "value": 669.94,
+      "value": 670.19,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-08T07:34:26.263Z",
-      "source_date": "2026-10-08"
+      "fetched_at": "2026-10-09T06:50:34.179Z",
+      "source_date": "2026-10-09"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_sell",
-      "value": 683.32,
+      "value": 683.57,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-08T07:34:26.263Z",
-      "source_date": "2026-10-08"
+      "fetched_at": "2026-10-09T06:50:34.179Z",
+      "source_date": "2026-10-09"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_buy",
-      "value": 3304,
+      "value": 3308,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-08T07:34:26.263Z",
-      "source_date": "2026-10-08"
+      "fetched_at": "2026-10-09T06:50:34.179Z",
+      "source_date": "2026-10-09"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_sell",
-      "value": 3369,
+      "value": 3373,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-08T07:34:26.263Z",
-      "source_date": "2026-10-08"
+      "fetched_at": "2026-10-09T06:50:34.179Z",
+      "source_date": "2026-10-09"
     }
   ]
 }
