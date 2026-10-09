@@ -8,10 +8,10 @@
   "route_note": null,
   "cross_check": {
     "against": "mirror",
-    "mirror_date": "2026-10-07",
-    "same_day": false,
-    "agree": null,
-    "max_diff_pct": null
+    "mirror_date": "2026-10-08",
+    "same_day": true,
+    "agree": true,
+    "max_diff_pct": 0
   },
   "stale": false,
   "last_success_at": "2026-10-08T07:34:22.137Z",
