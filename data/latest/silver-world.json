@@ -5,7 +5,7 @@
   "license": "Free public API, no key",
   "kind": "market",
   "stale": false,
-  "last_success_at": "2026-10-11T07:21:30.971Z",
+  "last_success_at": "2026-10-11T14:12:59.486Z",
   "last_error": null,
   "records": [
     {
@@ -13,8 +13,8 @@
       "metric": "XAG_USD",
       "value": 60.949,
       "unit": "USD per troy oz",
-      "fetched_at": "2026-10-11T07:21:30.637Z",
-      "source_date": "2026-10-11T07:21:05.000Z"
+      "fetched_at": "2026-10-11T14:12:59.257Z",
+      "source_date": "2026-10-11T14:12:36.000Z"
     }
   ]
 }
