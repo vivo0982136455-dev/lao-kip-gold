@@ -59,5 +59,6 @@
 {"source":"silver-world","metric":"XAG_USD","value":60.949,"unit":"USD per troy oz","fetched_at":"2026-10-10T14:50:37.559Z","source_date":"2026-10-10T14:50:32.000Z"},
 {"source":"silver-world","metric":"XAG_USD","value":60.949,"unit":"USD per troy oz","fetched_at":"2026-10-10T18:58:36.629Z","source_date":"2026-10-10T18:58:33.000Z"},
 {"source":"silver-world","metric":"XAG_USD","value":60.949,"unit":"USD per troy oz","fetched_at":"2026-10-10T22:10:52.152Z","source_date":"2026-10-10T22:10:34.000Z"},
-{"source":"silver-world","metric":"XAG_USD","value":60.949,"unit":"USD per troy oz","fetched_at":"2026-10-11T01:04:04.154Z","source_date":"2026-10-11T01:03:35.000Z"}
+{"source":"silver-world","metric":"XAG_USD","value":60.949,"unit":"USD per troy oz","fetched_at":"2026-10-11T01:04:04.154Z","source_date":"2026-10-11T01:03:35.000Z"},
+{"source":"silver-world","metric":"XAG_USD","value":60.949,"unit":"USD per troy oz","fetched_at":"2026-10-11T07:21:30.637Z","source_date":"2026-10-11T07:21:05.000Z"}
 ]
