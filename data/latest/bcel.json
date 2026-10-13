@@ -6,56 +6,56 @@
   "kind": "bank",
   "same_day_updates": true,
   "stale": false,
-  "last_success_at": "2026-10-12T02:04:01.118Z",
+  "last_success_at": "2026-10-13T07:59:54.178Z",
   "last_error": null,
   "records": [
     {
       "source": "bcel",
       "metric": "USD_LAK_buy",
-      "value": 22256,
+      "value": 22271,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-12T02:03:52.900Z",
-      "source_date": "2026-10-12"
+      "fetched_at": "2026-10-13T07:59:52.406Z",
+      "source_date": "2026-10-13"
     },
     {
       "source": "bcel",
       "metric": "USD_LAK_sell",
-      "value": 22608,
+      "value": 22618,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-12T02:03:52.900Z",
-      "source_date": "2026-10-12"
+      "fetched_at": "2026-10-13T07:59:52.406Z",
+      "source_date": "2026-10-13"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_buy",
-      "value": 670.14,
+      "value": 670.1,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-12T02:03:52.900Z",
-      "source_date": "2026-10-12"
+      "fetched_at": "2026-10-13T07:59:52.406Z",
+      "source_date": "2026-10-13"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_sell",
-      "value": 683.07,
+      "value": 683.03,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-12T02:03:52.900Z",
-      "source_date": "2026-10-12"
+      "fetched_at": "2026-10-13T07:59:52.406Z",
+      "source_date": "2026-10-13"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_buy",
-      "value": 3308,
+      "value": 3312,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-12T02:03:52.900Z",
-      "source_date": "2026-10-12"
+      "fetched_at": "2026-10-13T07:59:52.406Z",
+      "source_date": "2026-10-13"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_sell",
-      "value": 3373,
+      "value": 3377,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-12T02:03:52.900Z",
-      "source_date": "2026-10-12"
+      "fetched_at": "2026-10-13T07:59:52.406Z",
+      "source_date": "2026-10-13"
     }
   ]
 }
