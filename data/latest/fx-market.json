@@ -6,32 +6,32 @@
   "kind": "market",
   "shown_as": "reference",
   "stale": false,
-  "last_success_at": "2026-10-12T02:03:51.260Z",
+  "last_success_at": "2026-10-13T01:28:20.395Z",
   "last_error": null,
   "records": [
     {
       "source": "fx-market",
       "metric": "USD_LAK",
-      "value": 22295.206109,
+      "value": 22218.824732,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-12T02:03:51.124Z",
-      "source_date": "2026-10-12T00:02:32.000Z"
+      "fetched_at": "2026-10-13T01:28:20.236Z",
+      "source_date": "2026-10-12T23:57:31.000Z"
     },
     {
       "source": "fx-market",
       "metric": "USD_THB",
-      "value": 33.534124,
+      "value": 33.618266,
       "unit": "THB per USD",
-      "fetched_at": "2026-10-12T02:03:51.124Z",
-      "source_date": "2026-10-12T00:02:32.000Z"
+      "fetched_at": "2026-10-13T01:28:20.236Z",
+      "source_date": "2026-10-12T23:57:31.000Z"
     },
     {
       "source": "fx-market",
       "metric": "THB_LAK",
-      "value": 664.8513,
+      "value": 660.9153,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-12T02:03:51.124Z",
-      "source_date": "2026-10-12T00:02:32.000Z"
+      "fetched_at": "2026-10-13T01:28:20.236Z",
+      "source_date": "2026-10-12T23:57:31.000Z"
     }
   ]
 }
