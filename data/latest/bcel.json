@@ -6,56 +6,56 @@
   "kind": "bank",
   "same_day_updates": true,
   "stale": false,
-  "last_success_at": "2026-10-13T07:59:54.178Z",
+  "last_success_at": "2026-10-14T03:30:06.938Z",
   "last_error": null,
   "records": [
     {
       "source": "bcel",
       "metric": "USD_LAK_buy",
-      "value": 22271,
+      "value": 22266,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-13T07:59:52.406Z",
-      "source_date": "2026-10-13"
+      "fetched_at": "2026-10-14T03:29:58.499Z",
+      "source_date": "2026-10-14"
     },
     {
       "source": "bcel",
       "metric": "USD_LAK_sell",
-      "value": 22618,
+      "value": 22611,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-13T07:59:52.406Z",
-      "source_date": "2026-10-13"
+      "fetched_at": "2026-10-14T03:29:58.499Z",
+      "source_date": "2026-10-14"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_buy",
-      "value": 670.1,
+      "value": 670.08,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-13T07:59:52.406Z",
-      "source_date": "2026-10-13"
+      "fetched_at": "2026-10-14T03:29:58.499Z",
+      "source_date": "2026-10-14"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_sell",
-      "value": 683.03,
+      "value": 683.01,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-13T07:59:52.406Z",
-      "source_date": "2026-10-13"
+      "fetched_at": "2026-10-14T03:29:58.499Z",
+      "source_date": "2026-10-14"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_buy",
       "value": 3312,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-13T07:59:52.406Z",
-      "source_date": "2026-10-13"
+      "fetched_at": "2026-10-14T03:29:58.499Z",
+      "source_date": "2026-10-14"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_sell",
       "value": 3377,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-13T07:59:52.406Z",
-      "source_date": "2026-10-13"
+      "fetched_at": "2026-10-14T03:29:58.499Z",
+      "source_date": "2026-10-14"
     }
   ]
 }
