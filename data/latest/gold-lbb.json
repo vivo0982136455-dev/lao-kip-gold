@@ -5,7 +5,7 @@
   "license": "Public price shown on the LBB website",
   "kind": "bank",
   "stale": false,
-  "last_success_at": "2026-10-15T09:29:15.356Z",
+  "last_success_at": "2026-10-16T02:15:37.491Z",
   "last_error": null,
   "records": [
     {
@@ -13,16 +13,16 @@
       "metric": "buy_g",
       "value": 3038400,
       "unit": "LAK per gram",
-      "fetched_at": "2026-10-15T09:29:14.546Z",
-      "source_date": "2026-10-15T08:19:00.000Z"
+      "fetched_at": "2026-10-16T02:15:36.701Z",
+      "source_date": "2026-10-16T01:08:00.000Z"
     },
     {
       "source": "gold-lbb",
       "metric": "sell_g",
       "value": 3065000,
       "unit": "LAK per gram",
-      "fetched_at": "2026-10-15T09:29:14.546Z",
-      "source_date": "2026-10-15T08:19:00.000Z"
+      "fetched_at": "2026-10-16T02:15:36.701Z",
+      "source_date": "2026-10-16T01:08:00.000Z"
     }
   ]
 }
