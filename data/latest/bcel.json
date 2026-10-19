@@ -6,7 +6,7 @@
   "kind": "bank",
   "same_day_updates": true,
   "stale": false,
-  "last_success_at": "2026-10-16T02:15:45.916Z",
+  "last_success_at": "2026-10-19T01:55:00.783Z",
   "last_error": null,
   "records": [
     {
@@ -14,48 +14,48 @@
       "metric": "USD_LAK_buy",
       "value": 22273,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-16T02:15:37.507Z",
-      "source_date": "2026-10-16"
+      "fetched_at": "2026-10-19T01:54:52.299Z",
+      "source_date": "2026-10-19"
     },
     {
       "source": "bcel",
       "metric": "USD_LAK_sell",
       "value": 22618,
       "unit": "LAK per USD",
-      "fetched_at": "2026-10-16T02:15:37.507Z",
-      "source_date": "2026-10-16"
+      "fetched_at": "2026-10-19T01:54:52.299Z",
+      "source_date": "2026-10-19"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_buy",
-      "value": 670.07,
+      "value": 670.32,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-16T02:15:37.507Z",
-      "source_date": "2026-10-16"
+      "fetched_at": "2026-10-19T01:54:52.299Z",
+      "source_date": "2026-10-19"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_sell",
-      "value": 683,
+      "value": 683.25,
       "unit": "LAK per THB",
-      "fetched_at": "2026-10-16T02:15:37.507Z",
-      "source_date": "2026-10-16"
+      "fetched_at": "2026-10-19T01:54:52.299Z",
+      "source_date": "2026-10-19"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_buy",
-      "value": 3317,
+      "value": 3315,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-16T02:15:37.507Z",
-      "source_date": "2026-10-16"
+      "fetched_at": "2026-10-19T01:54:52.299Z",
+      "source_date": "2026-10-19"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_sell",
-      "value": 3382,
+      "value": 3380,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-10-16T02:15:37.507Z",
-      "source_date": "2026-10-16"
+      "fetched_at": "2026-10-19T01:54:52.299Z",
+      "source_date": "2026-10-19"
     }
   ]
 }

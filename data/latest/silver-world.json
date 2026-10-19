@@ -5,16 +5,16 @@
   "license": "Free public API, no key",
   "kind": "market",
   "stale": false,
-  "last_success_at": "2026-10-18T23:49:25.373Z",
+  "last_success_at": "2026-10-19T01:54:49.080Z",
   "last_error": null,
   "records": [
     {
       "source": "silver-world",
       "metric": "XAG_USD",
-      "value": 57.511,
+      "value": 57.559,
       "unit": "USD per troy oz",
-      "fetched_at": "2026-10-18T23:49:24.996Z",
-      "source_date": "2026-10-18T23:49:15.000Z"
+      "fetched_at": "2026-10-19T01:54:48.745Z",
+      "source_date": "2026-10-19T01:54:48.000Z"
     }
   ]
 }
