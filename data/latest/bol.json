@@ -13,9 +13,12 @@
     "agree": null,
     "max_diff_pct": null
   },
-  "stale": false,
+  "stale": true,
   "last_success_at": "2026-10-26T06:28:17.741Z",
-  "last_error": null,
+  "last_error": {
+    "message": "bank's page: no answer in 20 s from https://www.bol.gov.la/en/ExchangRate · mirror: the mirror shows 2026-10-23, older than the stored 2026-10-26",
+    "at": "2026-10-26T13:25:24.673Z"
+  },
   "records": [
     {
       "source": "bol",
