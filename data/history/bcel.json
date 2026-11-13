@@ -190,5 +190,11 @@
 {"source":"bcel","metric":"THB_LAK_buy","value":667.6,"unit":"LAK per THB","fetched_at":"2026-11-12T08:27:35.406Z","source_date":"2026-11-12"},
 {"source":"bcel","metric":"THB_LAK_sell","value":680.86,"unit":"LAK per THB","fetched_at":"2026-11-12T08:27:35.406Z","source_date":"2026-11-12"},
 {"source":"bcel","metric":"USD_LAK_buy","value":22283,"unit":"LAK per USD","fetched_at":"2026-11-12T08:27:35.406Z","source_date":"2026-11-12"},
-{"source":"bcel","metric":"USD_LAK_sell","value":22625,"unit":"LAK per USD","fetched_at":"2026-11-12T08:27:35.406Z","source_date":"2026-11-12"}
+{"source":"bcel","metric":"USD_LAK_sell","value":22625,"unit":"LAK per USD","fetched_at":"2026-11-12T08:27:35.406Z","source_date":"2026-11-12"},
+{"source":"bcel","metric":"CNY_LAK_buy","value":3330,"unit":"LAK per CNY","fetched_at":"2026-11-13T02:48:34.080Z","source_date":"2026-11-13"},
+{"source":"bcel","metric":"CNY_LAK_sell","value":3396,"unit":"LAK per CNY","fetched_at":"2026-11-13T02:48:34.080Z","source_date":"2026-11-13"},
+{"source":"bcel","metric":"THB_LAK_buy","value":666.95,"unit":"LAK per THB","fetched_at":"2026-11-13T02:48:34.080Z","source_date":"2026-11-13"},
+{"source":"bcel","metric":"THB_LAK_sell","value":680.27,"unit":"LAK per THB","fetched_at":"2026-11-13T02:48:34.080Z","source_date":"2026-11-13"},
+{"source":"bcel","metric":"USD_LAK_buy","value":22289,"unit":"LAK per USD","fetched_at":"2026-11-13T02:48:34.080Z","source_date":"2026-11-13"},
+{"source":"bcel","metric":"USD_LAK_sell","value":22631,"unit":"LAK per USD","fetched_at":"2026-11-13T02:48:34.080Z","source_date":"2026-11-13"}
 ]
