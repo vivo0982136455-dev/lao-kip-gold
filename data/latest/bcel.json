@@ -6,56 +6,56 @@
   "kind": "bank",
   "same_day_updates": true,
   "stale": false,
-  "last_success_at": "2026-11-13T02:48:35.759Z",
+  "last_success_at": "2026-11-16T03:18:41.628Z",
   "last_error": null,
   "records": [
     {
       "source": "bcel",
       "metric": "USD_LAK_buy",
-      "value": 22289,
+      "value": 22299,
       "unit": "LAK per USD",
-      "fetched_at": "2026-11-13T02:48:34.080Z",
-      "source_date": "2026-11-13"
+      "fetched_at": "2026-11-16T03:18:33.466Z",
+      "source_date": "2026-11-16"
     },
     {
       "source": "bcel",
       "metric": "USD_LAK_sell",
-      "value": 22631,
+      "value": 22638,
       "unit": "LAK per USD",
-      "fetched_at": "2026-11-13T02:48:34.080Z",
-      "source_date": "2026-11-13"
+      "fetched_at": "2026-11-16T03:18:33.466Z",
+      "source_date": "2026-11-16"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_buy",
-      "value": 666.95,
+      "value": 666.63,
       "unit": "LAK per THB",
-      "fetched_at": "2026-11-13T02:48:34.080Z",
-      "source_date": "2026-11-13"
+      "fetched_at": "2026-11-16T03:18:33.466Z",
+      "source_date": "2026-11-16"
     },
     {
       "source": "bcel",
       "metric": "THB_LAK_sell",
-      "value": 680.27,
+      "value": 679.94,
       "unit": "LAK per THB",
-      "fetched_at": "2026-11-13T02:48:34.080Z",
-      "source_date": "2026-11-13"
+      "fetched_at": "2026-11-16T03:18:33.466Z",
+      "source_date": "2026-11-16"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_buy",
       "value": 3330,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-11-13T02:48:34.080Z",
-      "source_date": "2026-11-13"
+      "fetched_at": "2026-11-16T03:18:33.466Z",
+      "source_date": "2026-11-16"
     },
     {
       "source": "bcel",
       "metric": "CNY_LAK_sell",
       "value": 3396,
       "unit": "LAK per CNY",
-      "fetched_at": "2026-11-13T02:48:34.080Z",
-      "source_date": "2026-11-13"
+      "fetched_at": "2026-11-16T03:18:33.466Z",
+      "source_date": "2026-11-16"
     }
   ]
 }
