@@ -168,5 +168,8 @@
 {"source":"fuel-thai","metric":"gasohol95","value":39.34,"unit":"THB per litre","fetched_at":"2026-11-14T20:48:31.984Z","source_date":"2026-11-15"},
 {"source":"fuel-thai","metric":"diesel","value":40.79,"unit":"THB per litre","fetched_at":"2026-11-15T19:51:40.586Z","source_date":"2026-11-16"},
 {"source":"fuel-thai","metric":"gasohol91","value":38.97,"unit":"THB per litre","fetched_at":"2026-11-15T19:51:40.586Z","source_date":"2026-11-16"},
-{"source":"fuel-thai","metric":"gasohol95","value":39.34,"unit":"THB per litre","fetched_at":"2026-11-15T19:51:40.586Z","source_date":"2026-11-16"}
+{"source":"fuel-thai","metric":"gasohol95","value":39.34,"unit":"THB per litre","fetched_at":"2026-11-15T19:51:40.586Z","source_date":"2026-11-16"},
+{"source":"fuel-thai","metric":"diesel","value":40.79,"unit":"THB per litre","fetched_at":"2026-11-16T21:17:38.862Z","source_date":"2026-11-17"},
+{"source":"fuel-thai","metric":"gasohol91","value":38.97,"unit":"THB per litre","fetched_at":"2026-11-16T21:17:38.862Z","source_date":"2026-11-17"},
+{"source":"fuel-thai","metric":"gasohol95","value":39.34,"unit":"THB per litre","fetched_at":"2026-11-16T21:17:38.862Z","source_date":"2026-11-17"}
 ]
