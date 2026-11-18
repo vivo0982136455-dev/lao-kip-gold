@@ -212,5 +212,6 @@
 {"source":"gold-world","metric":"XAU_USD","value":3851.73,"unit":"USD per troy oz","fetched_at":"2026-11-17T13:40:08.199Z","source_date":"2026-11-17T13:25:02.450Z"},
 {"source":"gold-world","metric":"XAU_USD","value":3849.65,"unit":"USD per troy oz","fetched_at":"2026-11-17T21:56:11.575Z","source_date":"2026-11-17T21:41:01.289Z"},
 {"source":"gold-world","metric":"XAU_USD","value":3798.59,"unit":"USD per troy oz","fetched_at":"2026-11-18T03:13:04.508Z","source_date":"2026-11-18T02:58:01.742Z"},
-{"source":"gold-world","metric":"XAU_USD","value":3764.75,"unit":"USD per troy oz","fetched_at":"2026-11-18T11:57:58.989Z","source_date":"2026-11-18T11:42:02.748Z"}
+{"source":"gold-world","metric":"XAU_USD","value":3764.75,"unit":"USD per troy oz","fetched_at":"2026-11-18T11:57:58.989Z","source_date":"2026-11-18T11:42:02.748Z"},
+{"source":"gold-world","metric":"XAU_USD","value":3721.56,"unit":"USD per troy oz","fetched_at":"2026-11-18T19:50:53.130Z","source_date":"2026-11-18T19:35:03.168Z"}
 ]
