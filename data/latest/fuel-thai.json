@@ -5,7 +5,7 @@
   "license": "Public price lists of the fuel companies",
   "kind": "market",
   "stale": false,
-  "last_success_at": "2026-11-18T19:50:56.423Z",
+  "last_success_at": "2026-11-19T01:32:18.085Z",
   "last_error": null,
   "records": [
     {
@@ -13,40 +13,24 @@
       "metric": "diesel",
       "value": 39.99,
       "unit": "THB per litre",
-      "fetched_at": "2026-11-18T19:50:55.165Z",
+      "fetched_at": "2026-11-19T01:32:16.796Z",
       "source_date": "2026-11-19"
     },
     {
       "source": "fuel-thai",
       "metric": "gasohol95",
-      "value": 38.84,
-      "unit": "THB per litre",
-      "fetched_at": "2026-11-18T19:50:55.165Z",
-      "source_date": "2026-11-19"
-    },
-    {
-      "source": "fuel-thai",
-      "metric": "gasohol95_next",
       "value": 38.14,
       "unit": "THB per litre",
-      "fetched_at": "2026-11-18T19:50:55.165Z",
-      "source_date": "2026-11-20"
+      "fetched_at": "2026-11-19T01:32:16.796Z",
+      "source_date": "2026-11-19"
     },
     {
       "source": "fuel-thai",
       "metric": "gasohol91",
-      "value": 38.47,
-      "unit": "THB per litre",
-      "fetched_at": "2026-11-18T19:50:55.165Z",
-      "source_date": "2026-11-19"
-    },
-    {
-      "source": "fuel-thai",
-      "metric": "gasohol91_next",
       "value": 37.77,
       "unit": "THB per litre",
-      "fetched_at": "2026-11-18T19:50:55.165Z",
-      "source_date": "2026-11-20"
+      "fetched_at": "2026-11-19T01:32:16.796Z",
+      "source_date": "2026-11-19"
     }
   ]
 }
