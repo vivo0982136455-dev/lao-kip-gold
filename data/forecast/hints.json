@@ -15,6 +15,6 @@
     {"target_date":"2026-11-06","made_at":"2026-11-06T07:39:37.685Z","basis":{"from_day":"2026-11-05","to_day":"2026-11-06","usd_pct":0.203,"thb_pct":0.7928},"hint":{"usd":"up","thb":"up"},"status":"no_publication"},
     {"target_date":"2026-11-12","made_at":"2026-11-12T01:06:07.959Z","basis":{"from_day":"2026-11-11","to_day":"2026-11-12","usd_pct":-0.0207,"thb_pct":-0.5316},"hint":{"usd":"down","thb":"down"},"status":"resolved","actual":{"usd":"up","thb":"flat"},"actual_pct":{"usd":0.0267,"thb":-0.0074},"correct":{"usd":false,"thb":false},"resolved_at":"2026-11-12T08:27:55.333Z"},
     {"target_date":"2026-11-19","made_at":"2026-11-19T01:32:37.450Z","basis":{"from_day":"2026-11-18","to_day":"2026-11-19","usd_pct":0.1799,"thb_pct":-0.2363},"hint":{"usd":"up","thb":"down"},"status":"resolved","actual":{"usd":"up","thb":"down"},"actual_pct":{"usd":0.0488,"thb":-0.1483},"correct":{"usd":true,"thb":true},"resolved_at":"2026-11-19T09:33:50.650Z"},
-    {"target_date":"2026-11-20","made_at":"2026-11-20T00:57:51.047Z","basis":{"from_day":"2026-11-19","to_day":"2026-11-20","usd_pct":-0.0712,"thb_pct":-0.0124},"hint":{"usd":"down","thb":"flat"},"status":"pending"}
+    {"target_date":"2026-11-20","made_at":"2026-11-20T00:57:51.047Z","basis":{"from_day":"2026-11-19","to_day":"2026-11-20","usd_pct":-0.0712,"thb_pct":-0.0124},"hint":{"usd":"down","thb":"flat"},"status":"resolved","actual":{"usd":"up","thb":"flat"},"actual_pct":{"usd":0.0488,"thb":0},"correct":{"usd":false,"thb":true},"resolved_at":"2026-11-20T07:55:20.123Z"}
   ]
 }
