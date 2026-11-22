@@ -5,7 +5,7 @@
   "license": "Gold Traders Association - personal, non-commercial use, with attribution",
   "kind": "market",
   "stale": false,
-  "last_success_at": "2026-11-21T03:34:49.094Z",
+  "last_success_at": "2026-11-22T03:20:51.954Z",
   "last_error": null,
   "records": [
     {
@@ -13,32 +13,32 @@
       "metric": "bar_buy",
       "value": 56950,
       "unit": "THB per baht-weight",
-      "fetched_at": "2026-11-21T03:34:47.863Z",
-      "source_date": "2026-11-21T02:11:00.000Z"
+      "fetched_at": "2026-11-22T03:20:50.920Z",
+      "source_date": "2026-11-22T02:09:00.000Z"
     },
     {
       "source": "gold-thai",
       "metric": "bar_sell",
       "value": 57150,
       "unit": "THB per baht-weight",
-      "fetched_at": "2026-11-21T03:34:47.863Z",
-      "source_date": "2026-11-21T02:11:00.000Z"
+      "fetched_at": "2026-11-22T03:20:50.920Z",
+      "source_date": "2026-11-22T02:09:00.000Z"
     },
     {
       "source": "gold-thai",
       "metric": "ornament_buy",
       "value": 55803.96,
       "unit": "THB per baht-weight",
-      "fetched_at": "2026-11-21T03:34:47.863Z",
-      "source_date": "2026-11-21T02:11:00.000Z"
+      "fetched_at": "2026-11-22T03:20:50.920Z",
+      "source_date": "2026-11-22T02:09:00.000Z"
     },
     {
       "source": "gold-thai",
       "metric": "ornament_sell",
       "value": 57950,
       "unit": "THB per baht-weight",
-      "fetched_at": "2026-11-21T03:34:47.863Z",
-      "source_date": "2026-11-21T02:11:00.000Z"
+      "fetched_at": "2026-11-22T03:20:50.920Z",
+      "source_date": "2026-11-22T02:09:00.000Z"
     }
   ]
 }
