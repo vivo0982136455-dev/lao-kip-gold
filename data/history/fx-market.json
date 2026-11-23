@@ -160,5 +160,8 @@
 {"source":"fx-market","metric":"USD_THB","value":33.94469,"unit":"THB per USD","fetched_at":"2026-11-20T00:57:18.288Z","source_date":"2026-11-20T00:02:32.000Z"},
 {"source":"fx-market","metric":"THB_LAK","value":657.7354,"unit":"LAK per THB","fetched_at":"2026-11-22T03:20:51.956Z","source_date":"2026-11-22T00:02:32.000Z"},
 {"source":"fx-market","metric":"USD_LAK","value":22309.317427,"unit":"LAK per USD","fetched_at":"2026-11-22T03:20:51.956Z","source_date":"2026-11-22T00:02:32.000Z"},
-{"source":"fx-market","metric":"USD_THB","value":33.918378,"unit":"THB per USD","fetched_at":"2026-11-22T03:20:51.956Z","source_date":"2026-11-22T00:02:32.000Z"}
+{"source":"fx-market","metric":"USD_THB","value":33.918378,"unit":"THB per USD","fetched_at":"2026-11-22T03:20:51.956Z","source_date":"2026-11-22T00:02:32.000Z"},
+{"source":"fx-market","metric":"THB_LAK","value":659.908,"unit":"LAK per THB","fetched_at":"2026-11-23T04:08:32.849Z","source_date":"2026-11-23T00:02:32.000Z"},
+{"source":"fx-market","metric":"USD_LAK","value":22399.549616,"unit":"LAK per USD","fetched_at":"2026-11-23T04:08:32.849Z","source_date":"2026-11-23T00:02:32.000Z"},
+{"source":"fx-market","metric":"USD_THB","value":33.943445,"unit":"THB per USD","fetched_at":"2026-11-23T04:08:32.849Z","source_date":"2026-11-23T00:02:32.000Z"}
 ]
